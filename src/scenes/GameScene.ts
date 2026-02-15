@@ -9,16 +9,16 @@ interface LevelConfig {
 }
 
 const LEVEL_CONFIGS: Record<number, LevelConfig> = {
-  1: { timeLimit: 60, walls: 1, stops: [], obstacleFrequency: 0.3, houseType: 'generic' },
-  2: { timeLimit: 75, walls: 2, stops: [], obstacleFrequency: 0.4, houseType: 'generic' },
-  3: { timeLimit: 90, walls: 3, stops: [], obstacleFrequency: 0.5, houseType: 'generic' },
-  4: { timeLimit: 100, walls: 4, stops: ['coffee'], obstacleFrequency: 0.6, houseType: 'brutalist' },
-  5: { timeLimit: 110, walls: 5, stops: ['coffee'], obstacleFrequency: 0.65, houseType: 'brutalist' },
-  6: { timeLimit: 120, walls: 6, stops: ['coffee', 'food'], obstacleFrequency: 0.7, houseType: 'brutalist' },
-  7: { timeLimit: 140, walls: 8, stops: ['coffee', 'food'], obstacleFrequency: 0.75, houseType: 'brutalist' },
-  8: { timeLimit: 160, walls: 10, stops: ['coffee', 'food', 'pee'], obstacleFrequency: 0.8, houseType: 'brutalist' },
-  9: { timeLimit: 180, walls: 12, stops: ['coffee', 'food', 'pee'], obstacleFrequency: 0.85, houseType: 'brutalist' },
-  10: { timeLimit: 240, walls: 20, stops: ['coffee', 'food', 'pee'], obstacleFrequency: 0.95, houseType: 'brutalist' }
+  1: { timeLimit: 90, walls: 2, stops: [], obstacleFrequency: 0.4, houseType: 'generic' },
+  2: { timeLimit: 110, walls: 3, stops: [], obstacleFrequency: 0.5, houseType: 'generic' },
+  3: { timeLimit: 130, walls: 4, stops: [], obstacleFrequency: 0.6, houseType: 'generic' },
+  4: { timeLimit: 150, walls: 5, stops: ['coffee'], obstacleFrequency: 0.7, houseType: 'brutalist' },
+  5: { timeLimit: 170, walls: 6, stops: ['coffee'], obstacleFrequency: 0.75, houseType: 'brutalist' },
+  6: { timeLimit: 190, walls: 8, stops: ['coffee', 'food'], obstacleFrequency: 0.8, houseType: 'brutalist' },
+  7: { timeLimit: 220, walls: 10, stops: ['coffee', 'food'], obstacleFrequency: 0.85, houseType: 'brutalist' },
+  8: { timeLimit: 260, walls: 14, stops: ['coffee', 'food', 'pee'], obstacleFrequency: 0.9, houseType: 'brutalist' },
+  9: { timeLimit: 300, walls: 18, stops: ['coffee', 'food', 'pee'], obstacleFrequency: 0.95, houseType: 'brutalist' },
+  10: { timeLimit: 360, walls: 25, stops: ['coffee', 'food', 'pee'], obstacleFrequency: 1.0, houseType: 'brutalist' }
 };
 
 export class GameScene extends Phaser.Scene {
@@ -79,7 +79,7 @@ export class GameScene extends Phaser.Scene {
     this.score = 0;
     this.speed = 0;
     this.distanceTraveled = 0;
-    this.targetDistance = 2000 + (this.level * 500);
+    this.targetDistance = 3000 + (this.level * 800);
     this.gameState = 'driving';
     this.boostEnergy = 100;
   }
@@ -373,15 +373,26 @@ export class GameScene extends Phaser.Scene {
     if (Math.random() > this.levelConfig.obstacleFrequency) return;
 
     const width = this.cameras.main.width;
-    const obstacleTypes = ['kangaroo', 'pie', 'cone', 'beachball', 'chook'];
-    const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+    
+    // More obstacles at higher levels
+    const baseObstacles = ['kangaroo', 'pie', 'cone', 'beachball', 'chook'];
+    const advancedObstacles = ['pedestrian', 'puddle', 'oil', 'cart', 'emu'];
+    const jumpObstacles = ['ramp'];
+    
+    let availableObstacles = [...baseObstacles];
+    if (this.level >= 3) availableObstacles.push(...advancedObstacles.slice(0, 2)); // puddle, pedestrian
+    if (this.level >= 5) availableObstacles.push(...advancedObstacles.slice(2, 4)); // oil, cart
+    if (this.level >= 7) availableObstacles.push(...advancedObstacles.slice(4)); // emu
+    if (this.level >= 4) availableObstacles.push(...jumpObstacles); // ramps
+
+    const type = availableObstacles[Math.floor(Math.random() * availableObstacles.length)];
     
     const x = Phaser.Math.Between(100, width - 100);
     const obstacle = this.obstacles.create(x, -50, type) as Phaser.Physics.Arcade.Sprite;
     obstacle.setScale(1.5);
     obstacle.setData('type', type);
 
-    // Different movement patterns
+    // Different movement patterns based on type
     if (type === 'kangaroo') {
       // Kangaroo hops side to side
       this.tweens.add({
@@ -400,21 +411,141 @@ export class GameScene extends Phaser.Scene {
         yoyo: true,
         repeat: -1
       });
+    } else if (type === 'pedestrian') {
+      // Pedestrian runs across the road!
+      const startLeft = Math.random() > 0.5;
+      obstacle.x = startLeft ? -50 : width + 50;
+      obstacle.y = Phaser.Math.Between(200, 600);
+      this.tweens.add({
+        targets: obstacle,
+        x: startLeft ? width + 50 : -50,
+        duration: 2000 + Math.random() * 1000,
+        onComplete: () => obstacle.destroy()
+      });
+    } else if (type === 'emu') {
+      // Emu runs erratically
+      this.tweens.add({
+        targets: obstacle,
+        x: x + Phaser.Math.Between(-150, 150),
+        duration: 400,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    } else if (type === 'cart') {
+      // Shopping cart rolls slowly
+      this.tweens.add({
+        targets: obstacle,
+        x: x + (Math.random() > 0.5 ? 100 : -100),
+        duration: 3000,
+        repeat: -1
+      });
+    } else if (type === 'puddle' || type === 'oil' || type === 'ramp') {
+      // Static hazards - larger hitbox
+      obstacle.setScale(2);
     }
   }
 
   private handleObstacleHit(van: any, obstacle: any): void {
     const type = obstacle.getData('type');
     
-    // Add spill
+    // === SPECIAL HAZARD EFFECTS ===
+    if (type === 'ramp') {
+      // JUMP! Van goes airborne
+      this.tweens.add({
+        targets: this.van,
+        y: this.van.y - 150,
+        scaleX: 2.5,
+        scaleY: 2.5,
+        duration: 400,
+        yoyo: true,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          this.van.setScale(2);
+        }
+      });
+      // Bonus points for jump!
+      this.score += 50;
+      const jumpText = this.add.text(this.van.x, this.van.y - 100, '🚀 AIRBORNE! +50', {
+        fontFamily: 'Arial Black',
+        fontSize: '28px',
+        color: '#00ff00'
+      }).setOrigin(0.5);
+      this.tweens.add({
+        targets: jumpText,
+        y: jumpText.y - 80,
+        alpha: 0,
+        duration: 1000,
+        onComplete: () => jumpText.destroy()
+      });
+      obstacle.destroy();
+      return;
+    }
+    
+    if (type === 'puddle') {
+      // SLIP! Van slides sideways
+      this.tweens.add({
+        targets: this.van,
+        x: this.van.x + Phaser.Math.Between(-80, 80),
+        duration: 300,
+        ease: 'Sine.easeOut'
+      });
+      this.addSpill(8);
+      const splashText = this.add.text(this.van.x, this.van.y, '💦 SPLASH!', {
+        fontFamily: 'Arial Black',
+        fontSize: '24px',
+        color: '#4a9aff'
+      }).setOrigin(0.5);
+      this.tweens.add({
+        targets: splashText,
+        y: splashText.y - 50,
+        alpha: 0,
+        duration: 600,
+        onComplete: () => splashText.destroy()
+      });
+      obstacle.destroy();
+      return;
+    }
+    
+    if (type === 'oil') {
+      // SPIN OUT! Van rotates
+      this.tweens.add({
+        targets: this.van,
+        angle: this.van.angle + (Math.random() > 0.5 ? 360 : -360),
+        duration: 800,
+        ease: 'Cubic.easeOut'
+      });
+      this.speed *= 0.3;
+      this.addSpill(25);
+      const spinText = this.add.text(this.van.x, this.van.y, '🛢️ SPIN OUT!', {
+        fontFamily: 'Arial Black',
+        fontSize: '28px',
+        color: '#aa44aa'
+      }).setOrigin(0.5);
+      this.tweens.add({
+        targets: spinText,
+        y: spinText.y - 60,
+        alpha: 0,
+        duration: 800,
+        onComplete: () => spinText.destroy()
+      });
+      this.cameras.main.shake(400, 0.02);
+      obstacle.destroy();
+      return;
+    }
+    
+    // === STANDARD COLLISIONS ===
     let spillAmount = 10;
     if (type === 'kangaroo') spillAmount = 20;
     if (type === 'beachball') spillAmount = 15;
+    if (type === 'emu') spillAmount = 25;
+    if (type === 'pedestrian') spillAmount = 30;
+    if (type === 'cart') spillAmount = 18;
 
     if (!this.crewBracing) {
       this.addSpill(spillAmount);
     } else {
-      this.addSpill(spillAmount * 0.3); // Reduced spill when bracing
+      this.addSpill(spillAmount * 0.3);
     }
 
     // Visual feedback
@@ -429,11 +560,15 @@ export class GameScene extends Phaser.Scene {
     // Remove obstacle
     obstacle.destroy();
 
-    // Show funny text
-    const texts = ['Oi!', 'Crikey!', 'Watch it!', 'Steady on!', 'Strewth!'];
+    // Show funny text based on type
+    let texts = ['Oi!', 'Crikey!', 'Watch it!', 'Steady on!', 'Strewth!'];
+    if (type === 'pedestrian') texts = ['📱 GET OFF YOUR PHONE!', 'WATCH WHERE YA GOIN!', 'BLOODY HELL!'];
+    if (type === 'emu') texts = ['🦃 STUPID BIRD!', 'EMU ATTACK!', 'RUN BIRD RUN!'];
+    if (type === 'cart') texts = ['🛒 TROLLEY!', 'WHO LEFT THAT THERE!'];
+    
     const text = this.add.text(this.van.x, this.van.y - 50, texts[Math.floor(Math.random() * texts.length)], {
       fontFamily: 'Arial Black',
-      fontSize: '24px',
+      fontSize: '22px',
       color: '#ff6600'
     }).setOrigin(0.5);
 
