@@ -40,9 +40,9 @@ export class GameScene extends Phaser.Scene {
   private boostEnergy = 100;
   
   private speed = 0;
-  private maxSpeed = 300;
-  private acceleration = 150;
-  private deceleration = 100;
+  private maxSpeed = 390;
+  private acceleration = 195;
+  private deceleration = 130;
   private turnSpeed = 3;
   
   private spillLevel = 0;
@@ -60,50 +60,110 @@ export class GameScene extends Phaser.Scene {
   
   private roadY = 0;
   private distanceTraveled = 0;
-  private targetDistance = 3000;
+  private targetDistance = 5000;
+  
+  private roadBendOffset = 0;
+  private roadBendTarget = 0;
+  private roadBendSpeed = 0;
   
   private crewBracing = false;
   private crewIcons: Phaser.GameObjects.Image[] = [];
   
-  private gameState: 'driving' | 'arrived' | 'paused' = 'driving';
+  private gameState: 'driving' | 'arrived' | 'paused' | 'at_stop' = 'driving';
+  
+  // Oncoming traffic
+  private oncomingTraffic!: Phaser.Physics.Arcade.Group;
+  private trafficSpeed = 200;
+  
+  // Stops system
+  private stopsRemaining: string[] = [];
+  private stopsCompleted: string[] = [];
+  private nextStopDistance = 0;
+  private currentStop: Phaser.GameObjects.Container | null = null;
+  private stopZone: Phaser.GameObjects.Rectangle | null = null;
+  
+  // Lane positions (4 lanes total)
+  private lane1X = 0;  // Far left - our lane / same direction
+  private lane2X = 0;  // Inner left - same direction traffic
+  private lane3X = 0;  // Inner right - oncoming traffic
+  private lane4X = 0;  // Far right - oncoming traffic
+  
+  // Same direction traffic
+  private sameDirectionTraffic!: Phaser.Physics.Arcade.Group;
 
   constructor() {
     super({ key: 'GameScene' });
   }
 
-  init(data: { level: number }): void {
+  init(data: { level: number; timeRemaining?: number; spillLevel?: number; score?: number; stopsCompleted?: string[] }): void {
     this.level = data.level || 1;
     this.levelConfig = LEVEL_CONFIGS[this.level] || LEVEL_CONFIGS[1];
-    this.timeRemaining = this.levelConfig.timeLimit;
-    this.spillLevel = 0;
-    this.score = 0;
+    this.timeRemaining = data.timeRemaining ?? this.levelConfig.timeLimit;
+    this.spillLevel = data.spillLevel ?? 0;
+    this.score = data.score ?? 0;
     this.speed = 0;
     this.distanceTraveled = 0;
-    this.targetDistance = 3000 + (this.level * 800);
+    this.targetDistance = 5000 + (this.level * 1200);
     this.gameState = 'driving';
     this.boostEnergy = 100;
+    this.roadBendOffset = 0;
+    this.roadBendTarget = 0;
+    this.roadBendSpeed = 0;
+    
+    // Set up stops for this level
+    this.stopsCompleted = data.stopsCompleted ?? [];
+    this.stopsRemaining = this.levelConfig.stops.filter(s => !this.stopsCompleted.includes(s));
+    
+    // Calculate when stops appear (evenly distributed along route)
+    if (this.stopsRemaining.length > 0) {
+      const stopInterval = this.targetDistance / (this.stopsRemaining.length + 1);
+      this.nextStopDistance = stopInterval;
+    } else {
+      this.nextStopDistance = Infinity;
+    }
+    
+    this.currentStop = null;
+    this.stopZone = null;
   }
 
   create(): void {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
+    // Calculate lane positions (4 lanes)
+    // Left side goes UP (our direction), Right side goes DOWN (oncoming)
+    const laneWidth = 50;
+    const roadCenter = width / 2;
+    this.lane1X = roadCenter - laneWidth * 1.5;  // Far left - player's main lane
+    this.lane2X = roadCenter - laneWidth * 0.5;  // Inner left - same direction traffic
+    this.lane3X = roadCenter + laneWidth * 0.5;  // Inner right - oncoming
+    this.lane4X = roadCenter + laneWidth * 1.5;  // Far right - oncoming
+
     // Road background (scrolling)
     this.createRoad();
 
-    // Van
-    this.van = this.physics.add.sprite(width / 2, height - 250, 'van');
-    this.van.setScale(2);
+    // Van - positioned in lane 1 (far left)
+    this.van = this.physics.add.sprite(this.lane1X, height - 250, 'van');
+    this.van.setScale(1.6);
     this.van.setCollideWorldBounds(true);
     this.van.setDrag(50);
-    this.van.body?.setSize(30, 50);
+    this.van.body?.setSize(32, 50);
+    this.van.setDepth(50);
 
-    // Obstacles group
+    // Obstacles group (hazards on road)
     this.obstacles = this.physics.add.group();
     this.splats = this.add.group();
+    
+    // Same direction traffic (lane 2 - inner left, going UP)
+    this.sameDirectionTraffic = this.physics.add.group();
+    
+    // Oncoming traffic group (lanes 3 & 4 - right side, going DOWN)
+    this.oncomingTraffic = this.physics.add.group();
 
-    // Collision
+    // Collisions
     this.physics.add.overlap(this.van, this.obstacles, this.handleObstacleHit, undefined, this);
+    this.physics.add.overlap(this.van, this.oncomingTraffic, this.handleTrafficCollision, undefined, this);
+    this.physics.add.overlap(this.van, this.sameDirectionTraffic, this.handleSameDirectionCollision, undefined, this);
 
     // Create UI
     this.createUI();
@@ -127,35 +187,156 @@ export class GameScene extends Phaser.Scene {
       loop: true
     });
 
+    // Road bend spawner
+    this.time.addEvent({
+      delay: 2500,
+      callback: this.createRoadBend,
+      callbackScope: this,
+      loop: true
+    });
+
+    // Oncoming traffic spawner (right lanes, going down)
+    this.time.addEvent({
+      delay: 1000 - (this.level * 60),
+      callback: this.spawnOncomingTraffic,
+      callbackScope: this,
+      loop: true
+    });
+    
+    // Same direction traffic spawner (lane 2, going up)
+    this.time.addEvent({
+      delay: 1800 - (this.level * 80),
+      callback: this.spawnSameDirectionTraffic,
+      callbackScope: this,
+      loop: true
+    });
+
     // Fade in
     this.cameras.main.fadeIn(300);
 
     // Level announcement
     this.showLevelAnnouncement();
+    
+    // Show stops indicator if there are stops
+    if (this.stopsRemaining.length > 0) {
+      this.showStopsIndicator();
+    }
+  }
+
+  private showStopsIndicator(): void {
+    const width = this.cameras.main.width;
+    const stopsText = this.stopsRemaining.map(s => {
+      if (s === 'coffee') return '☕';
+      if (s === 'food') return '🥧';
+      if (s === 'pee') return '🚽';
+      return '';
+    }).join(' ');
+    
+    const indicator = this.add.text(width / 2, 130, `STOPS: ${stopsText}`, {
+      fontFamily: 'Arial Black',
+      fontSize: '20px',
+      color: '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+    
+    // Pulse animation
+    this.tweens.add({
+      targets: indicator,
+      scale: 1.1,
+      duration: 500,
+      yoyo: true,
+      repeat: 2,
+      onComplete: () => {
+        indicator.setScale(1);
+      }
+    });
   }
 
   private createRoad(): void {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
 
-    // Create road tiles
-    for (let y = -128; y < height + 256; y += 128) {
-      for (let x = 0; x < width; x += 128) {
-        const road = this.add.image(x + 64, y, 'road');
-        road.setData('isRoad', true);
-      }
+    // === PARALLAX LAYER 1: SKY (static background) ===
+    const sky = this.add.image(width / 2, height / 2, 'sky');
+    sky.setDisplaySize(width, height);
+    sky.setScrollFactor(0);
+    sky.setDepth(-100);
+
+    // === PARALLAX LAYER 2: DISTANT CITY (very slow scroll) ===
+    for (let x = -250; x < width + 500; x += 500) {
+      const city = this.add.image(x, 120, 'city-silhouette');
+      city.setData('parallaxLayer', 'city');
+      city.setData('parallaxSpeed', 0.05);
+      city.setDepth(-90);
     }
 
-    // Road edges
-    const leftEdge = this.add.graphics();
-    leftEdge.fillStyle(0x1a5a1a);
-    leftEdge.fillRect(0, 0, 80, height);
-    leftEdge.setScrollFactor(0);
+    // === PARALLAX LAYER 3: HILLS (slow scroll) ===
+    for (let x = -250; x < width + 500; x += 500) {
+      const hills = this.add.image(x, 180, 'hills');
+      hills.setData('parallaxLayer', 'hills');
+      hills.setData('parallaxSpeed', 0.15);
+      hills.setDepth(-80);
+    }
 
-    const rightEdge = this.add.graphics();
-    rightEdge.fillStyle(0x1a5a1a);
-    rightEdge.fillRect(width - 80, 0, 80, height);
-    rightEdge.setScrollFactor(0);
+    // === ROADSIDE SCENERY (houses, trees, etc.) ===
+    // These spawn dynamically during gameplay
+    this.time.addEvent({
+      delay: 800,
+      callback: this.spawnRoadsideScenery,
+      callbackScope: this,
+      loop: true
+    });
+
+    // === ROAD TILES ===
+    const tileSize = 220;
+    for (let y = -tileSize; y < height + tileSize * 2; y += tileSize) {
+      const road = this.add.image(width / 2, y, 'road');
+      road.setData('isRoad', true);
+      road.setDepth(-10);
+    }
+  }
+
+  private spawnRoadsideScenery(): void {
+    if (this.gameState !== 'driving' || this.speed < 50) return;
+
+    const width = this.cameras.main.width;
+    const side = Math.random() > 0.5 ? 'left' : 'right';
+    const x = side === 'left' ? Phaser.Math.Between(-30, 50) : Phaser.Math.Between(width - 50, width + 30);
+    
+    // Scenery type depends on level aesthetics
+    let types: string[];
+    if (this.levelConfig.houseType === 'brutalist') {
+      // Brutalist levels: modern, sparse, more concrete
+      types = ['brutalist', 'house3', 'tree', 'streetlamp', 'streetlamp', 'hydrant'];
+    } else {
+      // Generic levels: suburban, friendly
+      types = ['house1', 'house2', 'tree', 'tree', 'bush', 'bush', 'mailbox', 'fence'];
+    }
+    
+    const type = types[Math.floor(Math.random() * types.length)];
+    
+    const scenery = this.add.image(x, -100, type);
+    scenery.setDepth(-5);
+    
+    // Scale based on type
+    if (type.includes('house') || type === 'brutalist') {
+      scenery.setScale(Phaser.Math.FloatBetween(1.2, 1.8));
+    } else if (type === 'tree') {
+      scenery.setScale(Phaser.Math.FloatBetween(1.5, 2.5));
+    } else if (type === 'fence') {
+      scenery.setScale(1.5);
+    } else {
+      scenery.setScale(Phaser.Math.FloatBetween(1, 1.5));
+    }
+    
+    // Flip for right side
+    if (side === 'right') {
+      scenery.setFlipX(true);
+    }
+    
+    scenery.setData('isScenery', true);
+    scenery.setData('scrollSpeed', 0.9);
   }
 
   private createUI(): void {
@@ -606,6 +787,387 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  // === ONCOMING TRAFFIC SYSTEM (Right lanes - going DOWN) ===
+  private spawnOncomingTraffic(): void {
+    if (this.gameState !== 'driving') return;
+    
+    // Different car types with varying speeds
+    const carTypes = ['car-red', 'car-blue', 'car-white', 'truck', 'ute'];
+    const type = carTypes[Math.floor(Math.random() * carTypes.length)];
+    
+    // Pick random right lane (lane 3 or lane 4)
+    const laneX = Math.random() > 0.5 ? this.lane3X : this.lane4X;
+    
+    // Create car in right lane (oncoming - going down screen)
+    const car = this.oncomingTraffic.create(laneX, -80, 'van') as Phaser.Physics.Arcade.Sprite;
+    car.setScale(1.4);
+    car.setFlipY(true); // Face downward (coming toward us)
+    car.setTint(this.getCarTint(type));
+    car.setData('type', type);
+    car.setData('speed', this.trafficSpeed + Phaser.Math.Between(-50, 100));
+    car.setDepth(45);
+    
+    // Trucks are bigger and slower
+    if (type === 'truck') {
+      car.setScale(1.8);
+      car.setData('speed', this.trafficSpeed - 50);
+    }
+  }
+  
+  // === SAME DIRECTION TRAFFIC (Lane 2 - going UP) ===
+  private spawnSameDirectionTraffic(): void {
+    if (this.gameState !== 'driving') return;
+    if (this.speed < 100) return; // Only spawn when we're moving fast
+    
+    const carTypes = ['car-red', 'car-blue', 'car-white', 'ute'];
+    const type = carTypes[Math.floor(Math.random() * carTypes.length)];
+    
+    // Spawn ahead or behind based on relative speed
+    const spawnBehind = Math.random() > 0.3;
+    const y = spawnBehind ? this.cameras.main.height + 100 : -80;
+    
+    const car = this.sameDirectionTraffic.create(this.lane2X, y, 'van') as Phaser.Physics.Arcade.Sprite;
+    car.setScale(1.4);
+    car.setTint(this.getCarTint(type));
+    car.setData('type', type);
+    // Same direction cars move at varying speeds relative to us
+    car.setData('speed', Phaser.Math.Between(150, 350)); // Their absolute speed
+    car.setData('spawnedBehind', spawnBehind);
+    car.setDepth(45);
+  }
+  
+  private handleSameDirectionCollision(van: any, car: any): void {
+    // Side collision or rear-end - moderate penalty
+    this.addSpill(20);
+    this.speed *= 0.5;
+    
+    this.cameras.main.shake(300, 0.02);
+    
+    const crashText = this.add.text(this.van.x, this.van.y - 60, '💥 CRASH!', {
+      fontFamily: 'Arial Black',
+      fontSize: '24px',
+      color: '#ff6600',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(200);
+    
+    this.tweens.add({
+      targets: crashText,
+      y: crashText.y - 50,
+      alpha: 0,
+      duration: 800,
+      onComplete: () => crashText.destroy()
+    });
+    
+    car.destroy();
+  }
+
+  private getCarTint(type: string): number {
+    switch (type) {
+      case 'car-red': return 0xff4444;
+      case 'car-blue': return 0x4444ff;
+      case 'car-white': return 0xeeeeee;
+      case 'truck': return 0x888888;
+      case 'ute': return 0x44aa44;
+      default: return 0xffffff;
+    }
+  }
+
+  private handleTrafficCollision(van: any, car: any): void {
+    // Head-on collision - major penalty!
+    this.addSpill(40);
+    this.speed = 0;
+    
+    // Big screen shake
+    this.cameras.main.shake(500, 0.03);
+    
+    // Crash text
+    const crashText = this.add.text(this.van.x, this.van.y - 80, '💥 HEAD-ON! 💥', {
+      fontFamily: 'Arial Black',
+      fontSize: '32px',
+      color: '#ff0000',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(200);
+    
+    this.tweens.add({
+      targets: crashText,
+      y: crashText.y - 100,
+      alpha: 0,
+      scale: 1.5,
+      duration: 1000,
+      onComplete: () => crashText.destroy()
+    });
+    
+    // Destroy the car
+    car.destroy();
+    
+    // Knock van back
+    this.tweens.add({
+      targets: this.van,
+      y: this.van.y + 100,
+      duration: 300,
+      yoyo: true
+    });
+  }
+
+  private updateOncomingTraffic(delta: number): void {
+    const dt = delta / 1000;
+    const height = this.cameras.main.height;
+
+    this.oncomingTraffic.children.iterate((child) => {
+      const car = child as Phaser.Physics.Arcade.Sprite;
+      if (car) {
+        const carSpeed = car.getData('speed') || this.trafficSpeed;
+        // Oncoming traffic moves DOWN the screen (toward us)
+        // Combined speed = our speed + their speed
+        car.y += (this.speed + carSpeed) * dt;
+
+        // Remove when off screen
+        if (car.y > height + 150) {
+          car.destroy();
+        }
+      }
+      return true;
+    });
+  }
+  
+  private updateSameDirectionTraffic(delta: number): void {
+    const dt = delta / 1000;
+    const height = this.cameras.main.height;
+
+    this.sameDirectionTraffic.children.iterate((child) => {
+      const car = child as Phaser.Physics.Arcade.Sprite;
+      if (car) {
+        const carSpeed = car.getData('speed') || 200;
+        const spawnedBehind = car.getData('spawnedBehind');
+        
+        // Relative movement: if car is faster than us, it moves up; if slower, it moves down
+        const relativeSpeed = this.speed - carSpeed;
+        car.y += relativeSpeed * dt;
+
+        // Remove when off screen (either direction)
+        if (car.y > height + 150 || car.y < -150) {
+          car.destroy();
+        }
+      }
+      return true;
+    });
+  }
+
+  // === STOPS SYSTEM ===
+  private checkForStops(): void {
+    if (this.stopsRemaining.length === 0) return;
+    if (this.currentStop) return; // Already showing a stop
+    
+    // Check if we've reached the next stop distance
+    if (this.distanceTraveled >= this.nextStopDistance) {
+      this.spawnStop(this.stopsRemaining[0]);
+    }
+  }
+
+  private spawnStop(stopType: string): void {
+    const width = this.cameras.main.width;
+    
+    // Create stop zone on the left side of road
+    const stopX = 60;
+    const stopY = -150;
+    
+    // Stop building container
+    this.currentStop = this.add.container(stopX, stopY);
+    this.currentStop.setDepth(30);
+    
+    // Stop graphics
+    const stopBg = this.add.graphics();
+    let stopColor = 0x8b4513;
+    let stopEmoji = '🏪';
+    let stopName = 'STOP';
+    
+    if (stopType === 'coffee') {
+      stopColor = 0x4a2c0a;
+      stopEmoji = '☕';
+      stopName = 'COFFEE';
+    } else if (stopType === 'food') {
+      stopColor = 0xcc6600;
+      stopEmoji = '🥧';
+      stopName = 'SERVO';
+    } else if (stopType === 'pee') {
+      stopColor = 0x2266aa;
+      stopEmoji = '🚽';
+      stopName = 'DUNNY';
+    }
+    
+    // Building
+    stopBg.fillStyle(stopColor, 1);
+    stopBg.fillRoundedRect(-40, -60, 80, 80, 8);
+    stopBg.fillStyle(0x000000, 0.3);
+    stopBg.fillRect(-35, -55, 70, 10);
+    
+    const emoji = this.add.text(0, -30, stopEmoji, { fontSize: '40px' }).setOrigin(0.5);
+    const label = this.add.text(0, 15, stopName, {
+      fontFamily: 'Arial Black',
+      fontSize: '14px',
+      color: '#ffffff'
+    }).setOrigin(0.5);
+    
+    // "PULL IN!" indicator
+    const pullIn = this.add.text(0, 45, '⬅️ PULL IN!', {
+      fontFamily: 'Arial Black',
+      fontSize: '16px',
+      color: '#ffff00',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+    
+    this.tweens.add({
+      targets: pullIn,
+      scale: 1.2,
+      duration: 300,
+      yoyo: true,
+      repeat: -1
+    });
+    
+    this.currentStop.add([stopBg, emoji, label, pullIn]);
+    this.currentStop.setData('stopType', stopType);
+    this.currentStop.setData('isScrolling', true);
+    
+    // Create invisible stop zone for collision
+    this.stopZone = this.add.rectangle(stopX, stopY, 100, 120, 0x00ff00, 0);
+    this.stopZone.setData('stopType', stopType);
+  }
+
+  private updateStops(delta: number): void {
+    if (!this.currentStop) return;
+    
+    const dt = delta / 1000;
+    const height = this.cameras.main.height;
+    
+    // Scroll stop down
+    if (this.currentStop.getData('isScrolling')) {
+      this.currentStop.y += this.speed * dt * 0.9;
+      if (this.stopZone) {
+        this.stopZone.y = this.currentStop.y;
+      }
+      
+      // Check if van is in stop zone
+      if (this.stopZone && this.van.x < 120 && 
+          Math.abs(this.van.y - this.stopZone.y) < 80 &&
+          this.speed < 50) {
+        this.enterStop();
+      }
+      
+      // Remove if missed
+      if (this.currentStop.y > height + 100) {
+        this.missedStop();
+      }
+    }
+  }
+
+  private enterStop(): void {
+    const stopType = this.currentStop?.getData('stopType');
+    if (!stopType) return;
+    
+    this.gameState = 'at_stop';
+    this.speed = 0;
+    
+    // Success feedback
+    const successText = this.add.text(this.cameras.main.width / 2, this.cameras.main.height / 2, 
+      `${stopType.toUpperCase()} BREAK!`, {
+      fontFamily: 'Arial Black',
+      fontSize: '36px',
+      color: '#00ff00',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(200);
+    
+    this.tweens.add({
+      targets: successText,
+      scale: 1.3,
+      duration: 500,
+      yoyo: true,
+      onComplete: () => {
+        successText.destroy();
+        // Go to mini-game
+        this.launchMiniGame(stopType);
+      }
+    });
+  }
+
+  private missedStop(): void {
+    const stopType = this.currentStop?.getData('stopType');
+    
+    // Penalty for missing stop
+    this.addSpill(20);
+    
+    const missText = this.add.text(this.cameras.main.width / 2, 200, 
+      `MISSED ${stopType?.toUpperCase()}! +20 SPILL`, {
+      fontFamily: 'Arial Black',
+      fontSize: '24px',
+      color: '#ff4444',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(200);
+    
+    this.tweens.add({
+      targets: missText,
+      y: missText.y - 50,
+      alpha: 0,
+      duration: 1500,
+      onComplete: () => missText.destroy()
+    });
+    
+    // Clean up
+    this.currentStop?.destroy();
+    this.currentStop = null;
+    this.stopZone?.destroy();
+    this.stopZone = null;
+    
+    // Move to next stop
+    this.stopsRemaining.shift();
+    if (this.stopsRemaining.length > 0) {
+      const stopInterval = (this.targetDistance - this.distanceTraveled) / (this.stopsRemaining.length + 1);
+      this.nextStopDistance = this.distanceTraveled + stopInterval;
+    }
+  }
+
+  private launchMiniGame(stopType: string): void {
+    // Clean up current stop
+    this.currentStop?.destroy();
+    this.currentStop = null;
+    this.stopZone?.destroy();
+    this.stopZone = null;
+    
+    // Mark as completed
+    this.stopsCompleted.push(stopType);
+    this.stopsRemaining.shift();
+    
+    // Calculate next stop distance
+    if (this.stopsRemaining.length > 0) {
+      const stopInterval = (this.targetDistance - this.distanceTraveled) / (this.stopsRemaining.length + 1);
+      this.nextStopDistance = this.distanceTraveled + stopInterval;
+    }
+    
+    // Launch appropriate mini-game scene
+    const sceneData = {
+      level: this.level,
+      timeRemaining: this.timeRemaining,
+      spillLevel: this.spillLevel,
+      score: this.score,
+      distanceTraveled: this.distanceTraveled,
+      targetDistance: this.targetDistance,
+      stopsCompleted: this.stopsCompleted,
+      stopsRemaining: this.stopsRemaining
+    };
+    
+    if (stopType === 'coffee') {
+      this.scene.start('CoffeeScene', sceneData);
+    } else if (stopType === 'food') {
+      this.scene.start('FoodScene', sceneData);
+    } else if (stopType === 'pee') {
+      this.scene.start('PeeScene', sceneData);
+    }
+  }
+
   private updateSpillMeter(): void {
     this.spillMeter.clear();
     
@@ -662,12 +1224,22 @@ export class GameScene extends Phaser.Scene {
 
     // Update obstacles
     this.updateObstacles(delta);
+    
+    // Update oncoming traffic
+    this.updateOncomingTraffic(delta);
+    
+    // Update same direction traffic
+    this.updateSameDirectionTraffic(delta);
+    
+    // Update stops
+    this.updateStops(delta);
+    this.checkForStops();
 
     // Update boost energy
     this.updateBoost(delta);
 
-    // Check if reached destination
-    if (this.distanceTraveled >= this.targetDistance) {
+    // Check if reached destination (only if all stops completed)
+    if (this.distanceTraveled >= this.targetDistance && this.stopsRemaining.length === 0) {
       this.arriveAtDestination();
     }
 
@@ -704,8 +1276,36 @@ export class GameScene extends Phaser.Scene {
       const lateralSpeed = this.joystickVector.x * Math.abs(this.speed) * 0.5;
       this.van.x += lateralSpeed * dt;
 
-      // Clamp to road bounds
-      this.van.x = Phaser.Math.Clamp(this.van.x, 100, this.cameras.main.width - 100);
+      // Clamp to road bounds - can use left 2 lanes, but crossing center is dangerous!
+      const width = this.cameras.main.width;
+      const centerLine = width / 2;
+      const leftBound = this.lane1X - 40;  // Left edge of road
+      const rightBound = this.lane4X + 40; // Right edge of road
+      this.van.x = Phaser.Math.Clamp(this.van.x, leftBound, rightBound);
+
+      // Warning if drifting into oncoming lanes (right side)
+      if (this.van.x > centerLine - 10) {
+        // In danger zone - in oncoming lanes!
+        if (!this.van.getData('inDangerZone')) {
+          this.van.setData('inDangerZone', true);
+          const dangerText = this.add.text(this.van.x, this.van.y - 80, '⚠️ WRONG SIDE!', {
+            fontFamily: 'Arial Black',
+            fontSize: '22px',
+            color: '#ff0000',
+            stroke: '#000000',
+            strokeThickness: 4
+          }).setOrigin(0.5).setDepth(200);
+          this.tweens.add({
+            targets: dangerText,
+            y: dangerText.y - 40,
+            alpha: 0,
+            duration: 1000,
+            onComplete: () => dangerText.destroy()
+          });
+        }
+      } else {
+        this.van.setData('inDangerZone', false);
+      }
 
       // Add spill on sharp turns
       if (Math.abs(this.joystickVector.x) > 0.7 && Math.abs(this.speed) > 100) {
@@ -720,19 +1320,98 @@ export class GameScene extends Phaser.Scene {
     this.van.setRotation(this.joystickVector.x * 0.2);
   }
 
+  private createRoadBend(): void {
+    if (this.gameState !== 'driving') return;
+    
+    // Create a new bend target (positive = bend right, negative = bend left)
+    this.roadBendTarget = Phaser.Math.Between(-120, 120);
+    this.roadBendSpeed = Phaser.Math.FloatBetween(0.5, 1.5);
+    
+    // Show curve warning
+    const warning = this.add.text(
+      this.cameras.main.width / 2, 
+      150, 
+      this.roadBendTarget > 0 ? '⬅️ CURVE AHEAD!' : '➡️ CURVE AHEAD!',
+      {
+        fontFamily: 'Arial Black',
+        fontSize: '24px',
+        color: '#ffff00',
+        stroke: '#000000',
+        strokeThickness: 3
+      }
+    ).setOrigin(0.5).setDepth(150);
+    
+    this.tweens.add({
+      targets: warning,
+      alpha: 0,
+      y: warning.y - 50,
+      duration: 1500,
+      onComplete: () => warning.destroy()
+    });
+  }
+
   private updateRoadScroll(delta: number): void {
     const dt = delta / 1000;
     const scrollSpeed = this.speed * dt;
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
 
-    // Move road tiles
+    // Update road bend
+    if (this.roadBendOffset !== this.roadBendTarget) {
+      const bendDelta = this.roadBendSpeed * dt * 60;
+      if (this.roadBendOffset < this.roadBendTarget) {
+        this.roadBendOffset = Math.min(this.roadBendTarget, this.roadBendOffset + bendDelta);
+      } else {
+        this.roadBendOffset = Math.max(this.roadBendTarget, this.roadBendOffset - bendDelta);
+      }
+    }
+
+    // Apply bend force to van (simulates curve)
+    if (Math.abs(this.roadBendOffset) > 10 && this.speed > 50) {
+      const bendForce = (this.roadBendOffset / 120) * 2 * dt * (this.speed / this.maxSpeed);
+      this.van.x += bendForce * 60;
+      
+      // Spill on hard curves if not compensating
+      if (Math.abs(this.roadBendOffset) > 80 && Math.abs(this.joystickVector.x) < 0.3) {
+        if (!this.crewBracing && Math.random() < 0.05) {
+          this.addSpill(1);
+        }
+      }
+    }
+
+    // Move all scrollable elements
     this.children.list.forEach(child => {
-      if (child.getData && child.getData('isRoad')) {
+      if (!child.getData) return;
+      
+      // Road tiles
+      if (child.getData('isRoad')) {
         const road = child as Phaser.GameObjects.Image;
         road.y += scrollSpeed;
-
-        // Wrap road tiles
-        if (road.y > this.cameras.main.height + 128) {
-          road.y -= this.cameras.main.height + 384;
+        if (road.y > height + 220) {
+          road.y -= height + 440;
+        }
+      }
+      
+      // Parallax layers (city, hills)
+      const parallaxSpeed = child.getData('parallaxSpeed');
+      if (parallaxSpeed) {
+        const layer = child as Phaser.GameObjects.Image;
+        layer.y += scrollSpeed * parallaxSpeed;
+        // Very slow vertical wrap for parallax
+        if (layer.y > 250) {
+          layer.y = 100;
+        }
+      }
+      
+      // Roadside scenery
+      if (child.getData('isScenery')) {
+        const scenery = child as Phaser.GameObjects.Image;
+        const scenerySpeed = child.getData('scrollSpeed') || 0.9;
+        scenery.y += scrollSpeed * scenerySpeed;
+        
+        // Remove when off screen
+        if (scenery.y > height + 150) {
+          scenery.destroy();
         }
       }
     });

@@ -379,8 +379,11 @@ export class PeeScene extends Phaser.Scene {
 
     this.time.delayedCall(3000, () => {
       this.scene.start('GameScene', { 
-        ...this.gameData,
-        afterStop: 'pee'
+        level: this.gameData.level,
+        timeRemaining: this.gameData.timeRemaining,
+        spillLevel: success ? this.gameData.spillLevel : this.gameData.spillLevel + 30,
+        score: this.gameData.score + (success ? 200 : 0),
+        stopsCompleted: this.gameData.stopsCompleted || []
       });
     });
   }

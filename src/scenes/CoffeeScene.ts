@@ -251,8 +251,11 @@ export class CoffeeScene extends Phaser.Scene {
 
     this.time.delayedCall(2000, () => {
       this.scene.start('GameScene', { 
-        ...this.gameData,
-        afterStop: 'coffee'
+        level: this.gameData.level,
+        timeRemaining: this.gameData.timeRemaining,
+        spillLevel: this.gameData.spillLevel,
+        score: this.gameData.score + (success ? 100 : 0),
+        stopsCompleted: this.gameData.stopsCompleted || []
       });
     });
   }

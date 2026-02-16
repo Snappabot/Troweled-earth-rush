@@ -320,8 +320,11 @@ export class FoodScene extends Phaser.Scene {
 
     this.time.delayedCall(2500, () => {
       this.scene.start('GameScene', { 
-        ...this.gameData,
-        afterStop: 'food'
+        level: this.gameData.level,
+        timeRemaining: this.gameData.timeRemaining,
+        spillLevel: this.gameData.spillLevel,
+        score: this.gameData.score + (success ? 150 : 0),
+        stopsCompleted: this.gameData.stopsCompleted || []
       });
     });
   }

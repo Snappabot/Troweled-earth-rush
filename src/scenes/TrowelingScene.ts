@@ -14,6 +14,7 @@ export class TrowelingScene extends Phaser.Scene {
   private wallsCompleted = 0;
   private totalWalls = 1;
   private spillLevel = 0;
+  private houseType: 'shack' | 'house' | 'brutalist' | 'villa' | 'mansion' = 'shack';
 
   private wallCells: WallCell[] = [];
   private cellsCovered = 0;
@@ -44,6 +45,13 @@ export class TrowelingScene extends Phaser.Scene {
     this.wallsCompleted = 0;
     this.wallCells = [];
     this.cellsCovered = 0;
+    
+    // Set house type based on level
+    if (this.level <= 2) this.houseType = 'shack';
+    else if (this.level <= 3) this.houseType = 'house';
+    else if (this.level <= 6) this.houseType = 'brutalist';
+    else if (this.level <= 9) this.houseType = 'villa';
+    else this.houseType = 'mansion';
   }
 
   create(): void {
@@ -133,42 +141,155 @@ export class TrowelingScene extends Phaser.Scene {
   private createWallGrid(): void {
     const width = this.cameras.main.width;
     const height = this.cameras.main.height;
+    const cellSize = 35;
 
-    // Wall area
-    const wallX = 60;
-    const wallY = 180;
-    const wallWidth = width - 120;
-    const wallHeight = height - 450;
-    const cellSize = 40;
+    // Get shape mask based on house type
+    const shapeMask = this.getHouseShapeMask();
+    
+    // Calculate wall area centered on screen
+    const maskWidth = shapeMask[0].length;
+    const maskHeight = shapeMask.length;
+    const wallWidth = maskWidth * cellSize;
+    const wallHeight = maskHeight * cellSize;
+    const wallX = (width - wallWidth) / 2;
+    const wallY = 160;
 
-    // Background wall
+    // Draw house outline background
     const wallBg = this.add.graphics();
     wallBg.fillStyle(0x5a5a5a);
-    wallBg.fillRect(wallX, wallY, wallWidth, wallHeight);
-    wallBg.lineStyle(4, 0x3a3a3a);
-    wallBg.strokeRect(wallX, wallY, wallWidth, wallHeight);
-
-    // Create grid cells
-    this.wallCells = [];
-    const cols = Math.floor(wallWidth / cellSize);
-    const rows = Math.floor(wallHeight / cellSize);
-    this.totalCells = cols * rows;
-
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const x = wallX + col * cellSize + cellSize / 2;
-        const y = wallY + row * cellSize + cellSize / 2;
-
-        const cell = this.add.rectangle(x, y, cellSize - 2, cellSize - 2, 0x5a5a5a);
-        cell.setAlpha(0);
-
-        this.wallCells.push({
-          x,
-          y,
-          covered: false,
-          sprite: cell
-        });
+    
+    // Draw shape from mask
+    for (let row = 0; row < maskHeight; row++) {
+      for (let col = 0; col < maskWidth; col++) {
+        if (shapeMask[row][col] === 1) {
+          const x = wallX + col * cellSize;
+          const y = wallY + row * cellSize;
+          wallBg.fillRect(x, y, cellSize, cellSize);
+        }
       }
+    }
+    
+    // Outline
+    wallBg.lineStyle(3, 0x3a3a3a);
+    for (let row = 0; row < maskHeight; row++) {
+      for (let col = 0; col < maskWidth; col++) {
+        if (shapeMask[row][col] === 1) {
+          const x = wallX + col * cellSize;
+          const y = wallY + row * cellSize;
+          // Draw border only on edges
+          if (col === 0 || shapeMask[row][col - 1] === 0) wallBg.lineBetween(x, y, x, y + cellSize);
+          if (col === maskWidth - 1 || shapeMask[row][col + 1] === 0) wallBg.lineBetween(x + cellSize, y, x + cellSize, y + cellSize);
+          if (row === 0 || shapeMask[row - 1][col] === 0) wallBg.lineBetween(x, y, x + cellSize, y);
+          if (row === maskHeight - 1 || shapeMask[row + 1]?.[col] === 0) wallBg.lineBetween(x, y + cellSize, x + cellSize, y + cellSize);
+        }
+      }
+    }
+
+    // Create grid cells only where mask is 1
+    this.wallCells = [];
+    this.totalCells = 0;
+
+    for (let row = 0; row < maskHeight; row++) {
+      for (let col = 0; col < maskWidth; col++) {
+        if (shapeMask[row][col] === 1) {
+          const x = wallX + col * cellSize + cellSize / 2;
+          const y = wallY + row * cellSize + cellSize / 2;
+
+          const cell = this.add.rectangle(x, y, cellSize - 2, cellSize - 2, 0x5a5a5a);
+          cell.setAlpha(0);
+
+          this.wallCells.push({
+            x,
+            y,
+            covered: false,
+            sprite: cell
+          });
+          this.totalCells++;
+        }
+      }
+    }
+  }
+
+  private getHouseShapeMask(): number[][] {
+    // 1 = wall cell, 0 = empty
+    switch (this.houseType) {
+      case 'shack':
+        // Small triangular roof shack
+        return [
+          [0,0,0,1,1,1,0,0,0],
+          [0,0,1,1,1,1,1,0,0],
+          [0,1,1,1,1,1,1,1,0],
+          [1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1],
+          [1,1,1,0,0,0,1,1,1],
+          [1,1,1,0,0,0,1,1,1],
+        ];
+      
+      case 'house':
+        // Standard house shape with peaked roof
+        return [
+          [0,0,0,0,1,1,0,0,0,0],
+          [0,0,0,1,1,1,1,0,0,0],
+          [0,0,1,1,1,1,1,1,0,0],
+          [0,1,1,1,1,1,1,1,1,0],
+          [1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,0,0,1,1,1,1],
+          [1,1,1,1,0,0,1,1,1,1],
+        ];
+      
+      case 'brutalist':
+        // Angular brutalist shape - asymmetric, modern
+        return [
+          [1,1,1,1,1,1,0,0,0,0,0],
+          [1,1,1,1,1,1,1,1,0,0,0],
+          [1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1],
+          [0,0,1,1,1,1,1,1,1,1,1],
+          [0,0,1,1,1,1,1,1,1,1,1],
+          [0,0,1,1,0,0,0,1,1,1,1],
+          [0,0,1,1,0,0,0,1,1,1,1],
+        ];
+      
+      case 'villa':
+        // Larger villa with multiple sections
+        return [
+          [0,0,1,1,1,1,0,0,0,0,1,1,0,0],
+          [0,1,1,1,1,1,1,0,0,1,1,1,1,0],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,0,0,1,1,1,1,0,0,1,1,1],
+          [1,1,1,0,0,1,1,1,1,0,0,1,1,1],
+        ];
+      
+      case 'mansion':
+        // Mega mansion - complex shape
+        return [
+          [0,0,0,1,1,1,1,0,0,0,0,1,1,1,1,0,0,0],
+          [0,0,1,1,1,1,1,1,0,0,1,1,1,1,1,1,0,0],
+          [0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+          [1,1,0,0,0,1,1,1,1,1,1,1,1,0,0,0,1,1],
+          [1,1,0,0,0,1,1,1,1,1,1,1,1,0,0,0,1,1],
+        ];
+      
+      default:
+        return [
+          [1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1],
+          [1,1,1,1,1,1,1],
+        ];
     }
   }
 
