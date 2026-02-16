@@ -127,7 +127,7 @@ export class MenuScene extends Phaser.Scene {
     joseHead.setScale(1.6);
     
     // TEM inverted logo on van branding panel
-    const vanLogo = this.add.image(vanTexture === 'van-side' ? -90 : 0, vanTexture === 'van-side' ? 0 : 0, 'tem-logo-inverted');
+    const vanLogo = this.add.image(vanTexture === 'van-side' ? -150 : 0, vanTexture === 'van-side' ? 0 : 0, 'tem-logo-inverted');
     vanLogo.setScale(vanTexture === 'van-side' ? 0.36 : 0.08);
     // "Troweled Earth" text on van copper panel
     const vanText1 = this.add.text(0, -4, 'Troweled Earth', {
