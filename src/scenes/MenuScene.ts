@@ -76,7 +76,7 @@ export class MenuScene extends Phaser.Scene {
     ground.fillRect(0, roadY + roadHeight, width, height - roadY - roadHeight);
 
     // === CREW (standing below road) ===
-    const crewY = roadY + roadHeight + 80;
+    const crewY = roadY + roadHeight + 120;
     const crewScale = 2.0;
     const crewSpacing = 85;
     const crewCenterX = 120;  // Left side of screen
@@ -107,7 +107,7 @@ export class MenuScene extends Phaser.Scene {
     this.add.text(crewCenterX + crewSpacing/2, labelY, 'MATT', labelStyle).setOrigin(0.5).setDepth(60);
 
     // === VAN (drives ON the road with Jose) ===
-    const vanCenterY = roadY + roadHeight - 60;  // Wheels on road
+    const vanCenterY = roadY + roadHeight - 20;  // Wheels on road
     const vanStartX = -400;  // Start further off screen (bigger van)
     const vanEndX = width - 200;  // End position for bigger van
     
