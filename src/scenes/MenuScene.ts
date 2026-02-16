@@ -46,7 +46,7 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // === GROUND & ROAD ===
-    const roadY = 620;
+    const roadY = 720;
     const roadHeight = 120;
     
     // Sky/grass split
@@ -107,7 +107,7 @@ export class MenuScene extends Phaser.Scene {
     this.add.text(crewCenterX + crewSpacing/2, labelY, 'MATT', labelStyle).setOrigin(0.5).setDepth(60);
 
     // === VAN (drives ON the road with Jose) ===
-    const vanCenterY = roadY + roadHeight - 20;  // Wheels on road
+    const vanCenterY = roadY + roadHeight/2;  // Center of road
     const vanStartX = -400;  // Start further off screen (bigger van)
     const vanEndX = width - 200;  // End position for bigger van
     
