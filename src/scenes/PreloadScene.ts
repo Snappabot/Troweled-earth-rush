@@ -1454,71 +1454,71 @@ export class PreloadScene extends Phaser.Scene {
     g.fillRoundedRect(2, 40, 14, 28, 5);
     g.fillRoundedRect(54, 40, 14, 28, 5);
     
-    // Hands
-    g.fillStyle(0x8b6a4a, 1);
+    // Hands (olive/light brown skin)
+    g.fillStyle(0xc49a6c, 1);
     g.fillRoundedRect(2, 64, 14, 14, 5);
     g.fillRoundedRect(54, 64, 14, 14, 5);
     
     // Neck
-    g.fillStyle(0x8b6a4a, 1);
+    g.fillStyle(0xc49a6c, 1);
     g.fillRect(28, 30, 14, 12);
     
-    // Head - oval shape (taller than wide, not round)
-    g.fillStyle(0x8b6a4a, 1);
-    g.fillEllipse(35, 18, 15, 19);
-    
-    // Jaw definition (slightly narrower at chin)
-    g.fillStyle(0x8b6a4a, 1);
-    g.fillRoundedRect(23, 18, 24, 16, 8);
-    
-    // Dreadlocks (behind head first)
-    g.fillStyle(0x2a1a0a, 1);
-    for (let i = 0; i < 7; i++) {
-      const angle = (i / 7) * Math.PI + Math.PI;
-      const x = 35 + Math.cos(angle) * 14;
+    // Dreadlocks (behind head - long, auburn/brown, past shoulders)
+    g.fillStyle(0x5a3a1a, 1);
+    for (let i = 0; i < 9; i++) {
+      const angle = (i / 9) * Math.PI + Math.PI;
+      const x = 35 + Math.cos(angle) * 15;
       const y = 16 + Math.sin(angle) * 17;
-      g.fillRoundedRect(x - 4, y, 8, 24 + (i % 3) * 5, 4);
+      g.fillRoundedRect(x - 4, y, 8, 34 + (i % 3) * 6, 4);
     }
-    g.fillStyle(0x3a2a1a, 0.7);
-    for (let i = 0; i < 5; i++) {
-      const angle = (i / 5) * Math.PI * 0.7 + Math.PI * 1.15;
-      const x = 35 + Math.cos(angle) * 13;
-      const y = 16 + Math.sin(angle) * 15;
-      g.fillRoundedRect(x - 3, y, 6, 18 + (i % 2) * 4, 3);
+    g.fillStyle(0x6a4a2a, 0.7);
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 0.8 + Math.PI * 1.1;
+      const x = 35 + Math.cos(angle) * 14;
+      const y = 16 + Math.sin(angle) * 16;
+      g.fillRoundedRect(x - 3, y, 7, 28 + (i % 2) * 5, 3);
     }
-    // Hair top
-    g.fillStyle(0x1a0a00, 1);
+    
+    // Head - oval shape (taller than wide)
+    g.fillStyle(0xc49a6c, 1);
+    g.fillEllipse(35, 18, 14, 18);
+    
+    // Jaw definition
+    g.fillStyle(0xc49a6c, 1);
+    g.fillRoundedRect(24, 18, 22, 14, 7);
+    
+    // Hair top (auburn dreads)
+    g.fillStyle(0x4a2a10, 1);
     g.fillEllipse(35, 4, 14, 8);
     g.fillEllipse(28, 6, 8, 7);
     g.fillEllipse(42, 6, 8, 7);
     
     // Re-draw face over dreads
-    g.fillStyle(0x8b6a4a, 1);
-    g.fillEllipse(35, 20, 13, 14);
+    g.fillStyle(0xc49a6c, 1);
+    g.fillEllipse(35, 20, 12, 13);
     
-    // Glasses frames (dark, rectangular-ish)
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(23, 14, 11, 8, 3);
-    g.fillRoundedRect(36, 14, 11, 8, 3);
-    g.fillRect(34, 16, 2, 2); // bridge
-    g.lineStyle(1.5, 0x1a1a1a, 1);
+    // Glasses frames (rectangular, clear lenses like the photo)
+    g.lineStyle(1.5, 0x2a2a2a, 1);
+    g.strokeRoundedRect(23, 14, 11, 8, 2);
+    g.strokeRoundedRect(36, 14, 11, 8, 2);
+    g.lineBetween(34, 17, 36, 17); // bridge
     g.lineBetween(23, 17, 20, 15); // left arm
     g.lineBetween(47, 17, 50, 15); // right arm
-    // Lens tint
-    g.fillStyle(0x2a4a6a, 0.5);
-    g.fillRoundedRect(24, 15, 9, 6, 2);
-    g.fillRoundedRect(37, 15, 9, 6, 2);
+    // Clear lenses (very slight tint)
+    g.fillStyle(0xddeeff, 0.2);
+    g.fillRoundedRect(24, 15, 9, 6, 1);
+    g.fillRoundedRect(37, 15, 9, 6, 1);
     // Eyes behind lenses
-    g.fillStyle(0x1a1a1a, 1);
+    g.fillStyle(0x3a2a1a, 1);
     g.fillCircle(28, 17, 1.5);
     g.fillCircle(42, 17, 1.5);
     
     // Nose
-    g.fillStyle(0x7a5a3a, 1);
+    g.fillStyle(0xb08a5c, 1);
     g.fillEllipse(35, 23, 2.5, 3);
     
-    // Mouth (subtle smile)
-    g.lineStyle(1, 0x6a4a3a, 0.7);
+    // Mouth (subtle)
+    g.lineStyle(1, 0x9a7a5a, 0.7);
     g.beginPath();
     g.arc(35, 26, 3, 0.3, Math.PI - 0.3);
     g.strokePath();
