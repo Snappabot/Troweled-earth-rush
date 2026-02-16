@@ -1550,47 +1550,45 @@ export class PreloadScene extends Phaser.Scene {
     g.fillRect(14, 113, 20, 4);
     g.fillRect(36, 113, 20, 4);
     
-    // Slim torso - Black TEM t-shirt
+    // Muscular torso - Black TEM t-shirt
     g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(12, 38, 46, 38, 6);
+    g.fillRoundedRect(8, 36, 54, 40, 8);
     g.fillStyle(0x2a2a2a, 1);
-    g.fillRect(12, 40, 12, 34);
+    g.fillRect(8, 38, 14, 36);
     g.fillStyle(0x0a0a0a, 0.7);
-    g.fillRect(46, 40, 12, 34);
+    g.fillRect(48, 38, 14, 36);
     
     // TEM badge placeholder - actual logo overlaid in scenes
     
-    // Arms (slim)
+    // Muscular arms
     g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(2, 40, 14, 28, 5);
-    g.fillRoundedRect(54, 40, 14, 28, 5);
+    g.fillRoundedRect(-2, 38, 16, 30, 6);
+    g.fillRoundedRect(56, 38, 16, 30, 6);
     
     // Hands
     g.fillStyle(0xe8c4a0, 1);
-    g.fillRoundedRect(2, 64, 14, 14, 5);
-    g.fillRoundedRect(54, 64, 14, 14, 5);
+    g.fillRoundedRect(-2, 64, 16, 14, 5);
+    g.fillRoundedRect(56, 64, 16, 14, 5);
     
-    // Neck
+    // Neck (thicker, muscular)
     g.fillStyle(0xe8c4a0, 1);
-    g.fillRect(28, 30, 14, 12);
+    g.fillRect(26, 28, 18, 12);
     
     // Head - oval
     g.fillStyle(0xe8c4a0, 1);
-    g.fillEllipse(35, 16, 15, 18);
+    g.fillEllipse(35, 14, 16, 18);
     
-    // Dark curly/wavy messy hair
+    // Top knot hair
     g.fillStyle(0x3a2a1a, 1);
-    g.fillEllipse(35, 4, 15, 10);
-    g.fillEllipse(25, 8, 8, 8);
-    g.fillEllipse(45, 8, 8, 8);
-    g.fillEllipse(35, 8, 14, 8);
-    // Messy curly bits
-    g.fillStyle(0x2a1a0a, 0.8);
-    g.fillEllipse(22, 6, 5, 6);
-    g.fillEllipse(48, 6, 5, 6);
-    g.fillEllipse(30, 2, 6, 5);
-    g.fillEllipse(40, 1, 6, 5);
-    g.fillEllipse(35, 0, 5, 4);
+    g.slice(35, 12, 16, Math.PI * 1.15, Math.PI * -0.15, false);
+    g.fillPath();
+    // The knot/bun on top
+    g.fillCircle(35, -4, 8);
+    g.fillStyle(0x2a1a0a, 1);
+    g.fillEllipse(35, -4, 7, 6);
+    // Hair tie
+    g.fillStyle(0x1a1a1a, 1);
+    g.fillRect(32, 1, 6, 3);
     
     // Re-draw face
     g.fillStyle(0xe8c4a0, 1);
