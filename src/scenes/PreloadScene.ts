@@ -1567,12 +1567,7 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0x7a5a3a, 1);
     g.fillEllipse(35, 23, 2.5, 3);
     
-    // Goatee
-    g.fillStyle(0x1a0a00, 1);
-    g.fillEllipse(35, 30, 4, 3);
-    g.fillRoundedRect(33, 27, 4, 4, 2);
-    
-    // Mouth (subtle line above goatee)
+    // Mouth (subtle smile)
     g.lineStyle(1, 0x6a4a3a, 0.7);
     g.beginPath();
     g.arc(35, 26, 3, 0.3, Math.PI - 0.3);
