@@ -85,13 +85,13 @@ export class MenuScene extends Phaser.Scene {
     this.add.image(crewCenterX - crewSpacing/2 + 3, crewY + 3, 'jarrad').setScale(crewScale).setTint(0x000000).setAlpha(0.3);
     const jarrad = this.add.image(crewCenterX - crewSpacing/2, crewY, 'jarrad').setScale(crewScale).setDepth(50);
     // TEM logo badge on Jarrad's chest
-    this.add.image(crewCenterX - crewSpacing/2 + 3, crewY + 10, 'tem-logo-inverted').setScale(0.035).setDepth(51);
+    this.add.image(crewCenterX - crewSpacing/2 + 3, crewY - 2, 'tem-logo-inverted').setScale(0.035).setDepth(51);
     
     // Matt
     this.add.image(crewCenterX + crewSpacing/2 + 3, crewY + 3, 'matt').setScale(crewScale).setTint(0x000000).setAlpha(0.3);
     const matt = this.add.image(crewCenterX + crewSpacing/2, crewY, 'matt').setScale(crewScale).setDepth(50);
     // TEM logo badge on Matt's chest
-    this.add.image(crewCenterX + crewSpacing/2 - 2, crewY + 14, 'tem-logo-inverted').setScale(0.035).setDepth(51);
+    this.add.image(crewCenterX + crewSpacing/2 - 2, crewY + 2, 'tem-logo-inverted').setScale(0.035).setDepth(51);
 
     // === MATERIAL BUCKETS (on grass next to crew) ===
     const bucketY = crewY + 55;
@@ -127,8 +127,8 @@ export class MenuScene extends Phaser.Scene {
     joseHead.setScale(1.6);
     
     // TEM inverted logo on van branding panel
-    const vanLogo = this.add.image(vanTexture === 'van-side' ? -52 : 0, vanTexture === 'van-side' ? 0 : 0, 'tem-logo-inverted');
-    vanLogo.setScale(vanTexture === 'van-side' ? 0.12 : 0.08);
+    const vanLogo = this.add.image(vanTexture === 'van-side' ? -62 : 0, vanTexture === 'van-side' ? 0 : 0, 'tem-logo-inverted');
+    vanLogo.setScale(vanTexture === 'van-side' ? 0.18 : 0.08);
     // "Troweled Earth" text on van copper panel
     const vanText1 = this.add.text(10, -6, 'TROWELED\nEARTH', {
       fontFamily: 'Arial Black, sans-serif',
