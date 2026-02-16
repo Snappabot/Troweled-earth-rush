@@ -1612,86 +1612,107 @@ export class PreloadScene extends Phaser.Scene {
 
   private createMatt(): void {
     const g = this.make.graphics({ x: 0, y: 0 });
-    const w = 65, h = 135;
+    const w = 70, h = 125;
     
     // Shadow
     g.fillStyle(0x000000, 0.3);
-    g.fillEllipse(w/2, h - 6, 40, 12);
+    g.fillEllipse(w/2, h - 6, 45, 14);
     
-    // Long skinny legs
-    g.fillStyle(0x2a2a3a, 1);
-    g.fillRoundedRect(18, 78, 12, 44, 4);
-    g.fillRoundedRect(36, 78, 12, 44, 4);
-    g.fillStyle(0x1a1a2a, 0.6);
-    g.fillRect(27, 80, 4, 40);
+    // Legs (dark cargo pants, plaster-stained)
+    g.fillStyle(0x2a2a2a, 1);
+    g.fillRoundedRect(18, 72, 14, 40, 5);
+    g.fillRoundedRect(38, 72, 14, 40, 5);
+    g.fillStyle(0x1a1a1a, 0.6);
+    g.fillRect(29, 74, 5, 36);
+    // Plaster stains on pants
+    g.fillStyle(0xccccbb, 0.4);
+    g.fillEllipse(22, 85, 4, 6);
+    g.fillEllipse(45, 92, 3, 5);
     
     // Boots
-    g.fillStyle(0x3a2a1a, 1);
-    g.fillRoundedRect(14, 118, 18, 12, 3);
-    g.fillRoundedRect(34, 118, 18, 12, 3);
-    g.fillStyle(0x2a1a0a, 1);
-    g.fillRect(14, 126, 18, 4);
-    g.fillRect(34, 126, 18, 4);
-    
-    // Skinny torso
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(14, 42, 38, 40, 6);
     g.fillStyle(0x2a2a2a, 1);
-    g.fillRect(14, 45, 10, 35);
+    g.fillRoundedRect(14, 108, 20, 14, 4);
+    g.fillRoundedRect(36, 108, 20, 14, 4);
+    g.fillStyle(0x1a1a1a, 1);
+    g.fillRect(14, 118, 20, 4);
+    g.fillRect(36, 118, 20, 4);
+    
+    // Torso - Black hoodie
+    g.fillStyle(0x1a1a1a, 1);
+    g.fillRoundedRect(12, 38, 46, 38, 6);
+    g.fillStyle(0x2a2a2a, 1);
+    g.fillRect(12, 40, 12, 34);
     g.fillStyle(0x0a0a0a, 0.7);
-    g.fillRect(42, 45, 10, 35);
+    g.fillRect(46, 40, 12, 34);
+    // Hoodie pocket
+    g.fillStyle(0x151515, 1);
+    g.fillRoundedRect(20, 60, 30, 14, 3);
+    g.lineStyle(1, 0x2a2a2a, 0.5);
+    g.lineBetween(20, 60, 50, 60);
+    // Plaster stains on hoodie
+    g.fillStyle(0xccccbb, 0.5);
+    g.fillEllipse(30, 65, 6, 4);
+    g.fillEllipse(42, 58, 4, 3);
+    g.fillEllipse(25, 55, 3, 2);
     
     // TEM badge placeholder - actual logo overlaid in scenes
-    g.lineBetween(27, 53, 25, 54);
-    g.lineBetween(39, 53, 41, 54);
     
-    // Lanky arms
+    // Arms (hoodie sleeves)
     g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(4, 44, 12, 30, 4);
-    g.fillRoundedRect(50, 44, 12, 30, 4);
+    g.fillRoundedRect(2, 40, 14, 28, 5);
+    g.fillRoundedRect(54, 40, 14, 28, 5);
     
     // Hands
     g.fillStyle(0xe8c4a0, 1);
-    g.fillRoundedRect(4, 70, 12, 12, 4);
-    g.fillRoundedRect(50, 70, 12, 12, 4);
+    g.fillRoundedRect(2, 64, 14, 14, 5);
+    g.fillRoundedRect(54, 64, 14, 14, 5);
     
-    // Long neck
+    // Neck
     g.fillStyle(0xe8c4a0, 1);
-    g.fillRect(26, 28, 14, 18);
+    g.fillRect(28, 30, 14, 12);
     
-    // Head
+    // Head - oval
     g.fillStyle(0xe8c4a0, 1);
-    g.fillCircle(33, 16, 15);
+    g.fillEllipse(35, 18, 14, 17);
     
-    // Messy hair
-    g.fillStyle(0x5a4a3a, 1);
-    g.slice(33, 14, 14, Math.PI + 0.3, -0.3, false);
-    g.fillPath();
-    g.fillRect(22, 5, 6, 9);
-    g.fillRect(36, 3, 6, 11);
-    g.fillRect(28, 1, 6, 9);
-    g.fillStyle(0x4a3a2a, 0.6);
-    g.fillRect(25, 3, 4, 7);
-    g.fillRect(33, 2, 5, 8);
+    // Short cropped hair (buzzed)
+    g.fillStyle(0x3a3028, 1);
+    g.fillEllipse(35, 8, 13, 9);
+    g.fillStyle(0x3a3028, 0.7);
+    g.fillEllipse(35, 12, 14, 6);
     
-    // Worried face
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillCircle(27, 14, 3);
-    g.fillCircle(39, 14, 3);
-    g.fillStyle(0xffffff, 1);
-    g.fillCircle(26, 13, 1);
-    g.fillCircle(38, 13, 1);
+    // Re-draw face
+    g.fillStyle(0xe8c4a0, 1);
+    g.fillEllipse(35, 20, 12, 13);
     
-    // Worried eyebrows
-    g.lineStyle(2, 0x4a3a2a);
-    g.lineBetween(23, 8, 30, 11);
-    g.lineBetween(43, 8, 36, 11);
+    // Glasses (rectangular, dark frames like photo)
+    g.lineStyle(1.5, 0x1a1a1a, 1);
+    g.strokeRoundedRect(23, 14, 11, 8, 2);
+    g.strokeRoundedRect(36, 14, 11, 8, 2);
+    g.lineBetween(34, 17, 36, 17); // bridge
+    g.lineBetween(23, 17, 20, 15); // left arm
+    g.lineBetween(47, 17, 50, 15); // right arm
+    // Clear lenses
+    g.fillStyle(0xddeeff, 0.15);
+    g.fillRoundedRect(24, 15, 9, 6, 1);
+    g.fillRoundedRect(37, 15, 9, 6, 1);
+    // Eyes
+    g.fillStyle(0x3a3a3a, 1);
+    g.fillCircle(28, 17, 1.5);
+    g.fillCircle(42, 17, 1.5);
     
-    // Grimace
-    g.lineStyle(2, 0x8a6a5a);
-    g.lineBetween(27, 24, 39, 24);
-    g.lineBetween(27, 24, 25, 22);
-    g.lineBetween(39, 24, 41, 22);
+    // Short beard/stubble
+    g.fillStyle(0x3a3028, 0.5);
+    g.fillEllipse(35, 27, 8, 5);
+    g.fillRoundedRect(29, 24, 12, 6, 3);
+    
+    // Nose
+    g.fillStyle(0xd8b490, 1);
+    g.fillEllipse(35, 22, 2.5, 3);
+    
+    // Mouth (neutral)
+    g.lineStyle(1, 0xb09080, 0.7);
+    g.lineBetween(31, 25, 39, 25);
     
     g.generateTexture('matt', w, h);
     g.destroy();
