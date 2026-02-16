@@ -1513,63 +1513,69 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0x8b6a4a, 1);
     g.fillRect(28, 30, 14, 12);
     
-    // Head
+    // Head - oval shape (taller than wide, not round)
     g.fillStyle(0x8b6a4a, 1);
-    g.fillCircle(35, 18, 18);
+    g.fillEllipse(35, 18, 15, 19);
     
-    // Dreadlocks
+    // Jaw definition (slightly narrower at chin)
+    g.fillStyle(0x8b6a4a, 1);
+    g.fillRoundedRect(23, 18, 24, 16, 8);
+    
+    // Dreadlocks (behind head first)
     g.fillStyle(0x2a1a0a, 1);
-    for (let i = 0; i < 8; i++) {
-      const angle = (i / 8) * Math.PI + Math.PI;
-      const x = 35 + Math.cos(angle) * 16;
-      const y = 18 + Math.sin(angle) * 16;
-      g.fillRoundedRect(x - 4, y, 8, 26 + (i % 3) * 5, 4);
+    for (let i = 0; i < 7; i++) {
+      const angle = (i / 7) * Math.PI + Math.PI;
+      const x = 35 + Math.cos(angle) * 14;
+      const y = 16 + Math.sin(angle) * 17;
+      g.fillRoundedRect(x - 4, y, 8, 24 + (i % 3) * 5, 4);
     }
     g.fillStyle(0x3a2a1a, 0.7);
     for (let i = 0; i < 5; i++) {
       const angle = (i / 5) * Math.PI * 0.7 + Math.PI * 1.15;
-      const x = 35 + Math.cos(angle) * 15;
-      const y = 18 + Math.sin(angle) * 15;
-      g.fillRoundedRect(x - 3, y, 6, 20 + (i % 2) * 4, 3);
+      const x = 35 + Math.cos(angle) * 13;
+      const y = 16 + Math.sin(angle) * 15;
+      g.fillRoundedRect(x - 3, y, 6, 18 + (i % 2) * 4, 3);
     }
-    // Top
+    // Hair top
     g.fillStyle(0x1a0a00, 1);
-    g.fillCircle(28, 8, 8);
-    g.fillCircle(42, 8, 8);
-    g.fillCircle(35, 5, 10);
+    g.fillEllipse(35, 4, 14, 8);
+    g.fillEllipse(28, 6, 8, 7);
+    g.fillEllipse(42, 6, 8, 7);
     
-    // Face (cleaner shape)
-    g.fillStyle(0x9a7a5a, 1);
-    g.fillEllipse(35, 20, 12, 11);
+    // Re-draw face over dreads
+    g.fillStyle(0x8b6a4a, 1);
+    g.fillEllipse(35, 20, 13, 14);
     
-    // Eyes (behind glasses)
+    // Glasses frames (dark, rectangular-ish)
     g.fillStyle(0x1a1a1a, 1);
-    g.fillCircle(28, 18, 2);
-    g.fillCircle(42, 18, 2);
-    
-    // Glasses (sunglasses style)
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(22, 14, 12, 9, 3);
-    g.fillRoundedRect(36, 14, 12, 9, 3);
-    g.fillRect(34, 17, 2, 2);
+    g.fillRoundedRect(23, 14, 11, 8, 3);
+    g.fillRoundedRect(36, 14, 11, 8, 3);
+    g.fillRect(34, 16, 2, 2); // bridge
+    g.lineStyle(1.5, 0x1a1a1a, 1);
+    g.lineBetween(23, 17, 20, 15); // left arm
+    g.lineBetween(47, 17, 50, 15); // right arm
     // Lens tint
-    g.fillStyle(0x2a4a6a, 0.6);
-    g.fillRoundedRect(23, 15, 10, 7, 2);
-    g.fillRoundedRect(37, 15, 10, 7, 2);
+    g.fillStyle(0x2a4a6a, 0.5);
+    g.fillRoundedRect(24, 15, 9, 6, 2);
+    g.fillRoundedRect(37, 15, 9, 6, 2);
+    // Eyes behind lenses
+    g.fillStyle(0x1a1a1a, 1);
+    g.fillCircle(28, 17, 1.5);
+    g.fillCircle(42, 17, 1.5);
     
     // Nose
-    g.fillStyle(0x8a6a4a, 1);
-    g.fillEllipse(35, 22, 3, 4);
+    g.fillStyle(0x7a5a3a, 1);
+    g.fillEllipse(35, 23, 2.5, 3);
     
     // Goatee
     g.fillStyle(0x1a0a00, 1);
-    g.fillEllipse(35, 28, 5, 4);
-    g.fillRect(33, 25, 4, 4);
+    g.fillEllipse(35, 30, 4, 3);
+    g.fillRoundedRect(33, 27, 4, 4, 2);
     
-    // Smile (subtle)
-    g.lineStyle(1, 0x6a5a4a);
+    // Mouth (subtle line above goatee)
+    g.lineStyle(1, 0x6a4a3a, 0.7);
     g.beginPath();
-    g.arc(35, 26, 4, 0.2, Math.PI - 0.2);
+    g.arc(35, 26, 3, 0.3, Math.PI - 0.3);
     g.strokePath();
     
     g.generateTexture('jose', w, h);
