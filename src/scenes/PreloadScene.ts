@@ -239,32 +239,7 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0x7a4a2a, 0.4);
     g.fillEllipse(65, 38, 18, 10);
     
-    // Tree logo - INVERTED (white tree on dark circle) - matching actual TEM
-    g.fillStyle(0x0a0a0a, 1);
-    g.fillCircle(38, 38, 14);
-    g.lineStyle(2, 0xffffff, 1);
-    g.strokeCircle(38, 38, 13);
-    // White bare tree - full branch structure like actual logo
-    g.lineStyle(2.5, 0xffffff, 1);
-    // Trunk
-    g.lineBetween(38, 48, 38, 30);
-    // Main left branch curving out
-    g.lineBetween(38, 33, 24, 26);
-    g.lineBetween(24, 26, 19, 28);
-    g.lineBetween(24, 26, 20, 23);
-    // Main right branch curving out
-    g.lineBetween(38, 33, 52, 26);
-    g.lineBetween(52, 26, 57, 28);
-    g.lineBetween(52, 26, 56, 23);
-    // Middle branches
-    g.lineBetween(38, 36, 27, 30);
-    g.lineBetween(38, 36, 49, 30);
-    g.lineStyle(1.5, 0xffffff, 1);
-    g.lineBetween(27, 30, 23, 32);
-    g.lineBetween(49, 30, 53, 32);
-    // Top twigs
-    g.lineBetween(38, 30, 32, 26);
-    g.lineBetween(38, 30, 44, 26);
+    // Tree logo placeholder - actual inverted logo overlaid in scenes
     
     // "Troweled Earth" text area (white)
     g.fillStyle(0xffffff, 1);
@@ -1743,6 +1718,23 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
+    // Create inverted logo (white tree on black background)
+    const src = this.textures.get('tem-tree-logo').getSourceImage() as HTMLImageElement;
+    const canvas = document.createElement('canvas');
+    canvas.width = src.width;
+    canvas.height = src.height;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(src, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = 255 - data[i];       // R
+      data[i + 1] = 255 - data[i + 1]; // G
+      data[i + 2] = 255 - data[i + 2]; // B
+    }
+    ctx.putImageData(imageData, 0, 0);
+    this.textures.addCanvas('tem-logo-inverted', canvas);
+
     this.scene.start('MenuScene');
   }
 }

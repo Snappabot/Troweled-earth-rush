@@ -85,13 +85,13 @@ export class MenuScene extends Phaser.Scene {
     this.add.image(crewCenterX - crewSpacing/2 + 3, crewY + 3, 'jarrad').setScale(crewScale).setTint(0x000000).setAlpha(0.3);
     const jarrad = this.add.image(crewCenterX - crewSpacing/2, crewY, 'jarrad').setScale(crewScale).setDepth(50);
     // TEM logo badge on Jarrad's chest
-    this.add.image(crewCenterX - crewSpacing/2 + 3, crewY + 10, 'tem-tree-logo').setScale(0.06).setDepth(51);
+    this.add.image(crewCenterX - crewSpacing/2 + 3, crewY + 10, 'tem-logo-inverted').setScale(0.06).setDepth(51);
     
     // Matt
     this.add.image(crewCenterX + crewSpacing/2 + 3, crewY + 3, 'matt').setScale(crewScale).setTint(0x000000).setAlpha(0.3);
     const matt = this.add.image(crewCenterX + crewSpacing/2, crewY, 'matt').setScale(crewScale).setDepth(50);
     // TEM logo badge on Matt's chest
-    this.add.image(crewCenterX + crewSpacing/2 - 2, crewY + 14, 'tem-tree-logo').setScale(0.06).setDepth(51);
+    this.add.image(crewCenterX + crewSpacing/2 - 2, crewY + 14, 'tem-logo-inverted').setScale(0.06).setDepth(51);
 
     // === MATERIAL BUCKETS (on grass next to crew) ===
     const bucketY = crewY + 55;
@@ -126,7 +126,10 @@ export class MenuScene extends Phaser.Scene {
     joseHead.setPosition(vanTexture === 'van-side' ? 140 : 90, -50);
     joseHead.setScale(1.6);
     
-    vanContainer.add([van, joseHead]);
+    // TEM inverted logo on van branding panel
+    const vanLogo = this.add.image(vanTexture === 'van-side' ? -52 : 0, vanTexture === 'van-side' ? 0 : 0, 'tem-logo-inverted');
+    vanLogo.setScale(vanTexture === 'van-side' ? 0.12 : 0.08);
+    vanContainer.add([van, vanLogo, joseHead]);
     
     // Jose label (above van - adjusted for bigger van)
     const joseLabelY = vanCenterY - 100;
@@ -273,20 +276,8 @@ export class MenuScene extends Phaser.Scene {
     g.closePath();
     g.fill();
     
-    // WHITE TREE on black label
-    g.lineStyle(2, 0xffffff, 1);
-    // Trunk
-    g.lineBetween(x, y + 13, x, y + 3);
-    // Main branches
-    g.lineBetween(x, y + 5, x - 7, y);
-    g.lineBetween(x, y + 5, x + 7, y);
-    // Secondary branches
-    g.lineBetween(x, y + 8, x - 5, y + 4);
-    g.lineBetween(x, y + 8, x + 5, y + 4);
-    // Twigs
-    g.lineStyle(1, 0xffffff, 1);
-    g.lineBetween(x - 7, y, x - 9, y + 1);
-    g.lineBetween(x + 7, y, x + 9, y + 1);
+    // TEM logo on bucket label
+    this.add.image(x, y + 7, 'tem-logo-inverted').setScale(0.04).setDepth(41);
     
     // White rim
     g.fillStyle(0xeeeeee, 1);
