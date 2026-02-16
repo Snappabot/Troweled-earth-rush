@@ -1475,18 +1475,7 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0x0a0a0a, 0.7);
     g.fillRect(46, 40, 12, 30);
     
-    // TEM badge - simple white tree on dark circle
-    g.fillStyle(0x0a0a0a, 1);
-    g.fillCircle(35, 52, 10);
-    g.lineStyle(1.5, 0xffffff, 1);
-    g.strokeCircle(35, 52, 9);
-    // Simple tree silhouette
-    g.lineStyle(1.5, 0xffffff, 1);
-    g.lineBetween(35, 59, 35, 48); // trunk
-    g.lineBetween(35, 50, 29, 46); // left branch
-    g.lineBetween(35, 50, 41, 46); // right branch
-    g.lineBetween(35, 48, 31, 44); // upper left
-    g.lineBetween(35, 48, 39, 44); // upper right
+    // TEM badge placeholder - actual logo overlaid in scenes
     
     // Arms
     g.fillStyle(0x1a1a1a, 1);
@@ -1597,18 +1586,7 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0x0a0a0a, 0.7);
     g.fillRect(52, 38, 14, 36);
     
-    // TEM badge - simple white tree on dark circle
-    g.fillStyle(0x0a0a0a, 1);
-    g.fillCircle(38, 54, 12);
-    g.lineStyle(1.5, 0xffffff, 1);
-    g.strokeCircle(38, 54, 11);
-    // Simple tree silhouette
-    g.lineStyle(1.5, 0xffffff, 1);
-    g.lineBetween(38, 62, 38, 49); // trunk
-    g.lineBetween(38, 52, 30, 47); // left branch
-    g.lineBetween(38, 52, 46, 47); // right branch
-    g.lineBetween(38, 49, 33, 44); // upper left
-    g.lineBetween(38, 49, 43, 44); // upper right
+    // TEM badge placeholder - actual logo overlaid in scenes
     g.lineBetween(30, 48, 27, 50);
     g.lineBetween(46, 48, 49, 50);
     
@@ -1691,18 +1669,7 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0x0a0a0a, 0.7);
     g.fillRect(42, 45, 10, 35);
     
-    // TEM badge - simple white tree on dark circle
-    g.fillStyle(0x0a0a0a, 1);
-    g.fillCircle(33, 58, 10);
-    g.lineStyle(1.5, 0xffffff, 1);
-    g.strokeCircle(33, 58, 9);
-    // Simple tree silhouette
-    g.lineStyle(1.5, 0xffffff, 1);
-    g.lineBetween(33, 65, 33, 54); // trunk
-    g.lineBetween(33, 56, 27, 52); // left branch
-    g.lineBetween(33, 56, 39, 52); // right branch
-    g.lineBetween(33, 54, 29, 50); // upper left
-    g.lineBetween(33, 54, 37, 50); // upper right
+    // TEM badge placeholder - actual logo overlaid in scenes
     g.lineBetween(27, 53, 25, 54);
     g.lineBetween(39, 53, 41, 54);
     

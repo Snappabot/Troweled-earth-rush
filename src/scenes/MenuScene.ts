@@ -84,10 +84,14 @@ export class MenuScene extends Phaser.Scene {
     // Jarrad
     this.add.image(crewCenterX - crewSpacing/2 + 3, crewY + 3, 'jarrad').setScale(crewScale).setTint(0x000000).setAlpha(0.3);
     const jarrad = this.add.image(crewCenterX - crewSpacing/2, crewY, 'jarrad').setScale(crewScale).setDepth(50);
+    // TEM logo badge on Jarrad's chest
+    this.add.image(crewCenterX - crewSpacing/2 + 3, crewY + 10, 'tem-tree-logo').setScale(0.06).setDepth(51);
     
     // Matt
     this.add.image(crewCenterX + crewSpacing/2 + 3, crewY + 3, 'matt').setScale(crewScale).setTint(0x000000).setAlpha(0.3);
     const matt = this.add.image(crewCenterX + crewSpacing/2, crewY, 'matt').setScale(crewScale).setDepth(50);
+    // TEM logo badge on Matt's chest
+    this.add.image(crewCenterX + crewSpacing/2 - 2, crewY + 14, 'tem-tree-logo').setScale(0.06).setDepth(51);
 
     // === MATERIAL BUCKETS (on grass next to crew) ===
     const bucketY = crewY + 55;

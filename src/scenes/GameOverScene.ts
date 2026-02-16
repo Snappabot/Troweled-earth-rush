@@ -149,6 +149,10 @@ export class GameOverScene extends Phaser.Scene {
     const jose = this.add.image(width / 2 - 100, 350, 'jose').setScale(3);
     const jarrad = this.add.image(width / 2, 350, 'jarrad').setScale(3);
     const matt = this.add.image(width / 2 + 100, 350, 'matt').setScale(3);
+    // TEM logo badges
+    this.add.image(width / 2 - 100, 360, 'tem-tree-logo').setScale(0.08).setDepth(51);
+    this.add.image(width / 2, 360, 'tem-tree-logo').setScale(0.08).setDepth(51);
+    this.add.image(width / 2 + 100, 365, 'tem-tree-logo').setScale(0.08).setDepth(51);
 
     // Sad animation (shake head)
     [jose, jarrad, matt].forEach(char => {
@@ -221,6 +225,10 @@ export class GameOverScene extends Phaser.Scene {
     const jose = this.add.image(width / 4, height - 200, 'jose').setScale(3);
     const jarrad = this.add.image(width / 2, height - 200, 'jarrad').setScale(3);
     const matt = this.add.image((width / 4) * 3, height - 200, 'matt').setScale(3);
+    // TEM logo badges
+    this.add.image(width / 4, height - 190, 'tem-tree-logo').setScale(0.08).setDepth(51);
+    this.add.image(width / 2, height - 190, 'tem-tree-logo').setScale(0.08).setDepth(51);
+    this.add.image((width / 4) * 3, height - 185, 'tem-tree-logo').setScale(0.08).setDepth(51);
 
     // Jump animation
     [jose, jarrad, matt].forEach((char, i) => {
