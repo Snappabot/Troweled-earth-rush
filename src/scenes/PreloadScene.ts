@@ -484,7 +484,7 @@ export class PreloadScene extends Phaser.Scene {
   // ============================================
   private createIsometricRoad(): void {
     const g = this.make.graphics({ x: 0, y: 0 });
-    const w = 220, h = 220;
+    const w = 300, h = 220;
     
     // === GRASS VERGE (left) ===
     g.fillStyle(0x4a7a3a, 1);

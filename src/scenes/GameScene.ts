@@ -132,7 +132,7 @@ export class GameScene extends Phaser.Scene {
 
     // Calculate lane positions (4 lanes)
     // Left side goes UP (our direction), Right side goes DOWN (oncoming)
-    const laneWidth = 50;
+    const laneWidth = 65;
     const roadCenter = width / 2;
     this.lane1X = roadCenter - laneWidth * 1.5;  // Far left - player's main lane
     this.lane2X = roadCenter - laneWidth * 0.5;  // Inner left - same direction traffic
@@ -144,7 +144,7 @@ export class GameScene extends Phaser.Scene {
 
     // Van - positioned in lane 1 (far left)
     this.van = this.physics.add.sprite(this.lane1X, height - 250, 'van');
-    this.van.setScale(1.6);
+    this.van.setScale(1.44);
     this.van.setCollideWorldBounds(true);
     this.van.setDrag(50);
     this.van.body?.setSize(32, 50);
@@ -800,7 +800,7 @@ export class GameScene extends Phaser.Scene {
     
     // Create car in right lane (oncoming - going down screen)
     const car = this.oncomingTraffic.create(laneX, -80, 'van') as Phaser.Physics.Arcade.Sprite;
-    car.setScale(1.4);
+    car.setScale(1.26);
     car.setFlipY(true); // Face downward (coming toward us)
     car.setTint(this.getCarTint(type));
     car.setData('type', type);
@@ -809,7 +809,7 @@ export class GameScene extends Phaser.Scene {
     
     // Trucks are bigger and slower
     if (type === 'truck') {
-      car.setScale(1.8);
+      car.setScale(1.62);
       car.setData('speed', this.trafficSpeed - 50);
     }
   }
@@ -827,7 +827,7 @@ export class GameScene extends Phaser.Scene {
     const y = spawnBehind ? this.cameras.main.height + 100 : -80;
     
     const car = this.sameDirectionTraffic.create(this.lane2X, y, 'van') as Phaser.Physics.Arcade.Sprite;
-    car.setScale(1.4);
+    car.setScale(1.26);
     car.setTint(this.getCarTint(type));
     car.setData('type', type);
     // Same direction cars move at varying speeds relative to us
