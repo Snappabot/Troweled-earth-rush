@@ -1529,81 +1529,106 @@ export class PreloadScene extends Phaser.Scene {
 
   private createJarrad(): void {
     const g = this.make.graphics({ x: 0, y: 0 });
-    const w = 75, h = 120;
+    const w = 70, h = 120;
     
     // Shadow
     g.fillStyle(0x000000, 0.3);
-    g.fillEllipse(w/2, h - 6, 50, 15);
+    g.fillEllipse(w/2, h - 6, 45, 14);
     
-    // Legs
-    g.fillStyle(0x2a2a3a, 1);
-    g.fillRoundedRect(20, 72, 16, 36, 5);
-    g.fillRoundedRect(40, 72, 16, 36, 5);
-    g.fillStyle(0x1a1a2a, 0.6);
-    g.fillRect(33, 74, 5, 32);
+    // Legs (dark pants)
+    g.fillStyle(0x2a2a2a, 1);
+    g.fillRoundedRect(18, 72, 14, 36, 5);
+    g.fillRoundedRect(38, 72, 14, 36, 5);
+    g.fillStyle(0x1a1a1a, 0.6);
+    g.fillRect(29, 74, 5, 32);
     
     // Boots
-    g.fillStyle(0x3a2a1a, 1);
-    g.fillRoundedRect(16, 103, 22, 14, 4);
-    g.fillRoundedRect(40, 103, 22, 14, 4);
-    g.fillStyle(0x2a1a0a, 1);
-    g.fillRect(16, 113, 22, 4);
-    g.fillRect(40, 113, 22, 4);
-    
-    // Muscular torso
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(10, 34, 56, 42, 8);
     g.fillStyle(0x2a2a2a, 1);
-    g.fillRect(10, 38, 14, 36);
+    g.fillRoundedRect(14, 103, 20, 14, 4);
+    g.fillRoundedRect(36, 103, 20, 14, 4);
+    g.fillStyle(0x1a1a1a, 1);
+    g.fillRect(14, 113, 20, 4);
+    g.fillRect(36, 113, 20, 4);
+    
+    // Slim torso - Black TEM t-shirt
+    g.fillStyle(0x1a1a1a, 1);
+    g.fillRoundedRect(12, 38, 46, 38, 6);
+    g.fillStyle(0x2a2a2a, 1);
+    g.fillRect(12, 40, 12, 34);
     g.fillStyle(0x0a0a0a, 0.7);
-    g.fillRect(52, 38, 14, 36);
+    g.fillRect(46, 40, 12, 34);
     
     // TEM badge placeholder - actual logo overlaid in scenes
-    g.lineBetween(30, 48, 27, 50);
-    g.lineBetween(46, 48, 49, 50);
     
-    // Muscular arms
+    // Arms (slim)
     g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(-2, 38, 16, 30, 6);
-    g.fillRoundedRect(62, 38, 16, 30, 6);
+    g.fillRoundedRect(2, 40, 14, 28, 5);
+    g.fillRoundedRect(54, 40, 14, 28, 5);
     
     // Hands
     g.fillStyle(0xe8c4a0, 1);
-    g.fillRoundedRect(-2, 64, 16, 14, 5);
-    g.fillRoundedRect(62, 64, 16, 14, 5);
+    g.fillRoundedRect(2, 64, 14, 14, 5);
+    g.fillRoundedRect(54, 64, 14, 14, 5);
     
     // Neck
     g.fillStyle(0xe8c4a0, 1);
-    g.fillRect(30, 26, 16, 12);
+    g.fillRect(28, 30, 14, 12);
     
-    // Head
+    // Head - oval
     g.fillStyle(0xe8c4a0, 1);
-    g.fillCircle(38, 14, 18);
+    g.fillEllipse(35, 16, 15, 18);
     
-    // Top knot
-    g.fillStyle(0x4a3a2a, 1);
-    g.slice(38, 12, 17, Math.PI * 1.15, Math.PI * -0.15, false);
-    g.fillPath();
-    g.fillCircle(38, -5, 10);
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRect(34, 0, 8, 4);
+    // Dark curly/wavy messy hair
+    g.fillStyle(0x3a2a1a, 1);
+    g.fillEllipse(35, 4, 15, 10);
+    g.fillEllipse(25, 8, 8, 8);
+    g.fillEllipse(45, 8, 8, 8);
+    g.fillEllipse(35, 8, 14, 8);
+    // Messy curly bits
+    g.fillStyle(0x2a1a0a, 0.8);
+    g.fillEllipse(22, 6, 5, 6);
+    g.fillEllipse(48, 6, 5, 6);
+    g.fillEllipse(30, 2, 6, 5);
+    g.fillEllipse(40, 1, 6, 5);
+    g.fillEllipse(35, 0, 5, 4);
     
-    // Glasses
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillRoundedRect(24, 10, 12, 9, 2);
-    g.fillRoundedRect(40, 10, 12, 9, 2);
-    g.fillRect(36, 13, 4, 2);
-    g.fillStyle(0x3a5a7a, 0.5);
-    g.fillRect(26, 12, 8, 5);
-    g.fillRect(42, 12, 8, 5);
+    // Re-draw face
+    g.fillStyle(0xe8c4a0, 1);
+    g.fillEllipse(35, 18, 13, 14);
     
-    // Friendly expression
+    // Thick rectangular glasses (like photo)
+    g.lineStyle(2, 0x1a1a1a, 1);
+    g.strokeRoundedRect(22, 12, 12, 9, 2);
+    g.strokeRoundedRect(36, 12, 12, 9, 2);
+    g.lineStyle(2, 0x1a1a1a, 1);
+    g.lineBetween(34, 16, 36, 16); // bridge
+    g.lineBetween(22, 15, 19, 13); // left arm
+    g.lineBetween(48, 15, 51, 13); // right arm
+    // Clear lenses
+    g.fillStyle(0xddeeff, 0.15);
+    g.fillRoundedRect(23, 13, 10, 7, 1);
+    g.fillRoundedRect(37, 13, 10, 7, 1);
+    // Brown eyes
+    g.fillStyle(0x5a3a1a, 1);
+    g.fillCircle(28, 16, 2);
+    g.fillCircle(42, 16, 2);
     g.fillStyle(0x1a1a1a, 1);
-    g.fillCircle(30, 12, 2);
-    g.fillCircle(46, 12, 2);
-    g.lineStyle(2, 0xb8a080);
+    g.fillCircle(28, 16, 1);
+    g.fillCircle(42, 16, 1);
+    
+    // Short beard/stubble
+    g.fillStyle(0x3a2a1a, 0.5);
+    g.fillEllipse(35, 27, 9, 5);
+    g.fillRoundedRect(28, 23, 14, 6, 3);
+    
+    // Nose
+    g.fillStyle(0xd8b490, 1);
+    g.fillEllipse(35, 22, 2.5, 3);
+    
+    // Friendly smirk (like photo)
+    g.lineStyle(1.5, 0xb09080, 0.8);
     g.beginPath();
-    g.arc(38, 22, 4, 0.2, Math.PI - 0.2);
+    g.arc(35, 25, 4, 0.1, Math.PI - 0.4);
     g.strokePath();
     
     g.generateTexture('jarrad', w, h);
