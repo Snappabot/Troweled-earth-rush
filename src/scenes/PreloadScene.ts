@@ -1497,30 +1497,42 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0xc49a6c, 1);
     g.fillEllipse(35, 20, 12, 13);
     
-    // Glasses frames (rectangular, clear lenses like the photo)
-    g.lineStyle(1.5, 0x2a2a2a, 1);
-    g.strokeRoundedRect(23, 14, 11, 8, 2);
-    g.strokeRoundedRect(36, 14, 11, 8, 2);
-    g.lineBetween(34, 17, 36, 17); // bridge
-    g.lineBetween(23, 17, 20, 15); // left arm
-    g.lineBetween(47, 17, 50, 15); // right arm
-    // Clear lenses (very slight tint)
-    g.fillStyle(0xddeeff, 0.2);
-    g.fillRoundedRect(24, 15, 9, 6, 1);
-    g.fillRoundedRect(37, 15, 9, 6, 1);
-    // Eyes behind lenses
+    // Cartoon eyes (big, round, white with pupils)
+    g.fillStyle(0xffffff, 1);
+    g.fillEllipse(28, 16, 5, 5);
+    g.fillEllipse(42, 16, 5, 5);
     g.fillStyle(0x3a2a1a, 1);
-    g.fillCircle(28, 17, 1.5);
-    g.fillCircle(42, 17, 1.5);
+    g.fillCircle(29, 16, 2.5);
+    g.fillCircle(43, 16, 2.5);
+    g.fillStyle(0x000000, 1);
+    g.fillCircle(29, 16, 1.2);
+    g.fillCircle(43, 16, 1.2);
+    // Eye shine
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(30, 15, 0.8);
+    g.fillCircle(44, 15, 0.8);
+    
+    // Glasses frames (rectangular, clear)
+    g.lineStyle(1.5, 0x2a2a2a, 1);
+    g.strokeRoundedRect(22, 12, 13, 9, 2);
+    g.strokeRoundedRect(35, 12, 13, 9, 2);
+    g.lineBetween(35, 16, 35, 16); // bridge
+    g.lineBetween(22, 16, 19, 14); // left arm
+    g.lineBetween(48, 16, 51, 14); // right arm
+    
+    // Eyebrows
+    g.lineStyle(2, 0x4a2a10, 1);
+    g.lineBetween(24, 10, 33, 10);
+    g.lineBetween(37, 10, 46, 10);
     
     // Nose
     g.fillStyle(0xb08a5c, 1);
-    g.fillEllipse(35, 23, 2.5, 3);
+    g.fillEllipse(35, 23, 3, 3);
     
-    // Mouth (subtle)
-    g.lineStyle(1, 0x9a7a5a, 0.7);
+    // Friendly smile
+    g.lineStyle(1.5, 0x8a5a3a, 1);
     g.beginPath();
-    g.arc(35, 26, 3, 0.3, Math.PI - 0.3);
+    g.arc(35, 26, 5, 0.2, Math.PI - 0.2);
     g.strokePath();
     
     g.generateTexture('jose', w, h);
@@ -1594,39 +1606,46 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0xe8c4a0, 1);
     g.fillEllipse(35, 18, 13, 14);
     
-    // Thick rectangular glasses (like photo)
+    // Cartoon eyes (big, round)
+    g.fillStyle(0xffffff, 1);
+    g.fillEllipse(28, 15, 5, 5);
+    g.fillEllipse(42, 15, 5, 5);
+    g.fillStyle(0x5a3a1a, 1);
+    g.fillCircle(29, 15, 2.5);
+    g.fillCircle(43, 15, 2.5);
+    g.fillStyle(0x000000, 1);
+    g.fillCircle(29, 15, 1.2);
+    g.fillCircle(43, 15, 1.2);
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(30, 14, 0.8);
+    g.fillCircle(44, 14, 0.8);
+    
+    // Thick rectangular glasses
     g.lineStyle(2, 0x1a1a1a, 1);
-    g.strokeRoundedRect(22, 12, 12, 9, 2);
-    g.strokeRoundedRect(36, 12, 12, 9, 2);
-    g.lineStyle(2, 0x1a1a1a, 1);
-    g.lineBetween(34, 16, 36, 16); // bridge
+    g.strokeRoundedRect(22, 11, 13, 9, 2);
+    g.strokeRoundedRect(35, 11, 13, 9, 2);
+    g.lineBetween(35, 15, 35, 15); // bridge
     g.lineBetween(22, 15, 19, 13); // left arm
     g.lineBetween(48, 15, 51, 13); // right arm
-    // Clear lenses
-    g.fillStyle(0xddeeff, 0.15);
-    g.fillRoundedRect(23, 13, 10, 7, 1);
-    g.fillRoundedRect(37, 13, 10, 7, 1);
-    // Brown eyes
-    g.fillStyle(0x5a3a1a, 1);
-    g.fillCircle(28, 16, 2);
-    g.fillCircle(42, 16, 2);
-    g.fillStyle(0x1a1a1a, 1);
-    g.fillCircle(28, 16, 1);
-    g.fillCircle(42, 16, 1);
+    
+    // Eyebrows
+    g.lineStyle(2, 0x3a2a1a, 1);
+    g.lineBetween(24, 9, 33, 9);
+    g.lineBetween(37, 9, 46, 9);
     
     // Short beard/stubble
     g.fillStyle(0x3a2a1a, 0.5);
-    g.fillEllipse(35, 27, 9, 5);
-    g.fillRoundedRect(28, 23, 14, 6, 3);
+    g.fillEllipse(35, 28, 9, 5);
+    g.fillRoundedRect(28, 24, 14, 6, 3);
     
     // Nose
     g.fillStyle(0xd8b490, 1);
-    g.fillEllipse(35, 22, 2.5, 3);
+    g.fillEllipse(35, 22, 3, 3);
     
-    // Friendly smirk (like photo)
-    g.lineStyle(1.5, 0xb09080, 0.8);
+    // Friendly smirk
+    g.lineStyle(1.5, 0x9a7060, 1);
     g.beginPath();
-    g.arc(35, 25, 4, 0.1, Math.PI - 0.4);
+    g.arc(35, 26, 5, 0.1, Math.PI - 0.4);
     g.strokePath();
     
     g.generateTexture('jarrad', w, h);
@@ -1708,34 +1727,39 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0xe8c4a0, 1);
     g.fillEllipse(35, 20, 12, 13);
     
-    // Glasses (rectangular, dark frames like photo)
-    g.lineStyle(1.5, 0x1a1a1a, 1);
-    g.strokeRoundedRect(23, 14, 11, 8, 2);
-    g.strokeRoundedRect(36, 14, 11, 8, 2);
-    g.lineBetween(34, 17, 36, 17); // bridge
-    g.lineBetween(23, 17, 20, 15); // left arm
-    g.lineBetween(47, 17, 50, 15); // right arm
-    // Clear lenses
-    g.fillStyle(0xddeeff, 0.15);
-    g.fillRoundedRect(24, 15, 9, 6, 1);
-    g.fillRoundedRect(37, 15, 9, 6, 1);
-    // Eyes
-    g.fillStyle(0x3a3a3a, 1);
-    g.fillCircle(28, 17, 1.5);
-    g.fillCircle(42, 17, 1.5);
+    // Big worried cartoon eyes (no glasses - like the illustration)
+    g.fillStyle(0xffffff, 1);
+    g.fillEllipse(27, 16, 6, 6);
+    g.fillEllipse(43, 16, 6, 6);
+    // Pupils (slightly looking up = worried)
+    g.fillStyle(0x4a4a4a, 1);
+    g.fillCircle(27, 15, 2.5);
+    g.fillCircle(43, 15, 2.5);
+    g.fillStyle(0x000000, 1);
+    g.fillCircle(27, 15, 1.2);
+    g.fillCircle(43, 15, 1.2);
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(28, 14, 0.8);
+    g.fillCircle(44, 14, 0.8);
+    // Eye outlines
+    g.lineStyle(1, 0x5a4a3a, 0.5);
+    g.strokeEllipse(27, 16, 6, 6);
+    g.strokeEllipse(43, 16, 6, 6);
     
-    // Short beard/stubble
-    g.fillStyle(0x3a3028, 0.5);
-    g.fillEllipse(35, 27, 8, 5);
-    g.fillRoundedRect(29, 24, 12, 6, 3);
+    // Worried eyebrows (angled up in middle)
+    g.lineStyle(2, 0x3a3028, 1);
+    g.lineBetween(21, 10, 31, 12);
+    g.lineBetween(49, 10, 39, 12);
     
     // Nose
     g.fillStyle(0xd8b490, 1);
-    g.fillEllipse(35, 22, 2.5, 3);
+    g.fillEllipse(35, 22, 3, 3);
     
-    // Mouth (neutral)
-    g.lineStyle(1, 0xb09080, 0.7);
-    g.lineBetween(31, 25, 39, 25);
+    // Worried grimace mouth
+    g.lineStyle(1.5, 0x9a7060, 1);
+    g.beginPath();
+    g.arc(35, 28, 5, Math.PI + 0.3, -0.3);
+    g.strokePath();
     
     g.generateTexture('matt', w, h);
     g.destroy();
