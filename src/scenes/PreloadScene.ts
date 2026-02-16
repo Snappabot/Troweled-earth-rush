@@ -241,10 +241,7 @@ export class PreloadScene extends Phaser.Scene {
     
     // Tree logo placeholder - actual inverted logo overlaid in scenes
     
-    // "Troweled Earth" text area (white)
-    g.fillStyle(0xffffff, 1);
-    g.fillRoundedRect(54, 24, 72, 14, 2);
-    g.fillRoundedRect(54, 42, 72, 10, 2);
+    // "Troweled Earth" text on copper panel (drawn in MenuScene as image text)
     
     // === WINDOWS ===
     // Side windows (dark tint)
