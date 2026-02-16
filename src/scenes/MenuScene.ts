@@ -85,13 +85,13 @@ export class MenuScene extends Phaser.Scene {
     this.add.image(crewCenterX - crewSpacing/2 + 3, crewY + 3, 'jarrad').setScale(crewScale).setTint(0x000000).setAlpha(0.3);
     const jarrad = this.add.image(crewCenterX - crewSpacing/2, crewY, 'jarrad').setScale(crewScale).setDepth(50);
     // TEM logo badge on Jarrad's chest
-    this.add.image(crewCenterX - crewSpacing/2 + 3, crewY + 10, 'tem-logo-inverted').setScale(0.06).setDepth(51);
+    this.add.image(crewCenterX - crewSpacing/2 + 3, crewY + 10, 'tem-logo-inverted').setScale(0.035).setDepth(51);
     
     // Matt
     this.add.image(crewCenterX + crewSpacing/2 + 3, crewY + 3, 'matt').setScale(crewScale).setTint(0x000000).setAlpha(0.3);
     const matt = this.add.image(crewCenterX + crewSpacing/2, crewY, 'matt').setScale(crewScale).setDepth(50);
     // TEM logo badge on Matt's chest
-    this.add.image(crewCenterX + crewSpacing/2 - 2, crewY + 14, 'tem-logo-inverted').setScale(0.06).setDepth(51);
+    this.add.image(crewCenterX + crewSpacing/2 - 2, crewY + 14, 'tem-logo-inverted').setScale(0.035).setDepth(51);
 
     // === MATERIAL BUCKETS (on grass next to crew) ===
     const bucketY = crewY + 55;
@@ -130,18 +130,15 @@ export class MenuScene extends Phaser.Scene {
     const vanLogo = this.add.image(vanTexture === 'van-side' ? -52 : 0, vanTexture === 'van-side' ? 0 : 0, 'tem-logo-inverted');
     vanLogo.setScale(vanTexture === 'van-side' ? 0.12 : 0.08);
     // "Troweled Earth" text on van copper panel
-    const vanText1 = this.add.text(-15, -8, 'Troweled Earth', {
-      fontFamily: 'Georgia, serif',
-      fontSize: '7px',
-      color: '#0a0a0a',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    const vanText2 = this.add.text(-15, 3, 'Melbourne', {
-      fontFamily: 'Georgia, serif',
+    const vanText1 = this.add.text(10, -6, 'TROWELED\nEARTH', {
+      fontFamily: 'Arial Black, sans-serif',
       fontSize: '5px',
-      color: '#0a0a0a'
+      color: '#0a0a0a',
+      fontStyle: 'bold',
+      align: 'center',
+      lineSpacing: -1
     }).setOrigin(0.5);
-    vanContainer.add([van, vanLogo, vanText1, vanText2, joseHead]);
+    vanContainer.add([van, vanLogo, vanText1, joseHead]);
     
     // Jose label (above van - adjusted for bigger van)
     const joseLabelY = vanCenterY - 100;
