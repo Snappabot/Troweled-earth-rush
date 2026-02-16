@@ -1475,29 +1475,18 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0x0a0a0a, 0.7);
     g.fillRect(46, 40, 12, 30);
     
-    // TEM badge - inverted logo (white tree on dark circle)
+    // TEM badge - simple white tree on dark circle
     g.fillStyle(0x0a0a0a, 1);
     g.fillCircle(35, 52, 10);
     g.lineStyle(1.5, 0xffffff, 1);
     g.strokeCircle(35, 52, 9);
-    // White bare tree - matching actual TEM logo
-    g.lineStyle(2, 0xffffff, 1);
-    // Trunk
-    g.lineBetween(35, 58, 35, 46);
-    // Main left branch
-    g.lineBetween(35, 48, 27, 44);
-    g.lineBetween(27, 44, 24, 45);
-    g.lineBetween(27, 44, 25, 42);
-    // Main right branch
-    g.lineBetween(35, 48, 43, 44);
-    g.lineBetween(43, 44, 46, 45);
-    g.lineBetween(43, 44, 45, 42);
-    // Upper branches
-    g.lineBetween(35, 50, 29, 47);
-    g.lineBetween(35, 50, 41, 47);
-    g.lineStyle(1, 0xffffff, 1);
-    g.lineBetween(29, 47, 27, 48);
-    g.lineBetween(41, 47, 43, 48);
+    // Simple tree silhouette
+    g.lineStyle(1.5, 0xffffff, 1);
+    g.lineBetween(35, 59, 35, 48); // trunk
+    g.lineBetween(35, 50, 29, 46); // left branch
+    g.lineBetween(35, 50, 41, 46); // right branch
+    g.lineBetween(35, 48, 31, 44); // upper left
+    g.lineBetween(35, 48, 39, 44); // upper right
     
     // Arms
     g.fillStyle(0x1a1a1a, 1);
@@ -1608,27 +1597,18 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0x0a0a0a, 0.7);
     g.fillRect(52, 38, 14, 36);
     
-    // TEM badge - inverted logo (white tree on dark circle)
+    // TEM badge - simple white tree on dark circle
     g.fillStyle(0x0a0a0a, 1);
     g.fillCircle(38, 54, 12);
     g.lineStyle(1.5, 0xffffff, 1);
     g.strokeCircle(38, 54, 11);
-    // White bare tree - matching actual TEM logo
-    g.lineStyle(2.5, 0xffffff, 1);
-    // Trunk
-    g.lineBetween(38, 62, 38, 47);
-    // Main left branch
-    g.lineBetween(38, 50, 28, 44);
-    g.lineBetween(28, 44, 24, 46);
-    g.lineBetween(28, 44, 25, 42);
-    // Main right branch
-    g.lineBetween(38, 50, 48, 44);
-    g.lineBetween(48, 44, 52, 46);
-    g.lineBetween(48, 44, 51, 42);
-    // Upper branches
-    g.lineBetween(38, 52, 30, 48);
-    g.lineBetween(38, 52, 46, 48);
+    // Simple tree silhouette
     g.lineStyle(1.5, 0xffffff, 1);
+    g.lineBetween(38, 62, 38, 49); // trunk
+    g.lineBetween(38, 52, 30, 47); // left branch
+    g.lineBetween(38, 52, 46, 47); // right branch
+    g.lineBetween(38, 49, 33, 44); // upper left
+    g.lineBetween(38, 49, 43, 44); // upper right
     g.lineBetween(30, 48, 27, 50);
     g.lineBetween(46, 48, 49, 50);
     
@@ -1711,27 +1691,18 @@ export class PreloadScene extends Phaser.Scene {
     g.fillStyle(0x0a0a0a, 0.7);
     g.fillRect(42, 45, 10, 35);
     
-    // TEM badge - inverted logo (white tree on dark circle)
+    // TEM badge - simple white tree on dark circle
     g.fillStyle(0x0a0a0a, 1);
     g.fillCircle(33, 58, 10);
     g.lineStyle(1.5, 0xffffff, 1);
     g.strokeCircle(33, 58, 9);
-    // White bare tree - matching actual TEM logo
-    g.lineStyle(2, 0xffffff, 1);
-    // Trunk
-    g.lineBetween(33, 64, 33, 52);
-    // Main left branch
-    g.lineBetween(33, 54, 25, 50);
-    g.lineBetween(25, 50, 22, 52);
-    g.lineBetween(25, 50, 23, 48);
-    // Main right branch
-    g.lineBetween(33, 54, 41, 50);
-    g.lineBetween(41, 50, 44, 52);
-    g.lineBetween(41, 50, 43, 48);
-    // Upper branches
-    g.lineBetween(33, 56, 27, 53);
-    g.lineBetween(33, 56, 39, 53);
-    g.lineStyle(1, 0xffffff, 1);
+    // Simple tree silhouette
+    g.lineStyle(1.5, 0xffffff, 1);
+    g.lineBetween(33, 65, 33, 54); // trunk
+    g.lineBetween(33, 56, 27, 52); // left branch
+    g.lineBetween(33, 56, 39, 52); // right branch
+    g.lineBetween(33, 54, 29, 50); // upper left
+    g.lineBetween(33, 54, 37, 50); // upper right
     g.lineBetween(27, 53, 25, 54);
     g.lineBetween(39, 53, 41, 54);
     
