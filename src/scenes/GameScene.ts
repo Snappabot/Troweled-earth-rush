@@ -132,7 +132,7 @@ export class GameScene extends Phaser.Scene {
 
     // Calculate lane positions (4 lanes)
     // Left side goes UP (our direction), Right side goes DOWN (oncoming)
-    const laneWidth = 85;
+    const laneWidth = 110;
     const roadCenter = width / 2;
     this.lane1X = roadCenter - laneWidth * 1.5;  // Far left - player's main lane
     this.lane2X = roadCenter - laneWidth * 0.5;  // Inner left - same direction traffic
