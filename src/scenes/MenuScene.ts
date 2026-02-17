@@ -107,7 +107,7 @@ export class MenuScene extends Phaser.Scene {
     this.add.text(crewCenterX + crewSpacing/2, labelY, 'MATT', labelStyle).setOrigin(0.5).setDepth(60);
 
     // === VAN (drives ON the road with Jose) ===
-    const vanCenterY = roadY + roadHeight/2;  // Center of road
+    const vanCenterY = roadY - 100;  // Van above road, wheels touching
     const vanStartX = -400;  // Start further off screen (bigger van)
     const vanEndX = width - 200;  // End position for bigger van
     
@@ -129,16 +129,16 @@ export class MenuScene extends Phaser.Scene {
     // TEM inverted logo on van branding panel
     const vanLogo = this.add.image(vanTexture === 'van-side' ? -180 : 0, vanTexture === 'van-side' ? 0 : 0, 'tem-logo-inverted');
     vanLogo.setScale(vanTexture === 'van-side' ? 0.36 : 0.08);
-    // "Troweled Earth" text on van copper panel - BIG
-    const vanText1 = this.add.text(20, -6, 'Troweled Earth', {
+    // "Troweled Earth" text on van copper panel - HUGE
+    const vanText1 = this.add.text(30, -10, 'Troweled Earth', {
       fontFamily: 'Georgia, serif',
-      fontSize: '14px',
+      fontSize: '28px',
       color: '#0a0a0a',
       fontStyle: 'bold'
     }).setOrigin(0.5);
-    const vanText2 = this.add.text(20, 8, 'Innovative Wall Coatings', {
+    const vanText2 = this.add.text(30, 14, 'Innovative Wall Coatings', {
       fontFamily: 'Georgia, serif',
-      fontSize: '7px',
+      fontSize: '12px',
       color: '#1a1a1a'
     }).setOrigin(0.5);
     vanContainer.add([van, vanLogo, vanText1, vanText2, joseHead]);
@@ -155,17 +155,39 @@ export class MenuScene extends Phaser.Scene {
       ease: 'Power2.easeOut',
       delay: 300,
       onComplete: () => {
-        // Show Jose label
-        this.tweens.add({ targets: joseLabel, alpha: 1, duration: 300 });
+        // Jose jumps out of van!
+        const joseChar = this.add.image(vanEndX + 130, vanCenterY - 40, 'jose').setScale(2.2).setDepth(55).setAlpha(0);
+        const joseBadge = this.add.image(vanEndX + 130, vanCenterY - 42, 'tem-logo-inverted').setScale(0.035).setDepth(56).setAlpha(0);
         
-        // Jose waves
+        // Jump out animation
         this.tweens.add({
-          targets: joseHead,
-          y: joseHead.y - 12,
-          duration: 200,
-          yoyo: true,
-          repeat: 2
+          targets: [joseChar, joseBadge],
+          alpha: 1,
+          duration: 100,
+          onComplete: () => {
+            // Land on ground
+            this.tweens.add({
+              targets: joseChar,
+              y: vanCenterY + 80,
+              x: vanEndX + 180,
+              duration: 400,
+              ease: 'Bounce.easeOut'
+            });
+            this.tweens.add({
+              targets: joseBadge,
+              y: vanCenterY + 78,
+              x: vanEndX + 180,
+              duration: 400,
+              ease: 'Bounce.easeOut'
+            });
+            // Show Jose label
+            joseLabel.setPosition(vanEndX + 180, vanCenterY + 130);
+            this.tweens.add({ targets: joseLabel, alpha: 1, duration: 300, delay: 400 });
+          }
         });
+        
+        // Hide Jose head from van window
+        this.tweens.add({ targets: joseHead, alpha: 0, duration: 200 });
         
         // Van idle bounce
         this.tweens.add({
