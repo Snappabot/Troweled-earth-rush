@@ -64,7 +64,7 @@ export class InputManager {
       touch-action: none;
       user-select: none;
     `;
-        brakeBtn.textContent = 'BRAKE';
+        brakeBtn.textContent = 'REV';
         document.body.appendChild(brakeBtn);
         brakeBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();

@@ -3,17 +3,15 @@ import { VanModel } from './VanModel';
 import { InputManager } from '../core/InputManager';
 
 const PHYSICS = {
-  maxSpeed: 40,           // Much faster
-  acceleration: 28,       // Snappier acceleration
-  brakeForce: 40,
-  friction: 0.92,         // Less friction = more slide
+  maxSpeed: 80,           // Doubled
+  acceleration: 55,       // Doubled
+  reverseForce: 45,       // Brake button now applies reverse
+  friction: 0.92,
   steerSpeed: 2.2,
   steerFriction: 0.70,
   minSpeedToSteer: 0.5,
-  // Drift: how strongly velocity direction follows heading
-  // 0 = full drift (velocity never follows heading), 1 = full grip (no drift)
-  gripAtLowSpeed: 12.0,   // Strong grip when slow
-  gripAtHighSpeed: 3.5,   // Weak grip when fast = drift
+  gripAtLowSpeed: 12.0,
+  gripAtHighSpeed: 3.5,
 };
 
 function normalizeAngle(a: number): number {
@@ -41,18 +39,17 @@ export class VanPhysics {
     // --- THROTTLE ---
     if (this.input.forward) {
       this.speed += PHYSICS.acceleration * dt;
-    } else if (this.input.backward) {
-      this.speed -= PHYSICS.acceleration * 0.6 * dt;
     }
 
-    // --- BRAKING ---
+    // --- BRAKE = REVERSE ---
+    // If moving forward, slows down fast. If stopped, reverses.
     if (this.input.brake) {
-      this.speed *= 1 - (PHYSICS.brakeForce * dt);
+      this.speed -= PHYSICS.reverseForce * dt;
     }
 
     // --- FRICTION ---
     this.speed *= Math.pow(PHYSICS.friction, dt * 60);
-    this.speed = Math.max(-PHYSICS.maxSpeed * 0.4, Math.min(PHYSICS.maxSpeed, this.speed));
+    this.speed = Math.max(-PHYSICS.maxSpeed * 0.5, Math.min(PHYSICS.maxSpeed, this.speed));
 
     // --- STEERING ---
     if (absSpeed > PHYSICS.minSpeedToSteer) {
