@@ -24,9 +24,10 @@ export class VanPhysics {
   }
 
   update(dt: number) {
-    // Throttle — analog from joystick, binary from keyboard
+    // Gas button OR keyboard W/ArrowUp = full throttle forward
+    // Keyboard S/ArrowDown = reverse
     const throttleInput = this.input.forward ? 1 : this.input.backward ? -0.6 :
-      Math.abs(this.input.throttleAxis) > 0.2 ? this.input.throttleAxis : 0;
+      this.input.throttleAxis > 0 ? this.input.throttleAxis : 0;
     this.speed += throttleInput * PHYSICS.acceleration * dt;
 
     // Braking

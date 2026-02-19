@@ -34,12 +34,12 @@ export class InputManager {
         this.joystickManager.on('move', (_evt, data) => {
             if (data.vector) {
                 this.steerAxis = data.vector.x;
-                this.throttleAxis = data.vector.y;
+                this.throttleAxis = 0; // joystick Y ignored — throttle is GAS button only
             }
         });
         this.joystickManager.on('end', () => {
             this.steerAxis = 0;
-            this.throttleAxis = 0;
+            // throttleAxis is managed by the GAS button — don't reset here
         });
         // Brake button
         const brakeBtn = document.createElement('div');
@@ -75,6 +75,41 @@ export class InputManager {
             e.preventDefault();
             this.braking = false;
             brakeBtn.style.background = 'rgba(220, 50, 50, 0.6)';
+        });
+        // GAS button — above brake
+        const gasBtn = document.createElement('div');
+        gasBtn.style.cssText = `
+      position: fixed;
+      bottom: 140px;
+      right: 30px;
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: rgba(50, 200, 50, 0.6);
+      border: 3px solid rgba(100, 255, 100, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-family: monospace;
+      font-weight: bold;
+      font-size: 14px;
+      letter-spacing: 1px;
+      z-index: 100;
+      touch-action: none;
+      user-select: none;
+    `;
+        gasBtn.textContent = 'GAS';
+        document.body.appendChild(gasBtn);
+        gasBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            this.throttleAxis = 1;
+            gasBtn.style.background = 'rgba(50, 200, 50, 0.9)';
+        });
+        gasBtn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            this.throttleAxis = 0;
+            gasBtn.style.background = 'rgba(50, 200, 50, 0.6)';
         });
     }
     get forward() { return this.keys['ArrowUp'] || this.keys['KeyW'] || this.throttleAxis > 0.2; }
