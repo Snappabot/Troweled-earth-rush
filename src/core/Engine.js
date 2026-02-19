@@ -6,16 +6,28 @@ export class Engine {
     camera;
     updateCallbacks = [];
     lastTime = 0;
+    // ── TE Plaster Palette ──
+    C = {
+        modernGrey: 0xC8C4BC, // Cool pearl grey — modern civic
+        warmGrey: 0xB8B0A6, // Warm grey — residential
+        terracotta: 0xC49A7A, // Earthy terracotta — Mediterranean
+        deepClay: 0xA07858, // Deep clay — accents/shadow buildings
+        softWhite: 0xE8E4DC, // Window surrounds, trim, parapets
+        charcoal: 0x4A4A4A, // Iron grilles, metal details
+        warmCream: 0xD4C9B8, // Cream — villas
+        oliveGreen: 0x8A9B6A, // Planting, feature walls
+        ironRed: 0xC1666B, // TEM brand accent (use sparingly)
+    };
     async init() {
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: false });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = false; // Performance: no shadows
+        this.renderer.shadowMap.enabled = false;
         document.body.appendChild(this.renderer.domElement);
         // Scene
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x87CEEB); // Sky blue
+        this.scene.background = new THREE.Color(0x87CEEB);
         this.scene.fog = new THREE.Fog(0x87CEEB, 200, 500);
         // Camera
         this.camera = new CameraController();
@@ -24,9 +36,8 @@ export class Engine {
         const ambient = new THREE.AmbientLight(0xffffff, 0.6);
         this.scene.add(ambient);
         const sun = new THREE.DirectionalLight(0xfff4e0, 1.2);
-        sun.position.set(80, 120, 40); // Dramatic angle
+        sun.position.set(80, 120, 40);
         this.scene.add(sun);
-        // Fill light from opposite direction, warm colour
         const fill = new THREE.DirectionalLight(0xffe8d0, 0.5);
         fill.position.set(-60, 40, -80);
         this.scene.add(fill);
@@ -40,11 +51,41 @@ export class Engine {
             this.camera.camera.updateProjectionMatrix();
         });
     }
-    // Deterministic pseudo-random from position + salt
+    // ── Deterministic pseudo-random from position + salt ──
     seed(x, z, salt = 0) {
         const n = Math.sin(x * 127.1 + z * 311.7 + salt * 74.3) * 43758.5453123;
         return n - Math.floor(n);
     }
+    // ── Zone detection by block centre position ──
+    getZone(bx, bz) {
+        if (Math.abs(bx) < 80 && Math.abs(bz) < 80)
+            return 'cbd';
+        if (bx < -80)
+            return 'footscray';
+        if (bx > 80)
+            return 'richmond';
+        if (bz < -80)
+            return 'stkilda';
+        return 'brunswick';
+    }
+    // ── Zone → building type, cumulative weights for [A, B, C, D, E] ──
+    pickBuildingType(zone, roll) {
+        const zoneWeights = {
+            cbd: [0.50, 0.50, 0.90, 1.00, 1.00], // 50%A 40%C 10%D
+            footscray: [0.00, 0.20, 0.20, 0.40, 1.00], // 20%B 20%D 60%E
+            brunswick: [0.30, 0.60, 0.60, 1.00, 1.00], // 30%A 30%B 40%D
+            richmond: [0.30, 0.30, 0.60, 1.00, 1.00], // 30%A 30%C 40%D
+            stkilda: [0.00, 0.30, 0.30, 0.70, 1.00], // 30%B 40%D 30%E
+        };
+        const weights = zoneWeights[zone] ?? zoneWeights['brunswick'];
+        const types = ['A', 'B', 'C', 'D', 'E'];
+        for (let i = 0; i < weights.length; i++) {
+            if (roll < weights[i])
+                return types[i];
+        }
+        return 'D';
+    }
+    // ── City ground — zone-based tile colours ──
     createCityGround() {
         const RANGE = 240;
         const GRID = 40;
@@ -56,14 +97,21 @@ export class Engine {
         baseGround.rotation.x = -Math.PI / 2;
         baseGround.position.y = 0;
         this.scene.add(baseGround);
-        // Per-block ground tiles between roads
+        const zoneColours = {
+            cbd: 0x888880, // urban concrete
+            footscray: 0x776655, // worn industrial
+            brunswick: 0x887766, // mixed
+            richmond: 0x7a7870, // clean urban
+            stkilda: 0x8a9080, // coastal
+        };
         for (let bx = -RANGE; bx < RANGE; bx += GRID) {
             for (let bz = -RANGE; bz < RANGE; bz += GRID) {
                 const cx = bx + GRID / 2;
                 const cz = bz + GRID / 2;
-                // ~30% grass, 70% urban
+                const zone = this.getZone(cx, cz);
                 const r = this.seed(bx, bz, 0);
-                const colour = r < 0.3 ? 0x4a7c4e : 0x888880;
+                // 15% grass blocks for non-road tiles
+                const colour = r < 0.15 ? 0x5a7a4a : zoneColours[zone];
                 const tileMat = new THREE.MeshLambertMaterial({ color: colour });
                 const tile = new THREE.Mesh(new THREE.PlaneGeometry(BLOCK - 2, BLOCK - 2), tileMat);
                 tile.rotation.x = -Math.PI / 2;
@@ -111,13 +159,10 @@ export class Engine {
                 this.scene.add(dash);
             }
             // Trees along sidewalks (horizontal road, z = constant)
-            // Sidewalk strip is 5–6 units from road centre; place at 5.5
             for (let x = -RANGE; x <= RANGE; x += 20) {
                 for (const side of [-1, 1]) {
-                    // Jitter only along the road (x-axis), NOT perpendicular
                     const tx = x + (this.seed(x, z, 50 + side) - 0.5) * 2;
                     const tz = z + side * 5.5;
-                    // Skip if within 6 units of a vertical road (intersection)
                     const rem = ((tx % GRID) + GRID) % GRID;
                     if (Math.min(rem, GRID - rem) <= 6)
                         continue;
@@ -165,13 +210,10 @@ export class Engine {
                 this.scene.add(dash);
             }
             // Trees along sidewalks (vertical road, x = constant)
-            // Sidewalk strip is 5–6 units from road centre; place at 5.5
             for (let z = -RANGE; z <= RANGE; z += 20) {
                 for (const side of [-1, 1]) {
                     const tx = x + side * 5.5;
-                    // Jitter only along the road (z-axis), NOT perpendicular
                     const tz = z + (this.seed(x, z, 52 + side) - 0.5) * 2;
-                    // Skip if within 6 units of a horizontal road (intersection)
                     const rem = ((tz % GRID) + GRID) % GRID;
                     if (Math.min(rem, GRID - rem) <= 6)
                         continue;
@@ -224,118 +266,234 @@ export class Engine {
         const car = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 3), carMat);
         car.position.set(x, 0.6, z);
         this.scene.add(car);
-        // Windscreen hint
         const wsMat = new THREE.MeshLambertMaterial({ color: 0x223344 });
         const ws = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 0.1), wsMat);
         ws.position.set(x, 1.3, z - 0.9);
         this.scene.add(ws);
     }
-    // ── Populate a city block with 1–4 buildings ──
+    // ── Populate a city block with 1–2 buildings ──
     populateBlock(bx, bz, GRID, ROAD_W) {
-        const usable = GRID - ROAD_W - 4;
+        const usable = GRID - ROAD_W - 4; // ~28 units of usable space
         const cx = bx + GRID / 2;
         const cz = bz + GRID / 2;
-        const numBuildings = 1 + Math.floor(this.seed(bx, bz, 1) * 4); // 1-4
-        const baseType = Math.floor(this.seed(bx, bz, 2) * 4);
+        const zone = this.getZone(cx, cz);
+        const numBuildings = 1 + Math.floor(this.seed(bx, bz, 1) * 2); // 1 or 2
         for (let i = 0; i < numBuildings; i++) {
-            const bType = (baseType + Math.floor(this.seed(bx + i * 3, bz + i * 7, 3) * 2)) % 4;
-            const halfU = usable / 2;
-            const ox = (this.seed(bx + i * 5, bz, 4) - 0.5) * halfU;
-            const oz = (this.seed(bx, bz + i * 5, 5) - 0.5) * halfU;
-            const bx2 = bx + i * 11;
-            const bz2 = bz + i * 13;
+            const typeRoll = this.seed(bx + i * 3, bz + i * 7, 3);
+            const bType = this.pickBuildingType(zone, typeRoll);
+            // Spread two buildings apart, jitter slightly
+            const halfU = usable * 0.22;
+            const baseOffset = numBuildings > 1 ? (i === 0 ? -halfU : halfU) : 0;
+            const ox = baseOffset + (this.seed(bx + i * 5, bz, 4) - 0.5) * halfU * 0.4;
+            const oz = baseOffset + (this.seed(bx, bz + i * 5, 5) - 0.5) * halfU * 0.4;
+            const sx = bx + i * 11;
+            const sz = bz + i * 13;
             switch (bType) {
-                case 0:
-                    this.buildingA(cx + ox, cz + oz, bx2, bz2);
+                case 'A':
+                    this.buildTypeA(cx + ox, cz + oz, sx, sz);
                     break;
-                case 1:
-                    this.buildingB(cx + ox, cz + oz, bx2, bz2);
+                case 'B':
+                    this.buildTypeB(cx + ox, cz + oz, sx, sz);
                     break;
-                case 2:
-                    this.buildingC(cx + ox, cz + oz, bx2, bz2);
+                case 'C':
+                    this.buildTypeC(cx + ox, cz + oz, sx, sz);
                     break;
-                case 3:
-                    this.buildingD(cx + ox, cz + oz, bx2, bz2);
+                case 'D':
+                    this.buildTypeD(cx + ox, cz + oz, sx, sz);
+                    break;
+                case 'E':
+                    this.buildTypeE(cx + ox, cz + oz, sx, sz);
                     break;
             }
         }
     }
-    // ── Type A: Flat-roof commercial block ──
-    buildingA(x, z, sx, sz) {
-        const colours = [0xc4a882, 0x8899aa, 0xaa9977, 0x7788aa, 0xbbaa99];
-        const ci = Math.floor(this.seed(sx, sz, 10) * colours.length);
-        const mat = new THREE.MeshLambertMaterial({ color: colours[ci] });
-        const trim = new THREE.MeshLambertMaterial({ color: colours[(ci + 1) % colours.length] });
-        const w = 12 + this.seed(sx, sz, 11) * 8;
-        const h = 4 + this.seed(sx, sz, 12) * 8;
-        const d = 12 + this.seed(sx, sz, 13) * 8;
-        const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-        body.position.set(x, h / 2, z);
-        this.scene.add(body);
-        // Rooftop trim (slightly inset, 0.3 tall)
-        const roofTrim = new THREE.Mesh(new THREE.BoxGeometry(w - 1, 0.3, d - 1), trim);
-        roofTrim.position.set(x, h + 0.15, z);
-        this.scene.add(roofTrim);
+    // ── Helper: add a box mesh to a group ──
+    addBox(group, color, w, h, d, x, y, z, rx = 0, ry = 0, rz = 0) {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color }));
+        mesh.position.set(x, y, z);
+        if (rx !== 0)
+            mesh.rotation.x = rx;
+        if (ry !== 0)
+            mesh.rotation.y = ry;
+        if (rz !== 0)
+            mesh.rotation.z = rz;
+        group.add(mesh);
     }
-    // ── Type B: Stepped brutalist ──
-    buildingB(x, z, sx, sz) {
-        const colours = [0x8a8a7a, 0x9a9080, 0x7a8090];
-        const ci = Math.floor(this.seed(sx, sz, 14) * colours.length);
-        const mat = new THREE.MeshLambertMaterial({ color: colours[ci] });
-        const mat2 = new THREE.MeshLambertMaterial({ color: colours[(ci + 1) % colours.length] });
-        const lower = new THREE.Mesh(new THREE.BoxGeometry(14, 12, 14), mat);
-        lower.position.set(x, 6, z);
-        this.scene.add(lower);
-        const upper = new THREE.Mesh(new THREE.BoxGeometry(8, 6, 8), mat2);
-        upper.position.set(x + 1, 15, z + 1);
-        this.scene.add(upper);
+    // ── Helper: add a cylinder mesh to a group ──
+    addCyl(group, color, rt, rb, h, seg, x, y, z) {
+        const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), new THREE.MeshLambertMaterial({ color }));
+        mesh.position.set(x, y, z);
+        group.add(mesh);
     }
-    // ── Type C: Slim glass tower ──
-    buildingC(x, z, sx, sz) {
-        const colours = [0x445566, 0x334455];
-        const ci = Math.floor(this.seed(sx, sz, 15) * 2);
-        const mat = new THREE.MeshLambertMaterial({ color: colours[ci] });
-        const h = 30 + this.seed(sx, sz, 16) * 20;
-        const tower = new THREE.Mesh(new THREE.BoxGeometry(6, h, 6), mat);
-        tower.position.set(x, h / 2, z);
-        this.scene.add(tower);
-        // Horizontal floor-line bands every 4 units
-        const bandMat = new THREE.MeshLambertMaterial({ color: 0xaabbcc });
-        for (let fy = 4; fy < h; fy += 4) {
-            const band = new THREE.Mesh(new THREE.BoxGeometry(6.12, 0.12, 6.12), bandMat);
-            band.position.set(x, fy, z);
-            this.scene.add(band);
+    // ────────────────────────────────────────────────
+    // TYPE A — Modern TE Commercial (CBD)
+    // Minimalist flat-roof, pearl grey plaster, colonnaded ground floor
+    // ────────────────────────────────────────────────
+    buildTypeA(x, z, sx, sz) {
+        const C = this.C;
+        const group = new THREE.Group();
+        // Main body
+        this.addBox(group, C.modernGrey, 16, 10, 14, 0, 5, 0);
+        // Parapet (roof trim)
+        this.addBox(group, C.softWhite, 16.4, 0.6, 14.4, 0, 10.3, 0);
+        // Ground colonnade — 3 columns along front face (z = -7)
+        for (const cx of [-5, 0, 5]) {
+            this.addCyl(group, C.charcoal, 0.3, 0.3, 3, 6, cx, 1.5, -7);
         }
+        // Colonnade beam across columns
+        this.addBox(group, C.charcoal, 14, 0.4, 0.4, 0, 3, -7);
+        // Window slots — upper wall, 3 across, recessed 0.1 from front face
+        for (const wx of [-4.5, 0, 4.5]) {
+            this.addBox(group, 0x223344, 2.5, 1.8, 0.15, wx, 7, -6.93);
+        }
+        // Base planter in front of building
+        this.addBox(group, C.deepClay, 14, 0.5, 1.2, 0, 0.25, -7.6);
+        this.addBox(group, C.oliveGreen, 13, 0.4, 1.0, 0, 0.70, -7.6);
+        // Random rotation 0/90/180/270°
+        group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
+        group.position.set(x, 0, z);
+        this.scene.add(group);
     }
-    // ── Type D: Low warehouse ──
-    buildingD(x, z, sx, sz) {
-        const colours = [0x778877, 0x667766];
-        const ci = Math.floor(this.seed(sx, sz, 17) * 2);
-        const mat = new THREE.MeshLambertMaterial({ color: colours[ci] });
-        const w = 20 + this.seed(sx, sz, 18) * 10;
-        const h = 3 + this.seed(sx, sz, 19) * 2;
-        const d = 20 + this.seed(sx, sz, 20) * 10;
-        const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
-        body.position.set(x, h / 2, z);
-        this.scene.add(body);
-        // Pitched roof — two angled panels
-        const roofMat = new THREE.MeshLambertMaterial({ color: 0x556655 });
-        const halfW = w / 2;
-        const roofL = new THREE.Mesh(new THREE.BoxGeometry(halfW + 0.5, 0.4, d + 0.5), roofMat);
-        roofL.rotation.z = Math.PI / 7;
-        roofL.position.set(x - halfW / 2, h + 0.75, z);
-        this.scene.add(roofL);
-        const roofR = new THREE.Mesh(new THREE.BoxGeometry(halfW + 0.5, 0.4, d + 0.5), roofMat);
-        roofR.rotation.z = -Math.PI / 7;
-        roofR.position.set(x + halfW / 2, h + 0.75, z);
-        this.scene.add(roofR);
+    // ────────────────────────────────────────────────
+    // TYPE B — Mediterranean Heritage (Footscray)
+    // Thick terracotta walls, small deeply-recessed windows, iron grille hints
+    // ────────────────────────────────────────────────
+    buildTypeB(x, z, sx, sz) {
+        const C = this.C;
+        const group = new THREE.Group();
+        // Wall thickness shadow hint — slightly behind and offset
+        this.addBox(group, C.deepClay, 14.5, 8.2, 12.5, 0.3, 4.0, 0.3);
+        // Main body
+        this.addBox(group, C.terracotta, 14, 8, 12, 0, 4, 0);
+        // Parapet
+        this.addBox(group, C.terracotta, 14.6, 1.2, 12.6, 0, 8.6, 0);
+        // Parapet cap
+        this.addBox(group, C.softWhite, 15, 0.3, 13, 0, 9.35, 0);
+        // Windows (2x tall narrow) + surrounds + grilles
+        for (const wx of [-3, 3]) {
+            // White surround on wall face
+            this.addBox(group, C.softWhite, 1.6, 2.6, 0.1, wx, 5.0, -5.99);
+            // Dark glass, recessed 0.15 from front face (front face at z=-6)
+            this.addBox(group, 0x223344, 1.2, 2.2, 0.2, wx, 5.0, -5.75);
+            // Iron grille bars — 3 horizontal per window
+            for (const gy of [4.3, 5.0, 5.7]) {
+                this.addBox(group, C.charcoal, 1.0, 0.08, 0.12, wx, gy, -5.68);
+            }
+        }
+        // Arched doorway (3 boxes, decreasing width = arch hint)
+        this.addBox(group, C.charcoal, 2.0, 3.0, 0.2, 0, 1.5, -6.1);
+        this.addBox(group, C.charcoal, 1.5, 0.4, 0.2, 0, 3.2, -6.1);
+        this.addBox(group, C.charcoal, 1.0, 0.4, 0.2, 0, 3.7, -6.1);
+        // Small herb planter at base
+        this.addBox(group, C.deepClay, 2.0, 0.4, 0.6, 0, 0.20, -6.6);
+        this.addBox(group, C.oliveGreen, 1.8, 0.1, 0.5, 0, 0.45, -6.6);
+        group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
+        group.position.set(x, 0, z);
+        this.scene.add(group);
+    }
+    // ────────────────────────────────────────────────
+    // TYPE C — Glass Tower (CBD/Richmond)
+    // Slim modern tower, dark glass panels, horizontal floor bands
+    // ────────────────────────────────────────────────
+    buildTypeC(x, z, sx, sz) {
+        const C = this.C;
+        const group = new THREE.Group();
+        const h = 30 + Math.floor(this.seed(sx, sz, 31) * 20); // 30–50
+        // Lobby base (wider footprint at ground)
+        this.addBox(group, C.modernGrey, 8, 4, 8, 0, 2, 0);
+        // Lobby glass inside
+        this.addBox(group, 0x445566, 7.5, 3.5, 7.5, 0, 2, 0);
+        // Main tower body
+        this.addBox(group, 0x334455, 7, h, 7, 0, h / 2, 0);
+        // Floor bands — every 4 units
+        for (let fy = 4; fy <= h; fy += 4) {
+            this.addBox(group, C.warmGrey, 7.3, 0.2, 7.3, 0, fy, 0);
+        }
+        // Roof plant room
+        this.addBox(group, C.charcoal, 4, 3, 4, 0, h + 1.5, 0);
+        // Towers are square — rotation doesn't matter visually, but keep for consistency
+        group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
+        group.position.set(x, 0, z);
+        this.scene.add(group);
+    }
+    // ────────────────────────────────────────────────
+    // TYPE D — Transitional Villa (Brunswick/Richmond residential)
+    // Warm cream plaster, bay window projection, arched entry
+    // ────────────────────────────────────────────────
+    buildTypeD(x, z, sx, sz) {
+        const C = this.C;
+        const group = new THREE.Group();
+        // Main body — front face at z = -5.5
+        this.addBox(group, C.warmCream, 13, 7, 11, 0, 3.5, 0);
+        // Flat roof
+        this.addBox(group, C.softWhite, 13.5, 0.5, 11.5, 0, 7.25, 0);
+        // Bay window surround (slightly larger, set back one unit from the bay front)
+        this.addBox(group, C.softWhite, 2.8, 3.8, 1.6, 0, 4.0, -6.20);
+        // Bay window projection body
+        this.addBox(group, C.warmCream, 2.5, 3.5, 1.5, 0, 4.0, -6.25);
+        // Bay window glass — 3 panels side by side at front of bay (z = -7.0)
+        for (const wx of [-0.8, 0.0, 0.8]) {
+            this.addBox(group, 0x334455, 0.7, 2.5, 0.2, wx, 4.0, -7.0);
+        }
+        // Arched entry hint (stepped arch at ground centre)
+        this.addBox(group, C.deepClay, 2.2, 3.2, 0.3, 0, 1.6, -5.65);
+        this.addBox(group, C.deepClay, 1.8, 0.4, 0.3, 0, 3.35, -5.65);
+        this.addBox(group, C.deepClay, 1.2, 0.4, 0.3, 0, 3.80, -5.65);
+        // Side windows — 2 on upper front wall
+        for (const wx of [-3.5, 3.5]) {
+            // White surround
+            this.addBox(group, C.softWhite, 1.8, 1.5, 0.10, wx, 5.5, -5.50);
+            // Glass
+            this.addBox(group, 0x334455, 1.5, 1.2, 0.15, wx, 5.5, -5.55);
+        }
+        // Low fence/wall — 1 unit in front of building
+        this.addBox(group, C.deepClay, 11, 1.0, 0.3, 0, 0.5, -6.65);
+        group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
+        group.position.set(x, 0, z);
+        this.scene.add(group);
+    }
+    // ────────────────────────────────────────────────
+    // TYPE E — Low Warehouse/Workshop (Footscray/St Kilda industrial)
+    // Wide low shed, pitched roof
+    // ────────────────────────────────────────────────
+    buildTypeE(x, z, sx, sz) {
+        const C = this.C;
+        const group = new THREE.Group();
+        const DEG12 = 12 * Math.PI / 180; // 12° in radians
+        // Main body — front face at z = -9
+        this.addBox(group, 0x778877, 22, 4, 18, 0, 2, 0);
+        // Pitched roof — two panels meeting at ridge
+        // Left panel (negative z side): slopes up toward centre
+        const roofL = new THREE.Mesh(new THREE.BoxGeometry(22.5, 0.3, 10), new THREE.MeshLambertMaterial({ color: C.deepClay }));
+        roofL.rotation.x = DEG12;
+        roofL.position.set(0, 4.5, -4.5);
+        group.add(roofL);
+        // Right panel (positive z side)
+        const roofR = new THREE.Mesh(new THREE.BoxGeometry(22.5, 0.3, 10), new THREE.MeshLambertMaterial({ color: C.deepClay }));
+        roofR.rotation.x = -DEG12;
+        roofR.position.set(0, 4.5, 4.5);
+        group.add(roofR);
+        // Ridge cap
+        this.addBox(group, C.charcoal, 22.5, 0.5, 0.6, 0, 5.2, 0);
+        // Large roller door on front face
+        this.addBox(group, C.charcoal, 4.5, 3.5, 0.2, 0, 1.75, -9.1);
+        // Door tracks either side
+        this.addBox(group, 0x555555, 0.15, 3.5, 0.2, -2.4, 1.75, -9.1);
+        this.addBox(group, 0x555555, 0.15, 3.5, 0.2, 2.4, 1.75, -9.1);
+        // Side windows strip — near top of left side wall
+        this.addBox(group, 0x334455, 8, 0.8, 0.15, -11.075, 3.5, 0);
+        // Downpipe at front-left corner
+        this.addCyl(group, C.charcoal, 0.1, 0.1, 4, 5, -11, 2, -9);
+        group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
+        group.position.set(x, 0, z);
+        this.scene.add(group);
     }
     onUpdate(cb) {
         this.updateCallbacks.push(cb);
     }
     start() {
         const loop = (time) => {
-            const dt = Math.min((time - this.lastTime) / 1000, 0.05); // Cap at 50ms
+            const dt = Math.min((time - this.lastTime) / 1000, 0.05);
             this.lastTime = time;
             for (const cb of this.updateCallbacks)
                 cb(dt);
