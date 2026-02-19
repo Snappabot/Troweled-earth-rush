@@ -54,6 +54,8 @@ export class Engine {
     this.createCityGround();
     this.createCity();
     this.createTEHouses();
+    this.createZebraCrossings();
+    this.createRoadCorners();
 
     // Handle resize
     window.addEventListener('resize', () => {
@@ -872,6 +874,77 @@ export class Engine {
 
     g.position.set(x, 0, z);
     this.scene.add(g);
+  }
+
+  // ── Zebra Crossings (crosswalks) at every road intersection ──
+  private createZebraCrossings() {
+    const stripeMat = new THREE.MeshLambertMaterial({ color: 0xEEEEEE });
+
+    for (let ix = -200; ix <= 200; ix += 40) {
+      for (let iz = -200; iz <= 200; iz += 40) {
+        if (Math.abs(ix) > 160 || Math.abs(iz) > 160) continue;
+
+        // North approach: z = iz - 5.5, 7 stripes spaced along Z
+        for (let s = 0; s < 7; s++) {
+          const stripe = new THREE.Mesh(new THREE.BoxGeometry(7, 0.03, 0.7), stripeMat);
+          stripe.position.set(ix, 0.02, iz - 5.5 + (s - 3) * 1.1);
+          this.scene.add(stripe);
+        }
+
+        // South approach: z = iz + 5.5
+        for (let s = 0; s < 7; s++) {
+          const stripe = new THREE.Mesh(new THREE.BoxGeometry(7, 0.03, 0.7), stripeMat);
+          stripe.position.set(ix, 0.02, iz + 5.5 + (s - 3) * 1.1);
+          this.scene.add(stripe);
+        }
+
+        // West approach: x = ix - 5.5, 7 stripes spaced along X
+        for (let s = 0; s < 7; s++) {
+          const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 7), stripeMat);
+          stripe.position.set(ix - 5.5 + (s - 3) * 1.1, 0.02, iz);
+          this.scene.add(stripe);
+        }
+
+        // East approach: x = ix + 5.5
+        for (let s = 0; s < 7; s++) {
+          const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 7), stripeMat);
+          stripe.position.set(ix + 5.5 + (s - 3) * 1.1, 0.02, iz);
+          this.scene.add(stripe);
+        }
+      }
+    }
+  }
+
+  // ── Curved Road Corners — filled circles to round intersection corners ──
+  private createRoadCorners() {
+    const asphaltMat  = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
+    const sidewalkMat = new THREE.MeshLambertMaterial({ color: 0xc8c0b0 });
+
+    // dx/dz: circle centre offset from intersection; ox/oz: extra sidewalk offset away from centre
+    const corners = [
+      { dx: -4, dz: -4, ox: -0.5, oz: -0.5 }, // Top-left
+      { dx:  4, dz: -4, ox:  0.5, oz: -0.5 }, // Top-right
+      { dx: -4, dz:  4, ox: -0.5, oz:  0.5 }, // Bottom-left
+      { dx:  4, dz:  4, ox:  0.5, oz:  0.5 }, // Bottom-right
+    ];
+
+    for (let ix = -200; ix <= 200; ix += 40) {
+      for (let iz = -200; iz <= 200; iz += 40) {
+        for (const { dx, dz, ox, oz } of corners) {
+          // Sidewalk-coloured backing circle (radius 4.5, slightly lower)
+          const swCircle = new THREE.Mesh(new THREE.CircleGeometry(4.5, 8), sidewalkMat);
+          swCircle.rotation.x = -Math.PI / 2;
+          swCircle.position.set(ix + dx + ox, 0.003, iz + dz + oz);
+          this.scene.add(swCircle);
+
+          // Asphalt circle (radius 4, just above sidewalk)
+          const asCircle = new THREE.Mesh(new THREE.CircleGeometry(4, 8), asphaltMat);
+          asCircle.rotation.x = -Math.PI / 2;
+          asCircle.position.set(ix + dx, 0.005, iz + dz);
+          this.scene.add(asCircle);
+        }
+      }
+    }
   }
 
   onUpdate(cb: (dt: number) => void) {
