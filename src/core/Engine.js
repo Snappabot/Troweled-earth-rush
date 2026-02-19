@@ -44,6 +44,7 @@ export class Engine {
         // Build city
         this.createCityGround();
         this.createCity();
+        this.createTEHouses();
         // Handle resize
         window.addEventListener('resize', () => {
             this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -487,6 +488,230 @@ export class Engine {
         group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
         group.position.set(x, 0, z);
         this.scene.add(group);
+    }
+    // ────────────────────────────────────────────────────────────────────────────
+    // TE LANDMARK HOUSES — 5 signature builds based on real Troweled Earth projects
+    // ────────────────────────────────────────────────────────────────────────────
+    createTEHouses() {
+        this.buildHouseMarbellino(20, 20); // House 1 — CBD edge
+        this.buildHousePorthole(-60, 20); // House 2 — Brunswick
+        this.buildHouseTerracotta(20, -60); // House 3 — St Kilda edge
+        this.buildHouseLoggia(-60, -60); // House 4 — Brunswick/StKilda
+        this.buildHouseRokka(60, -20); // House 5 — Richmond
+    }
+    // ── House 1 — Marbellino Modern ──────────────────────────────────────────────
+    buildHouseMarbellino(x, z) {
+        const g = new THREE.Group();
+        // Lower level — light beige/cream render
+        this.addBox(g, 0xD4CBBA, 18, 4, 14, 0, 2, 0);
+        // Upper level — dark charcoal vertical cladding (cantilevered)
+        this.addBox(g, 0x2A2A2A, 20, 4, 15, 0, 7, 0);
+        // Upper cladding vertical strips (6x)
+        for (const cx of [-8, -5, -2, 1, 4, 7]) {
+            this.addBox(g, 0x1A1A1A, 0.15, 4, 15, cx, 7, 0);
+        }
+        // Flat roof parapet (top of upper body = y=9, parapet centre = 9.25)
+        this.addBox(g, 0x333333, 20.5, 0.5, 15.5, 0, 9.25, 0);
+        // Lower level horizontal strip window
+        this.addBox(g, 0x334455, 10, 0.9, 0.15, 0, 3.5, -7.1);
+        // Window frame (slightly behind)
+        this.addBox(g, 0xC8C4BC, 10.4, 1.1, 0.1, 0, 3.5, -7.05);
+        // Upper level vertical slot windows (3x) — emissive
+        for (const wx of [-4, 0, 4]) {
+            const mesh = new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.5, 0.15), new THREE.MeshLambertMaterial({
+                color: 0x445566,
+                emissive: new THREE.Color(0x223344),
+                emissiveIntensity: 0.3,
+            }));
+            mesh.position.set(wx, 7.5, -7.6);
+            g.add(mesh);
+        }
+        // Garage door (large, ground floor left)
+        this.addBox(g, 0x1A1A1A, 5, 3.8, 0.2, -5.5, 1.9, -7.1);
+        // Entry step
+        this.addBox(g, 0xC8C4BC, 2, 0.3, 1, 4, 0.15, -7.5);
+        // Ground planting strip
+        this.addBox(g, 0x8A7060, 14, 0.4, 1, 0, 0.2, -8);
+        this.addBox(g, 0x5A7A4A, 12, 0.6, 0.8, 0, 0.6, -8);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+    // ── House 2 — Angular Porthole House ─────────────────────────────────────────
+    buildHousePorthole(x, z) {
+        const g = new THREE.Group();
+        // Main concrete body
+        this.addBox(g, 0xB8B4AC, 16, 5.5, 13, 0, 2.75, 0);
+        // Diagonal timber feature panel (right side, front face)
+        this.addBox(g, 0x8B6040, 7, 5.5, 0.3, 3.5, 2.75, -6.65);
+        // Timber strips (5x diagonal suggestion, rotated ~25°)
+        for (let i = 0; i < 5; i++) {
+            const ty = (i - 2) * 1.2;
+            this.addBox(g, 0x6A4820, 7, 0.2, 0.4, 3.5, 2.75 + ty, -6.55, 0, 0, Math.PI / 7.2);
+        }
+        // Flat roof slab
+        this.addBox(g, 0xC8C4BC, 16.5, 0.3, 13.5, 0, 5.65, 0);
+        // Roof edge (dark metal)
+        this.addBox(g, 0x2A2A2A, 17, 0.5, 14, 0, 5.95, 0);
+        // PORTHOLE — surround (cylinder as disc, rotated X=PI/2)
+        {
+            const surround = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.4, 0.15, 16), new THREE.MeshLambertMaterial({ color: 0x888888 }));
+            surround.rotation.x = Math.PI / 2;
+            surround.position.set(-4, 3.5, -6.7);
+            g.add(surround);
+        }
+        // PORTHOLE — glass (emissive)
+        {
+            const glass = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.1, 16), new THREE.MeshLambertMaterial({
+                color: 0x223344,
+                emissive: new THREE.Color(0x112233),
+                emissiveIntensity: 0.5,
+            }));
+            glass.rotation.x = Math.PI / 2;
+            glass.position.set(-4, 3.5, -6.65);
+            g.add(glass);
+        }
+        // Regular windows (2x horizontal)
+        this.addBox(g, 0x334455, 3.5, 1.2, 0.15, 1, 3.5, -6.7);
+        this.addBox(g, 0x334455, 3.5, 1.2, 0.15, 5, 3.5, -6.7);
+        // Entry door recess
+        this.addBox(g, 0x3A2A1A, 1.8, 2.8, 0.3, -6, 1.4, -6.8);
+        // Door frame
+        this.addBox(g, 0x888888, 2.2, 3.0, 0.2, -6, 1.4, -6.65);
+        // Low hedge at base
+        this.addBox(g, 0x3A6A3A, 10, 0.7, 0.8, 0, 0.35, -7.5);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+    // ── House 3 — Terracotta Mediterranean Villa ──────────────────────────────────
+    buildHouseTerracotta(x, z) {
+        const g = new THREE.Group();
+        // Shadow edge — thick wall illusion (slightly larger, rendered first)
+        this.addBox(g, 0x9A7050, 17.6, 7.2, 14.6, 0, 3.5, 0);
+        // Main body — terracotta
+        this.addBox(g, 0xC49A7A, 17, 7, 14, 0, 3.5, 0);
+        // Tall parapet (top of body = y=7, parapet centre = 7+0.75 = 7.75)
+        this.addBox(g, 0xC49A7A, 17.8, 1.5, 14.8, 0, 7.75, 0);
+        // Parapet cap (top of parapet = 8.5, cap centre = 8.65)
+        this.addBox(g, 0xE8E4DC, 18.2, 0.3, 15.2, 0, 8.65, 0);
+        // Arched entry — stepped arch (3 boxes on front face)
+        this.addBox(g, 0x8A6040, 2.4, 3.5, 0.3, 0, 1.75, -7.1);
+        this.addBox(g, 0x8A6040, 2.0, 0.5, 0.3, 0, 3.75, -7.1);
+        this.addBox(g, 0x8A6040, 1.4, 0.5, 0.3, 0, 4.25, -7.1);
+        // Left window — deep reveal, glass, white surround, iron grilles
+        this.addBox(g, 0x8A6040, 1.4, 2.8, 0.5, -4, 4.0, -7.2); // reveal
+        this.addBox(g, 0x223344, 1.0, 2.4, 0.15, -4, 4.0, -7.05); // glass
+        this.addBox(g, 0xE8E4DC, 1.6, 3.0, 0.15, -4, 4.0, -6.98); // white surround
+        for (const gy of [3.2, 4.0, 4.8]) {
+            this.addBox(g, 0x333333, 0.9, 0.08, 0.15, -4, gy, -7.1); // iron grille bars
+        }
+        // Right window — mirror of left
+        this.addBox(g, 0x8A6040, 1.4, 2.8, 0.5, 4, 4.0, -7.2);
+        this.addBox(g, 0x223344, 1.0, 2.4, 0.15, 4, 4.0, -7.05);
+        this.addBox(g, 0xE8E4DC, 1.6, 3.0, 0.15, 4, 4.0, -6.98);
+        for (const gy of [3.2, 4.0, 4.8]) {
+            this.addBox(g, 0x333333, 0.9, 0.08, 0.15, 4, gy, -7.1);
+        }
+        // Side windows (2x per side, smaller)
+        for (const sz of [-2, 2]) {
+            this.addBox(g, 0x334455, 0.15, 1.5, 1.0, 8.58, 4.0, sz);
+            this.addBox(g, 0x334455, 0.15, 1.5, 1.0, -8.58, 4.0, sz);
+        }
+        // Herb planters at base (2x) + greenery
+        this.addBox(g, 0xA07858, 2.5, 0.5, 0.8, -4, 0.25, -7.5);
+        this.addBox(g, 0xA07858, 2.5, 0.5, 0.8, 4, 0.25, -7.5);
+        this.addBox(g, 0x5A8A4A, 2.0, 0.5, 0.6, -4, 0.65, -7.5);
+        this.addBox(g, 0x5A8A4A, 2.0, 0.5, 0.6, 4, 0.65, -7.5);
+        // Decorative parapet wall tiles (4x raised squares)
+        for (const tx of [-6, -2, 2, 6]) {
+            this.addBox(g, 0xE8E4DC, 0.8, 0.8, 0.2, tx, 8.4, -7.4);
+        }
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+    // ── House 4 — Concretum Loggia House ─────────────────────────────────────────
+    buildHouseLoggia(x, z) {
+        const g = new THREE.Group();
+        // Main building body — smooth concrete
+        this.addBox(g, 0xB0ACA4, 20, 6, 15, 0, 3, 0);
+        // Roof slab (top of body = y=6, slab centre = 6.2)
+        this.addBox(g, 0x9A9690, 20.5, 0.4, 15.5, 0, 6.2, 0);
+        // LOGGIA — covered walkway across full front
+        this.addBox(g, 0x9A9690, 20, 0.4, 3, 0, 3.2, -10);
+        // 4 slim loggia columns
+        for (const cx of [-7, -3, 3, 7]) {
+            this.addCyl(g, 0x888880, 0.2, 0.2, 3.2, 8, cx, 1.6, -11);
+        }
+        // Large recessed window band
+        this.addBox(g, 0x334455, 14, 2.0, 0.2, 0, 4, -7.5);
+        // Window frame (behind)
+        this.addBox(g, 0xC8C4BC, 14.4, 2.2, 0.15, 0, 4, -7.4);
+        // Window mullions (3 vertical dividers)
+        for (const mx of [-5, 0, 5]) {
+            this.addBox(g, 0x888880, 0.15, 2.0, 0.2, mx, 4, -7.5);
+        }
+        // Entry glazed door (emissive)
+        {
+            const door = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.8, 0.2), new THREE.MeshLambertMaterial({
+                color: 0x334455,
+                emissive: new THREE.Color(0x111822),
+                emissiveIntensity: 0.2,
+            }));
+            door.position.set(5, 1.4, -7.5);
+            g.add(door);
+        }
+        // Door frame
+        this.addBox(g, 0x888880, 2.8, 3.0, 0.15, 5, 1.4, -7.4);
+        // Long planter box spanning full front
+        this.addBox(g, 0x8A7860, 18, 0.5, 2.5, 0, 0.25, -9);
+        this.addBox(g, 0x4A7A4A, 16, 0.7, 2.0, 0, 0.65, -9);
+        // Concrete beam hints between roof edge and column tops
+        this.addBox(g, 0x888880, 20, 0.3, 0.3, 0, 3.1, -10.2);
+        this.addBox(g, 0x888880, 20, 0.3, 0.3, 0, 3.1, -11.8);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+    // ── House 5 — Rokka Stone Retreat ─────────────────────────────────────────────
+    buildHouseRokka(x, z) {
+        const g = new THREE.Group();
+        // Wide single-storey spread form
+        this.addBox(g, 0xC4B89A, 22, 4.5, 16, 0, 2.25, 0);
+        // Pitched roof — 2 angled panels (body top = y=4.5, panels start above)
+        this.addBox(g, 0x9A8C7A, 22.5, 0.3, 9, 0, 4.75, -3.5, Math.PI * 8 / 180, 0, 0);
+        this.addBox(g, 0x9A8C7A, 22.5, 0.3, 9, 0, 4.75, 3.5, -Math.PI * 8 / 180, 0, 0);
+        // Ridge cap
+        this.addBox(g, 0x6A5A48, 22.5, 0.6, 0.8, 0, 5.1, 0);
+        // Stone base course (darker, wraps around base)
+        this.addBox(g, 0x9A8870, 22.5, 1.0, 16.5, 0, 0.5, 0);
+        // Large bifold/stacking doors — emissive
+        {
+            const doors = new THREE.Mesh(new THREE.BoxGeometry(6, 3.2, 0.2), new THREE.MeshLambertMaterial({
+                color: 0x334455,
+                emissive: new THREE.Color(0x111822),
+                emissiveIntensity: 0.3,
+            }));
+            doors.position.set(0, 1.6, -8.1);
+            g.add(doors);
+        }
+        // Door frame
+        this.addBox(g, 0x7A6A5A, 6.4, 3.5, 0.15, 0, 1.75, -8.0);
+        // Door grid — 3 vertical + 1 horizontal
+        for (const dx of [-2, 0, 2]) {
+            this.addBox(g, 0x888870, 0.1, 3.2, 0.2, dx, 1.6, -8.1);
+        }
+        this.addBox(g, 0x888870, 6, 0.1, 0.2, 0, 2.2, -8.1);
+        // Flanking windows (2x)
+        this.addBox(g, 0x334455, 2.5, 1.5, 0.2, -7, 3.0, -8.1);
+        this.addBox(g, 0x334455, 2.5, 1.5, 0.2, 7, 3.0, -8.1);
+        // Natural stone pillars at entry (2x)
+        this.addBox(g, 0xB0A088, 0.8, 4.5, 0.8, -3.5, 2.25, -8.2);
+        this.addBox(g, 0xB0A088, 0.8, 4.5, 0.8, 3.5, 2.25, -8.2);
+        // Downpipes at building corners (2x)
+        this.addCyl(g, 0x6A5A48, 0.1, 0.1, 4.5, 5, -11, 2.25, -8);
+        this.addCyl(g, 0x6A5A48, 0.1, 0.1, 4.5, 5, 11, 2.25, -8);
+        // Low boundary wall / garden edge
+        this.addBox(g, 0xB0A088, 20, 0.8, 0.3, 0, 0.4, -10);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
     }
     onUpdate(cb) {
         this.updateCallbacks.push(cb);
