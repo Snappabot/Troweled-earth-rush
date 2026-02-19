@@ -10,7 +10,7 @@ async function main() {
     const physics = new VanPhysics(van, input);
     engine.onUpdate((dt) => {
         physics.update(dt);
-        engine.camera.follow(van.mesh.position, van.velocity);
+        engine.camera.follow(van.mesh.position, van.velocity, van.heading);
     });
     engine.start();
 }

@@ -13,7 +13,7 @@ async function main() {
 
   engine.onUpdate((dt: number) => {
     physics.update(dt);
-    engine.camera.follow(van.mesh.position, van.velocity);
+    engine.camera.follow(van.mesh.position, van.velocity, van.heading);
   });
 
   engine.start();

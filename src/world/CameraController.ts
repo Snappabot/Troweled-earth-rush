@@ -1,40 +1,56 @@
 import * as THREE from 'three';
 
 const CAMERA_CONFIG = {
-  fov: 30,
-  height: 45,
-  pitchAngle: 55,
-  followSmoothing: 0.08,
-  lookAheadDistance: 8,
+  fov: 35,
+  height: 38,
+  distance: 28,           // How far behind the car
+  rotationSmoothing: 0.06, // How quickly camera swings behind car (lower = lazier)
+  positionSmoothing: 0.1,
+  lookAheadDistance: 6,
 };
 
 export class CameraController {
   camera: THREE.PerspectiveCamera;
   private targetPos = new THREE.Vector3();
+  private cameraAngle = 0; // smoothed camera angle following van heading
 
   constructor() {
     this.camera = new THREE.PerspectiveCamera(
       CAMERA_CONFIG.fov,
       window.innerWidth / window.innerHeight,
-      10,
+      5,
       800
     );
   }
 
-  follow(vanPos: THREE.Vector3, velocity: THREE.Vector3) {
-    const pitchRad = THREE.MathUtils.degToRad(CAMERA_CONFIG.pitchAngle);
-    const horizontalDist = CAMERA_CONFIG.height / Math.tan(pitchRad);
+  follow(vanPos: THREE.Vector3, velocity: THREE.Vector3, heading: number) {
+    // Smoothly rotate camera angle toward van heading
+    // Normalize angle difference to -PI..PI
+    let angleDiff = heading - this.cameraAngle;
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    this.cameraAngle += angleDiff * CAMERA_CONFIG.rotationSmoothing;
 
-    // Fixed-north offset (camera always looks from south, fixed orientation)
-    const offset = new THREE.Vector3(0, CAMERA_CONFIG.height, horizontalDist);
-    this.targetPos.copy(vanPos).add(offset);
+    // Camera sits BEHIND the van based on smoothed heading
+    const behindX = Math.sin(this.cameraAngle) * -CAMERA_CONFIG.distance;
+    const behindZ = -Math.cos(this.cameraAngle) * -CAMERA_CONFIG.distance;
 
-    // Smooth follow
-    this.camera.position.lerp(this.targetPos, CAMERA_CONFIG.followSmoothing);
+    this.targetPos.set(
+      vanPos.x + behindX,
+      vanPos.y + CAMERA_CONFIG.height,
+      vanPos.z + behindZ
+    );
 
-    // Look-ahead
-    const lookAhead = velocity.clone().normalize().multiplyScalar(CAMERA_CONFIG.lookAheadDistance);
+    // Smooth position follow
+    this.camera.position.lerp(this.targetPos, CAMERA_CONFIG.positionSmoothing);
+
+    // Look slightly ahead of van
+    const speed = velocity.length();
+    const lookAhead = speed > 0.5
+      ? velocity.clone().normalize().multiplyScalar(CAMERA_CONFIG.lookAheadDistance)
+      : new THREE.Vector3(0, 0, 0);
     const lookAtTarget = vanPos.clone().add(lookAhead);
+    lookAtTarget.y += 2; // look slightly above ground level
     this.camera.lookAt(lookAtTarget);
   }
 }
