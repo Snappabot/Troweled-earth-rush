@@ -1,14 +1,14 @@
 import * as THREE from 'three';
 const PHYSICS = {
-    maxSpeed: 80, // Doubled
-    acceleration: 55, // Doubled
-    reverseForce: 45, // Brake button now applies reverse
-    friction: 0.92,
-    steerSpeed: 2.2,
-    steerFriction: 0.70,
+    maxSpeed: 80,
+    acceleration: 55,
+    reverseForce: 45,
+    friction: 0.985, // Much less friction = coasts with momentum
+    steerSpeed: 3.3, // 50% more sensitive
+    steerFriction: 0.72,
     minSpeedToSteer: 0.5,
     gripAtLowSpeed: 12.0,
-    gripAtHighSpeed: 3.5,
+    gripAtHighSpeed: 3.0, // Slightly more slidey
 };
 function normalizeAngle(a) {
     while (a > Math.PI)
@@ -46,7 +46,8 @@ export class VanPhysics {
         if (absSpeed > PHYSICS.minSpeedToSteer) {
             const steerInput = this.input.left ? -1 : this.input.right ? 1 :
                 Math.abs(this.input.steerAxis) > 0.1 ? this.input.steerAxis : 0;
-            const steerEffectiveness = Math.min(1, absSpeed / 6);
+            // Full steering at low speed (tight turning circle), slight reduction at high speed
+            const steerEffectiveness = Math.min(1.0, 0.4 + absSpeed / 10);
             this.steerAngle += steerInput * PHYSICS.steerSpeed * steerEffectiveness * dt;
         }
         this.steerAngle *= Math.pow(PHYSICS.steerFriction, dt * 60);
