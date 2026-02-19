@@ -24,12 +24,10 @@ export class VanPhysics {
   }
 
   update(dt: number) {
-    // Throttle
-    if (this.input.forward) {
-      this.speed += PHYSICS.acceleration * dt;
-    } else if (this.input.backward) {
-      this.speed -= PHYSICS.acceleration * dt * 0.6;
-    }
+    // Throttle — analog from joystick, binary from keyboard
+    const throttleInput = this.input.forward ? 1 : this.input.backward ? -0.6 :
+      Math.abs(this.input.throttleAxis) > 0.2 ? this.input.throttleAxis : 0;
+    this.speed += throttleInput * PHYSICS.acceleration * dt;
 
     // Braking
     if (this.input.brake) {
@@ -42,7 +40,9 @@ export class VanPhysics {
 
     // Steering (only when moving)
     if (Math.abs(this.speed) > PHYSICS.minSpeedToSteer) {
-      const steerInput = this.input.left ? -1 : this.input.right ? 1 : 0;
+      // Steering — analog from joystick, binary from keyboard
+      const steerInput = this.input.left ? -1 : this.input.right ? 1 :
+        Math.abs(this.input.steerAxis) > 0.2 ? this.input.steerAxis : 0;
       const steerEffectiveness = Math.min(1, Math.abs(this.speed) / 8);
       this.steerAngle += steerInput * PHYSICS.steerSpeed * steerEffectiveness * dt;
     }

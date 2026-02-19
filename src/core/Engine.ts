@@ -131,11 +131,16 @@ export class Engine {
         this.scene.add(dash);
       }
 
-      // Trees along sidewalks
+      // Trees along sidewalks (horizontal road, z = constant)
+      // Sidewalk strip is 5–6 units from road centre; place at 5.5
       for (let x = -RANGE; x <= RANGE; x += 20) {
         for (const side of [-1, 1]) {
-          const tx = x + (this.seed(x, z, 50) - 0.5) * 2;
-          const tz = z + side * (ROAD_W / 2 + 3);
+          // Jitter only along the road (x-axis), NOT perpendicular
+          const tx = x + (this.seed(x, z, 50 + side) - 0.5) * 2;
+          const tz = z + side * 5.5;
+          // Skip if within 6 units of a vertical road (intersection)
+          const rem = ((tx % GRID) + GRID) % GRID;
+          if (Math.min(rem, GRID - rem) <= 6) continue;
           this.addTree(tx, tz, x * 10 + side, z * 10 + 1);
         }
       }
@@ -186,11 +191,16 @@ export class Engine {
         this.scene.add(dash);
       }
 
-      // Trees along sidewalks
+      // Trees along sidewalks (vertical road, x = constant)
+      // Sidewalk strip is 5–6 units from road centre; place at 5.5
       for (let z = -RANGE; z <= RANGE; z += 20) {
         for (const side of [-1, 1]) {
-          const tx = x + side * (ROAD_W / 2 + 3);
-          const tz = z + (this.seed(x, z, 52) - 0.5) * 2;
+          const tx = x + side * 5.5;
+          // Jitter only along the road (z-axis), NOT perpendicular
+          const tz = z + (this.seed(x, z, 52 + side) - 0.5) * 2;
+          // Skip if within 6 units of a horizontal road (intersection)
+          const rem = ((tz % GRID) + GRID) % GRID;
+          if (Math.min(rem, GRID - rem) <= 6) continue;
           this.addTree(tx, tz, x * 10 + 2, z * 10 + side);
         }
       }
