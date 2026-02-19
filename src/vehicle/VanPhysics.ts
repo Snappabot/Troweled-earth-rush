@@ -7,7 +7,7 @@ const PHYSICS = {
   acceleration: 55,
   reverseForce: 45,
   friction: 0.985,        // Coasts with momentum
-  steerSpeed: 5.5,        // Tight turning
+  steerSpeed: 9.0,        // Max tight turning
   steerFriction: 0.62,    // Snappy steer response
   minSpeedToSteer: 0.5,
   gripAtLowSpeed: 7.0,    // Less grip = more slide even at low speed
