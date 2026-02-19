@@ -722,28 +722,31 @@ export class Engine {
             for (let iz = -200; iz <= 200; iz += 40) {
                 if (Math.abs(ix) > 160 || Math.abs(iz) > 160)
                     continue;
-                // North approach: z = iz - 5.5, 7 stripes spaced along Z
-                for (let s = 0; s < 7; s++) {
-                    const stripe = new THREE.Mesh(new THREE.BoxGeometry(7, 0.03, 0.7), stripeMat);
-                    stripe.position.set(ix, 0.02, iz - 5.5 + (s - 3) * 1.1);
+                // 5 stripes per approach, starting just outside road edge (±4) going outward
+                // Stripes at offsets 4.4, 5.1, 5.8, 6.5, 7.2 from intersection centre — all outside road
+                const offsets = [4.4, 5.1, 5.8, 6.5, 7.2];
+                // North approach — stripes run E-W across road, placed north of intersection
+                for (const o of offsets) {
+                    const stripe = new THREE.Mesh(new THREE.BoxGeometry(8, 0.03, 0.6), stripeMat);
+                    stripe.position.set(ix, 0.02, iz - o);
                     this.scene.add(stripe);
                 }
-                // South approach: z = iz + 5.5
-                for (let s = 0; s < 7; s++) {
-                    const stripe = new THREE.Mesh(new THREE.BoxGeometry(7, 0.03, 0.7), stripeMat);
-                    stripe.position.set(ix, 0.02, iz + 5.5 + (s - 3) * 1.1);
+                // South approach
+                for (const o of offsets) {
+                    const stripe = new THREE.Mesh(new THREE.BoxGeometry(8, 0.03, 0.6), stripeMat);
+                    stripe.position.set(ix, 0.02, iz + o);
                     this.scene.add(stripe);
                 }
-                // West approach: x = ix - 5.5, 7 stripes spaced along X
-                for (let s = 0; s < 7; s++) {
-                    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 7), stripeMat);
-                    stripe.position.set(ix - 5.5 + (s - 3) * 1.1, 0.02, iz);
+                // West approach — stripes run N-S across road, placed west of intersection
+                for (const o of offsets) {
+                    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.03, 8), stripeMat);
+                    stripe.position.set(ix - o, 0.02, iz);
                     this.scene.add(stripe);
                 }
-                // East approach: x = ix + 5.5
-                for (let s = 0; s < 7; s++) {
-                    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 7), stripeMat);
-                    stripe.position.set(ix + 5.5 + (s - 3) * 1.1, 0.02, iz);
+                // East approach
+                for (const o of offsets) {
+                    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.03, 8), stripeMat);
+                    stripe.position.set(ix + o, 0.02, iz);
                     this.scene.add(stripe);
                 }
             }
