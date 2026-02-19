@@ -3,7 +3,7 @@ import nipplejs from 'nipplejs';
 export class InputManager {
   keys: Record<string, boolean> = {};
   steerAxis = 0;
-  throttleAxis = 0;
+  accelerating = false;
   braking = false;
   private joystickManager: nipplejs.JoystickManager | null = null;
 
@@ -39,13 +39,13 @@ export class InputManager {
     this.joystickManager.on('move', (_evt, data: nipplejs.JoystickOutputData) => {
       if (data.vector) {
         this.steerAxis = data.vector.x;
-        this.throttleAxis = 0; // joystick Y ignored — throttle is GAS button only
+        // Joystick ONLY controls steering — never touches accelerating
       }
     });
 
     this.joystickManager.on('end', () => {
       this.steerAxis = 0;
-      // throttleAxis is managed by the GAS button — don't reset here
+      // Joystick ONLY resets steering — never touches accelerating
     });
 
     // Brake button
@@ -78,12 +78,12 @@ export class InputManager {
       e.preventDefault();
       this.braking = true;
       brakeBtn.style.background = 'rgba(220, 50, 50, 0.9)';
-    });
+    }, { passive: false });
     brakeBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
       this.braking = false;
       brakeBtn.style.background = 'rgba(220, 50, 50, 0.6)';
-    });
+    }, { passive: false });
 
     // GAS button — above brake
     const gasBtn = document.createElement('div');
@@ -113,18 +113,18 @@ export class InputManager {
 
     gasBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      this.throttleAxis = 1;
+      this.accelerating = true;
       gasBtn.style.background = 'rgba(50, 200, 50, 0.9)';
-    });
+    }, { passive: false });
     gasBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
-      this.throttleAxis = 0;
+      this.accelerating = false;
       gasBtn.style.background = 'rgba(50, 200, 50, 0.6)';
-    });
+    }, { passive: false });
   }
 
-  get forward() { return this.keys['ArrowUp'] || this.keys['KeyW'] || this.throttleAxis > 0.2; }
-  get backward() { return this.keys['ArrowDown'] || this.keys['KeyS'] || this.throttleAxis < -0.2; }
+  get forward() { return this.keys['ArrowUp'] || this.keys['KeyW'] || this.accelerating; }
+  get backward() { return this.keys['ArrowDown'] || this.keys['KeyS']; }
   get left() { return this.keys['ArrowLeft'] || this.keys['KeyA'] || this.steerAxis < -0.2; }
   get right() { return this.keys['ArrowRight'] || this.keys['KeyD'] || this.steerAxis > 0.2; }
   get brake() { return this.keys['Space'] || this.braking; }
