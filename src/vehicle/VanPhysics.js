@@ -43,8 +43,8 @@ export class VanPhysics {
         if (Math.abs(this.speed) > 0.1) {
             this.van.heading += this.steerAngle * Math.sign(this.speed) * dt;
         }
-        // Move van
-        const dir = new THREE.Vector3(Math.sin(this.van.heading), 0, Math.cos(this.van.heading));
+        // Move van (van faces -Z, so negate Z component)
+        const dir = new THREE.Vector3(Math.sin(this.van.heading), 0, -Math.cos(this.van.heading));
         this.van.velocity.copy(dir).multiplyScalar(this.speed);
         this.van.mesh.position.add(this.van.velocity.clone().multiplyScalar(dt));
         this.van.mesh.rotation.y = -this.van.heading;
