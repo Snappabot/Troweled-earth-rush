@@ -879,42 +879,65 @@ export class Engine {
   // ── Zebra Crossings (crosswalks) at every road intersection ──
   private createZebraCrossings() {
     const stripeMat = new THREE.MeshLambertMaterial({ color: 0xEEEEEE });
+    const blackMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
 
     for (let ix = -200; ix <= 200; ix += 40) {
       for (let iz = -200; iz <= 200; iz += 40) {
         if (Math.abs(ix) > 160 || Math.abs(iz) > 160) continue;
 
-        // Spread stripes across the road width (not as long bars)
-        // N/S approaches: thin N-S stripes spread across X (road width)
-        // E/W approaches: thin E-W stripes spread across Z (road width)
-        const spread = [-3, -1.5, 0, 1.5, 3]; // 5 stripes spread across ~8 unit road
+        // Zebra crossing: white + black stripes alternating, length = sidewalk width (2 units)
+        // Centred at road edge (iz±5 = middle of 2-unit sidewalk from ±4 to ±6)
+        // Stripe width 0.8, gap 0.8 → 5 white + 4 black spread across 8-unit road
+        const whiteX = [-3.2, -1.6, 0, 1.6, 3.2];
+        const blackX = [-2.4, -0.8, 0.8, 2.4];
+        const stripeLen = 2.0; // = sidewalk width
 
-        // North approach — thin N-S stripes spread across road, centred at iz-5.5
-        for (const s of spread) {
-          const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 3.5), stripeMat);
-          stripe.position.set(ix + s, 0.02, iz - 5.5);
-          this.scene.add(stripe);
+        // North approach (centred at iz-5, length spans iz-4 to iz-6)
+        for (const s of whiteX) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, stripeLen), stripeMat);
+          m.position.set(ix + s, 0.025, iz - 5);
+          this.scene.add(m);
+        }
+        for (const s of blackX) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, stripeLen), blackMat);
+          m.position.set(ix + s, 0.024, iz - 5);
+          this.scene.add(m);
         }
 
-        // South approach
-        for (const s of spread) {
-          const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 3.5), stripeMat);
-          stripe.position.set(ix + s, 0.02, iz + 5.5);
-          this.scene.add(stripe);
+        // South approach (centred at iz+5)
+        for (const s of whiteX) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, stripeLen), stripeMat);
+          m.position.set(ix + s, 0.025, iz + 5);
+          this.scene.add(m);
+        }
+        for (const s of blackX) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, stripeLen), blackMat);
+          m.position.set(ix + s, 0.024, iz + 5);
+          this.scene.add(m);
         }
 
-        // West approach — thin E-W stripes spread across road, centred at ix-5.5
-        for (const s of spread) {
-          const stripe = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.03, 0.7), stripeMat);
-          stripe.position.set(ix - 5.5, 0.02, iz + s);
-          this.scene.add(stripe);
+        // West approach (centred at ix-5, stripes spread across Z)
+        for (const s of whiteX) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(stripeLen, 0.03, 0.8), stripeMat);
+          m.position.set(ix - 5, 0.025, iz + s);
+          this.scene.add(m);
+        }
+        for (const s of blackX) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(stripeLen, 0.03, 0.8), blackMat);
+          m.position.set(ix - 5, 0.024, iz + s);
+          this.scene.add(m);
         }
 
-        // East approach
-        for (const s of spread) {
-          const stripe = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.03, 0.7), stripeMat);
-          stripe.position.set(ix + 5.5, 0.02, iz + s);
-          this.scene.add(stripe);
+        // East approach (centred at ix+5)
+        for (const s of whiteX) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(stripeLen, 0.03, 0.8), stripeMat);
+          m.position.set(ix + 5, 0.025, iz + s);
+          this.scene.add(m);
+        }
+        for (const s of blackX) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(stripeLen, 0.03, 0.8), blackMat);
+          m.position.set(ix + 5, 0.024, iz + s);
+          this.scene.add(m);
         }
       }
     }
