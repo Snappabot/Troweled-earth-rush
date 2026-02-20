@@ -794,12 +794,12 @@ export class Engine {
                     const cx = ix + dx;
                     const cz = iz + dz;
                     // Sidewalk fill: quarter-circle radius 2 (= sidewalk width) filling the outer corner gap
-                    const fill = new THREE.Mesh(new THREE.CircleGeometry(2, 10, theta, Math.PI / 2), sidewalkMat);
+                    const fill = new THREE.Mesh(new THREE.CircleGeometry(4, 12, theta, Math.PI / 2), sidewalkMat);
                     fill.rotation.x = -Math.PI / 2;
                     fill.position.set(cx, 0.008, cz);
                     this.scene.add(fill);
                     // Raised curb arc: thin ring at radius 1.8–2.0, slightly elevated (curb height)
-                    const curb = new THREE.Mesh(new THREE.RingGeometry(1.7, 2.1, 10, 1, theta, Math.PI / 2), curbMat);
+                    const curb = new THREE.Mesh(new THREE.RingGeometry(3.6, 4.2, 12, 1, theta, Math.PI / 2), curbMat);
                     curb.rotation.x = -Math.PI / 2;
                     curb.position.set(cx, 0.12, cz); // raised above road to simulate curb
                     this.scene.add(curb);

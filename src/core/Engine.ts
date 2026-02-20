@@ -965,7 +965,7 @@ export class Engine {
 
           // Sidewalk fill: quarter-circle radius 2 (= sidewalk width) filling the outer corner gap
           const fill = new THREE.Mesh(
-            new THREE.CircleGeometry(2, 10, theta, Math.PI / 2),
+            new THREE.CircleGeometry(4, 12, theta, Math.PI / 2),
             sidewalkMat
           );
           fill.rotation.x = -Math.PI / 2;
@@ -974,7 +974,7 @@ export class Engine {
 
           // Raised curb arc: thin ring at radius 1.8–2.0, slightly elevated (curb height)
           const curb = new THREE.Mesh(
-            new THREE.RingGeometry(1.7, 2.1, 10, 1, theta, Math.PI / 2),
+            new THREE.RingGeometry(3.6, 4.2, 12, 1, theta, Math.PI / 2),
             curbMat
           );
           curb.rotation.x = -Math.PI / 2;
