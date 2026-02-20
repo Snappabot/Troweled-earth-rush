@@ -502,6 +502,7 @@ export class Engine {
         this.buildHouseRokka(60, -20); // House 5 — Richmond
         this.buildHouseTimberStone(100, 60); // House 6 — Richmond (Snappa's house)
         this.buildHouseSculpturalPlaster(-100, -20); // House 7 — Brunswick sculptural olive
+        this.buildHouseHaussmann(60, -100); // House 8 — St Kilda Parisian mansion
     }
     // ── House 1 — Marbellino Modern ──────────────────────────────────────────────
     buildHouseMarbellino(x, z) {
@@ -886,6 +887,126 @@ export class Engine {
         }
         // ── Low step at entry ──
         this.addBox(g, oliveDrk, 2.5, 0.2, 1.0, -3, 0.1, -7.5);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+    // ── House 8 — Parisian Haussmann Mansion, St Kilda ───────────────────────────
+    // Cream limestone render, horizontal rustication, bold cornices, corner tower
+    // pilaster, ornate wrought iron balconies, tall French windows with deep reveals
+    buildHouseHaussmann(x, z) {
+        const g = new THREE.Group();
+        const cream = 0xE8DEC8; // warm cream limestone
+        const cLight = 0xF0E8D4; // lighter highlights / frame colour
+        const cShadow = 0xC8BA9C; // shadow / deep recess
+        const iron = 0x111111; // wrought iron
+        // ── Main two-storey body ──
+        this.addBox(g, cream, 22, 9.5, 14, 0, 4.75, 0);
+        // ── Ground floor rustication bands (5 horizontal grooves) ──
+        for (let i = 0; i < 5; i++) {
+            this.addBox(g, cShadow, 22.3, 0.14, 14.3, 0, 0.5 + i * 0.88, 0);
+        }
+        // ── Upper floor rustication bands ──
+        for (let i = 0; i < 4; i++) {
+            this.addBox(g, cShadow, 22.3, 0.12, 14.3, 0, 5.4 + i * 0.85, 0);
+        }
+        // ── Inter-floor cornice (main moulding between floors) ──
+        this.addBox(g, cLight, 22.6, 0.5, 14.6, 0, 4.75, 0);
+        this.addBox(g, cShadow, 22.8, 0.2, 14.8, 0, 5.05, 0);
+        this.addBox(g, cream, 22.5, 0.3, 14.5, 0, 5.25, 0);
+        // ── Roof cornice — bold projecting crown ──
+        this.addBox(g, cream, 23.2, 0.5, 15.2, 0, 9.75, 0);
+        this.addBox(g, cLight, 22.8, 0.8, 14.8, 0, 10.15, 0);
+        this.addBox(g, cShadow, 23.4, 0.25, 15.4, 0, 10.55, 0);
+        // ── Corner tower pilaster — rises above roof, left-front corner ──
+        // Pilaster body (proud of wall surface)
+        this.addBox(g, cLight, 4.0, 11.5, 4.0, -10, 5.75, -6);
+        // Rustication on pilaster
+        for (let i = 0; i < 6; i++) {
+            this.addBox(g, cShadow, 4.2, 0.12, 4.2, -10, 0.5 + i * 1.75, -6);
+        }
+        // Pilaster inter-floor cornice band
+        this.addBox(g, cream, 4.4, 0.4, 4.4, -10, 5.0, -6);
+        // Pilaster top cornice (stepped, 3 levels)
+        this.addBox(g, cream, 4.6, 0.4, 4.6, -10, 11.3, -6);
+        this.addBox(g, cLight, 4.4, 0.6, 4.4, -10, 11.75, -6);
+        this.addBox(g, cShadow, 4.8, 0.25, 4.8, -10, 12.12, -6);
+        // Pilaster finial block
+        this.addBox(g, cream, 2.5, 1.0, 2.5, -10, 12.75, -6);
+        // ── Ground floor French windows — 3 across (tall, narrow, deep reveals) ──
+        for (const wx of [-6.5, -1, 4.5]) {
+            this.addBox(g, cShadow, 2.0, 4.2, 0.5, wx, 2.1, -7.25); // deep recess
+            this.addBox(g, cLight, 1.7, 4.0, 0.2, wx, 2.1, -7.05); // frame
+            // Glass — emissive
+            const glGF = new THREE.Mesh(new THREE.BoxGeometry(1.35, 3.5, 0.12), new THREE.MeshLambertMaterial({
+                color: 0x8AABBB,
+                emissive: new THREE.Color(0x1A2A33),
+                emissiveIntensity: 0.15,
+            }));
+            glGF.position.set(wx, 2.1, -7.0);
+            g.add(glGF);
+            // Transom bar
+            this.addBox(g, cLight, 1.7, 0.12, 0.15, wx, 3.2, -7.05);
+        }
+        // ── Upper floor French windows + Juliet balconies ──
+        for (const wx of [-6.5, 4.5]) {
+            // Deep window reveal
+            this.addBox(g, cShadow, 2.0, 3.8, 0.5, wx, 7.5, -7.25);
+            this.addBox(g, cLight, 1.7, 3.5, 0.2, wx, 7.5, -7.05);
+            // Glass
+            const glUF = new THREE.Mesh(new THREE.BoxGeometry(1.35, 3.0, 0.12), new THREE.MeshLambertMaterial({
+                color: 0x8AABBB,
+                emissive: new THREE.Color(0x1A2A33),
+                emissiveIntensity: 0.15,
+            }));
+            glUF.position.set(wx, 7.5, -7.0);
+            g.add(glUF);
+            // Transom bar
+            this.addBox(g, cLight, 1.7, 0.12, 0.15, wx, 8.5, -7.05);
+            // Balcony slab
+            this.addBox(g, cream, 3.4, 0.28, 1.4, wx, 5.66, -7.9);
+            this.addBox(g, cShadow, 3.5, 0.45, 1.5, wx, 5.38, -7.95);
+            // Wrought iron railing — 5 vertical spindles
+            for (let bi = 0; bi < 5; bi++) {
+                const bx = wx - 1.3 + bi * 0.65;
+                this.addBox(g, iron, 0.07, 1.0, 0.07, bx, 6.2, -8.4);
+            }
+            // Top & bottom rails
+            this.addBox(g, iron, 3.2, 0.09, 0.09, wx, 6.72, -8.4);
+            this.addBox(g, iron, 3.2, 0.09, 0.09, wx, 5.82, -8.4);
+            // Decorative scroll hints (diagonal bars at each end)
+            this.addBox(g, iron, 0.07, 1.0, 0.07, wx - 1.3, 6.2, -8.4, 0, 0, 0.35);
+            this.addBox(g, iron, 0.07, 1.0, 0.07, wx + 1.3, 6.2, -8.4, 0, 0, -0.35);
+        }
+        // ── Large glazed bay — right side (floor-to-ceiling grid windows) ──
+        this.addBox(g, cLight, 5.0, 6.5, 0.22, 9.5, 3.75, -7.05);
+        const glBay = new THREE.Mesh(new THREE.BoxGeometry(4.5, 6.0, 0.12), new THREE.MeshLambertMaterial({
+            color: 0x8AABBB,
+            emissive: new THREE.Color(0x1A2A33),
+            emissiveIntensity: 0.12,
+        }));
+        glBay.position.set(9.5, 3.75, -7.0);
+        g.add(glBay);
+        // Grid mullions
+        for (let my = 0; my < 3; my++) {
+            this.addBox(g, cLight, 5.0, 0.1, 0.15, 9.5, 1.0 + my * 2.0, -7.0);
+        }
+        for (const mx of [7.5, 9.5, 11.5]) {
+            this.addBox(g, cLight, 0.1, 6.0, 0.15, mx, 3.75, -7.0);
+        }
+        // ── Entry recess / portico ──
+        this.addBox(g, cShadow, 3.8, 5.5, 0.6, 1.5, 2.75, -7.4);
+        this.addBox(g, cLight, 2.8, 4.8, 0.2, 1.5, 2.4, -7.1);
+        const glEntry = new THREE.Mesh(new THREE.BoxGeometry(2.2, 4.2, 0.12), new THREE.MeshLambertMaterial({
+            color: 0x8AABBB,
+            emissive: new THREE.Color(0x0A1520),
+            emissiveIntensity: 0.2,
+        }));
+        glEntry.position.set(1.5, 2.4, -7.05);
+        g.add(glEntry);
+        // Door handle
+        this.addBox(g, 0xD4AA50, 0.1, 0.1, 0.1, 2.4, 2.2, -7.06);
+        // ── Base plinth (building sits on a slight raise) ──
+        this.addBox(g, cShadow, 22.5, 0.3, 14.5, 0, 0.15, 0);
         g.position.set(x, 0, z);
         this.scene.add(g);
     }
