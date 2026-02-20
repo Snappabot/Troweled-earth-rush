@@ -598,6 +598,11 @@ export class Engine {
     this.buildHouseTimberStone(100, 60);     // House 6 — Richmond (Snappa's house)
     this.buildHouseSculpturalPlaster(-100, -20); // House 7 — Brunswick sculptural olive
     this.buildHouseHaussmann(60, -100);           // House 8 — St Kilda Parisian mansion
+    this.buildHouseAngularBay(-140, 40);          // House 9  — Footscray
+    this.buildHouseBrutalistCompound(20, 100);    // House 10 — Brunswick
+    this.buildHouseTerracottaMonolith(140, 20);   // House 11 — Richmond
+    this.buildHouseCurvedBalcony(-20, -140);      // House 12 — St Kilda
+    this.buildHouseCortenPlaster(-140, -60);      // House 13 — Footscray
   }
 
   // ── House 1 — Marbellino Modern ──────────────────────────────────────────────
@@ -1246,6 +1251,256 @@ export class Engine {
 
     // ── Base plinth (building sits on a slight raise) ──
     this.addBox(g, cShadow, 22.5, 0.3, 14.5, 0, 0.15, 0);
+
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  // ── House 9 — Angular Bay / Footscray Mediterranean ──────────────────────────
+  private buildHouseAngularBay(x: number, z: number) {
+    const g = new THREE.Group();
+    const cream      = 0xF0EBDE;  // Mediterranean stucco
+    const terracotta = 0xC47A5A;  // Roof tiles
+    const timber     = 0x3A2010;  // Dark brown timber
+    const iron       = 0x111111;  // Iron railing
+
+    // Ground floor
+    this.addBox(g, cream, 18, 4, 13, 0, 2, 0);
+    // Upper floor (main body)
+    this.addBox(g, cream, 18, 4, 12, 0, 6, 0);
+    // Upper-right corner mass projecting forward
+    this.addBox(g, cream, 8, 4, 2.5, 5, 6, -7.25);
+
+    // Angular chimney/bay pillar — protruding on front face, rises above roofline
+    this.addBox(g, cream, 3, 10, 2.5, 6.5, 5, -7.5);
+
+    // Gable roof — two angled panels meeting at ridge (~25° = 0.44 rad)
+    this.addBox(g, terracotta, 10, 0.5, 14, -4.5, 8.5, 0, 0, 0,  0.44);
+    this.addBox(g, terracotta, 10, 0.5, 14,  4.5, 8.5, 0, 0, 0, -0.44);
+    // Ridge cap
+    this.addBox(g, timber, 1.5, 0.5, 14.5, 0, 10.5, 0);
+
+    // Dark timber fascia at eave level
+    this.addBox(g, timber, 19, 0.3, 13.5, 0, 8.05, 0);
+    // Front eave soffit underside lining
+    this.addBox(g, timber, 19, 0.2, 1.2, 0, 8.05, -7.3);
+
+    // Ground floor windows — white frame + dark glass
+    for (const wx of [-6.5, 0]) {
+      this.addBox(g, 0xEEEEEE, 2.6, 2.0, 0.12, wx, 1.8, -6.56);
+      this.addBox(g, 0x334455, 2.2, 1.6, 0.15, wx, 1.8, -6.5);
+    }
+    // Upper floor windows
+    for (const wx of [-6.5, 0]) {
+      this.addBox(g, 0xEEEEEE, 2.6, 2.0, 0.12, wx, 5.8, -6.56);
+      this.addBox(g, 0x334455, 2.2, 1.6, 0.15, wx, 5.8, -6.5);
+    }
+
+    // Iron balcony railing upper-left: 4 vertical bars
+    for (let bi = 0; bi < 4; bi++) {
+      this.addBox(g, iron, 0.08, 1.0, 0.08, -8.5 + bi * 0.65, 5.5, -6.7);
+    }
+    // Top and bottom rails
+    this.addBox(g, iron, 2.4, 0.08, 0.08, -7.02, 6.05, -6.7);
+    this.addBox(g, iron, 2.4, 0.08, 0.08, -7.02, 5.0,  -6.7);
+
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  // ── House 10 — Brutalist Compound / Brunswick ─────────────────────────────────
+  private buildHouseBrutalistCompound(x: number, z: number) {
+    const g = new THREE.Group();
+    const taupe = 0xA09878;  // Sandy taupe render
+    const metal = 0x888880;  // Grey metal canopies
+
+    // Volume 1 — leftmost, tallest (7 units high)
+    this.addBox(g, taupe,   7, 7, 11, -8.5, 3.5,  0);
+    // Volume 2 — centre, medium (5 units)
+    this.addBox(g, taupe,   6, 5, 10,  -1,  2.5,  0.5);
+    // Volume 3 — centre-right (6 units)
+    this.addBox(g, taupe,   6, 6, 11,  5.5, 3.0, -0.5);
+    // Volume 4 — far right, low (4 units)
+    this.addBox(g, taupe,   5, 4,  9,  11,  2.0,  0);
+    // Low linking plinth across all volumes
+    this.addBox(g, taupe,  24, 1.5, 9,   0, 0.75, 0.5);
+
+    // Grey metal box-awning canopies protruding from upper volumes
+    this.addBox(g, metal, 4.0, 0.25, 2.5, -8.5, 7.25, -6.2);
+    this.addBox(g, metal, 4.0, 0.25, 2.5,  5.5, 6.25, -6.2);
+
+    // Large floor-to-ceiling sliding glass panels (dark-framed)
+    this.addBox(g, 0x223344, 4.0, 5.5, 0.15, -8.5, 3.5, -5.6);
+    this.addBox(g, 0x223344, 3.5, 4.5, 0.15,  5.5, 3.0, -5.6);
+
+    // Diagonal feature wall (~15° ry rotation)
+    this.addBox(g, taupe, 8, 5, 0.4, 2.0, 2.5, -6.5, 0, 0.26, 0);
+
+    // Curved low perimeter/garden wall — 9 box segments forming a gentle arc
+    const wallR = 14;
+    const wallSegs = 9;
+    const wAngStart = -Math.PI * 0.35;
+    const wAngEnd   =  Math.PI * 0.35;
+    for (let si = 0; si < wallSegs; si++) {
+      const t     = si / (wallSegs - 1);
+      const ang   = wAngStart + (wAngEnd - wAngStart) * t;
+      const wx    = Math.sin(ang) * wallR;
+      const wz    = Math.cos(ang) * wallR - wallR + 4;
+      this.addBox(g, taupe, 3.5, 1.5, 0.4, wx, 0.75, wz, 0, -ang, 0);
+    }
+
+    // Courtyard trees — thin trunk + sphere canopy
+    for (const tx of [-3, 2.5]) {
+      this.addCyl(g, 0x5A3A1A, 0.15, 0.2, 3, 5, tx, 1.5, -4);
+      const canopy = new THREE.Mesh(
+        new THREE.SphereGeometry(1.2, 6, 5),
+        new THREE.MeshLambertMaterial({ color: 0x3A6A2A })
+      );
+      canopy.position.set(tx, 4.0, -4);
+      g.add(canopy);
+    }
+
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  // ── House 11 — Terracotta Monolith / Richmond ─────────────────────────────────
+  private buildHouseTerracottaMonolith(x: number, z: number) {
+    const g = new THREE.Group();
+    const rose  = 0xBB7060;  // Dusty rose-terracotta
+    const seam  = 0x2A1A1A;  // Shadow seam lines
+    const plant = 0x4A7A3A;  // Planting
+
+    // Front boundary wall (~20 wide, 3 tall, 0.5 deep) — forward of main house
+    this.addBox(g, rose, 20, 3, 0.5, 0, 1.5, -9.5);
+    // Horizontal seam lines on boundary wall
+    this.addBox(g, seam, 20.2, 0.1, 0.55, 0, 1.0, -9.5);
+    this.addBox(g, seam, 20.2, 0.1, 0.55, 0, 2.0, -9.5);
+
+    // Main house wall — set back, leaving courtyard gap
+    this.addBox(g, rose, 20, 6, 10, 0, 3, -2);
+    // Horizontal seam lines on main wall
+    this.addBox(g, seam, 20.2, 0.1, 10.1, 0, 2.0, -2);
+    this.addBox(g, seam, 20.2, 0.1, 10.1, 0, 4.0, -2);
+    // Parapet capping the flat roof
+    this.addBox(g, rose, 20.3, 0.4, 10.3, 0, 6.2, -2);
+
+    // Planter channel between walls — green fill
+    this.addBox(g, plant, 18, 0.3, 1.8, 0, 0.15, -7.5);
+    // Grass tufts — thin cones
+    for (let pi = -8; pi <= 8; pi += 2.5) {
+      const tuft = new THREE.Mesh(
+        new THREE.ConeGeometry(0.2, 0.8, 5),
+        new THREE.MeshLambertMaterial({ color: 0x5A8A4A })
+      );
+      tuft.position.set(pi, 0.55, -7.5);
+      g.add(tuft);
+    }
+
+    // Single tall narrow slot window in main wall — recessed black frame + dark glass
+    this.addBox(g, 0x111111, 1.2, 3.5, 0.2, 0, 3.5, -7.05);
+    this.addBox(g, 0x223344, 0.8, 3.0, 0.15, 0, 3.5, -7.0);
+
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  // ── House 12 — Curved Balcony / St Kilda ──────────────────────────────────────
+  private buildHouseCurvedBalcony(x: number, z: number) {
+    const g = new THREE.Group();
+    const creamLow = 0xE8E0CC;  // Lower level warm cream
+    const whiteUp  = 0xF0EDE8;  // Upper level flat white
+    const concrete = 0xA8A8A0;  // Curved balcony wall — grey concrete
+    const iron     = 0x111111;  // Black gutters / downpipes / trim
+
+    // Lower level — warm cream render
+    this.addBox(g, creamLow, 16, 4, 12, 0, 2, 0);
+    // Upper level — white render
+    this.addBox(g, whiteUp, 16, 4, 12, 0, 6, 0);
+    // Flat roof slab
+    this.addBox(g, whiteUp, 16.5, 0.3, 12.5, 0, 8.15, 0);
+    // Dark roof edge trim
+    this.addBox(g, iron, 16.6, 0.2, 12.6, 0, 8.3, 0);
+
+    // LARGE SWEEPING CURVED BALCONY WALL — 14 box segments forming an arc
+    // Convex barrel-curve protrudes forward across ~9 units wide, 2 units tall
+    const arcR    = 5.0;
+    const arcSegs = 14;
+    const arcA0   = -Math.PI * 0.5;
+    const arcA1   =  Math.PI * 0.5;
+    for (let si = 0; si < arcSegs; si++) {
+      const t   = si / (arcSegs - 1);
+      const ang = arcA0 + (arcA1 - arcA0) * t;
+      const bx  = Math.sin(ang) * arcR;
+      const bz  = -Math.cos(ang) * arcR - 3.5;
+      this.addBox(g, concrete, 1.3, 2.0, 0.5, bx, 5.5, bz, 0, -ang, 0);
+    }
+
+    // Ground floor dark-framed casement windows
+    for (const wx of [-5, 0, 5]) {
+      this.addBox(g, 0x444444, 2.5, 2.0, 0.15, wx, 1.8, -6.1);
+      this.addBox(g, 0x223344, 2.0, 1.6, 0.12, wx, 1.8, -6.0);
+    }
+
+    // Black gutters/downpipes at corners
+    this.addCyl(g, iron, 0.1, 0.1, 8, 5, -8, 4, -6.1);
+    this.addCyl(g, iron, 0.1, 0.1, 8, 5,  8, 4, -6.1);
+
+    // Small black cube wall sconce on lower wall
+    this.addBox(g, iron, 0.3, 0.3, 0.3, -2, 2.5, -6.15);
+
+    // Flat soffit/canopy at slight angle — dark edge
+    this.addBox(g, whiteUp, 17, 0.25, 1.5, 0, 8.0, -7.2, 0.1, 0, 0);
+    this.addBox(g, iron,    17.2, 0.1, 1.6, 0, 8.12, -7.2, 0.1, 0, 0);
+
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  // ── House 13 — Corten + Plaster / Footscray ───────────────────────────────────
+  private buildHouseCortenPlaster(x: number, z: number) {
+    const g = new THREE.Group();
+    const charcoal    = 0x4A4A4A;  // Left volume — dark charcoal plaster
+    const corten      = 0xB85A20;  // Right volume — Corten rust-orange
+    const pilasterCol = 0x383838;  // Seam pilaster
+    const claddingLn  = 0x8A4010;  // Vertical cladding strip lines
+
+    // Left volume — charcoal plaster (~12 wide, 8 tall)
+    this.addBox(g, charcoal, 12, 8, 11, -7, 4, 0);
+    // Parapet — left
+    this.addBox(g, charcoal, 12.3, 0.4, 11.3, -7, 8.2, 0);
+
+    // Right volume — Corten steel (0.5 units taller)
+    this.addBox(g, corten, 8, 8.5, 11, 5, 4.25, 0);
+    // Parapet — right
+    this.addBox(g, corten, 8.3, 0.4, 11.3, 5, 8.7, 0);
+
+    // Tall narrow pilaster/tower column at seam (full height + 1 above)
+    this.addBox(g, pilasterCol, 2, 9.5, 11, -0.5, 4.75, 0);
+
+    // Vertical cladding strip lines on Corten volume (6 thin dark lines)
+    for (let ci = 0; ci < 6; ci++) {
+      this.addBox(g, claddingLn, 0.15, 8.5, 11.1, 1.5 + ci * 1.2, 4.25, 0);
+    }
+
+    // Cylindrical wall sconces on charcoal face (2 units)
+    this.addCyl(g, 0xCCCC88, 0.15, 0.15, 0.5, 6, -5, 5, -5.6);
+    this.addCyl(g, 0xCCCC88, 0.15, 0.15, 0.5, 6, -9, 5, -5.6);
+
+    // Recessed windows — charcoal volume (black frame recess + dark glass)
+    this.addBox(g, 0x111111, 2.5, 1.8, 0.3, -6, 4.5, -5.7);
+    this.addBox(g, 0x223344, 2.0, 1.4, 0.15, -6, 4.5, -5.6);
+    this.addBox(g, 0x111111, 2.5, 1.8, 0.3, -10, 2.5, -5.7);
+    this.addBox(g, 0x223344, 2.0, 1.4, 0.15, -10, 2.5, -5.6);
+
+    // Palm tree — tall thin trunk + dark green cone fan at top
+    this.addCyl(g, 0x8B5A2B, 0.2, 0.3, 8, 6, -15, 4, -3);
+    const palmFan = new THREE.Mesh(
+      new THREE.ConeGeometry(2.5, 1.5, 8),
+      new THREE.MeshLambertMaterial({ color: 0x2A5A1A })
+    );
+    palmFan.position.set(-15, 8.75, -3);
+    g.add(palmFan);
 
     g.position.set(x, 0, z);
     this.scene.add(g);
