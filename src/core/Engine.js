@@ -776,32 +776,33 @@ export class Engine {
             }
         }
     }
-    // ── Curved Road Corners — proper quarter-circle fills with raised concrete curb ──
+    // ── Curved Road Corners — quarter-circle fills matching sidewalk width ──
     createRoadCorners() {
         const sidewalkMat = new THREE.MeshLambertMaterial({ color: 0xc8c0b0 });
-        const curbMat = new THREE.MeshLambertMaterial({ color: 0xa8a098 }); // slightly darker concrete curb
-        // Each corner: road-edge position offset, and the theta angle for the outer quadrant fill
-        // theta=0→east, PI/2→north(-Z), PI→west, 3PI/2→south(+Z) when circle laid flat
+        const curbMat = new THREE.MeshLambertMaterial({ color: 0xa8a098 });
+        // Corner inner-edge positions at road boundary (±4 from intersection centre)
+        // theta: start angle of the quarter-arc that fills each corner gap
         const corners = [
-            { dx: -4, dz: -4, theta: Math.PI / 2 }, // NW corner → fill NW quadrant
-            { dx: 4, dz: -4, theta: 0 }, // NE corner → fill NE quadrant
-            { dx: -4, dz: 4, theta: Math.PI }, // SW corner → fill SW quadrant
-            { dx: 4, dz: 4, theta: 3 * Math.PI / 2 }, // SE corner → fill SE quadrant
+            { dx: -4, dz: -4, theta: Math.PI / 2 }, // NW
+            { dx: 4, dz: -4, theta: 0 }, // NE
+            { dx: -4, dz: 4, theta: Math.PI }, // SW
+            { dx: 4, dz: 4, theta: 3 * Math.PI / 2 }, // SE
         ];
         for (let ix = -200; ix <= 200; ix += 40) {
             for (let iz = -200; iz <= 200; iz += 40) {
                 for (const { dx, dz, theta } of corners) {
                     const cx = ix + dx;
                     const cz = iz + dz;
-                    // Sidewalk fill: quarter-circle radius 2 (= sidewalk width) filling the outer corner gap
-                    const fill = new THREE.Mesh(new THREE.CircleGeometry(4, 12, theta, Math.PI / 2), sidewalkMat);
+                    // Sidewalk fill: radius 2 matches the 2-unit sidewalk width.
+                    // Positioned above sidewalk (y=0.021) so it blends flush.
+                    const fill = new THREE.Mesh(new THREE.CircleGeometry(2, 12, theta, Math.PI / 2), sidewalkMat);
                     fill.rotation.x = -Math.PI / 2;
-                    fill.position.set(cx, 0.008, cz);
+                    fill.position.set(cx, 0.021, cz);
                     this.scene.add(fill);
-                    // Raised curb arc: thin ring at radius 1.8–2.0, slightly elevated (curb height)
-                    const curb = new THREE.Mesh(new THREE.RingGeometry(3.6, 4.2, 12, 1, theta, Math.PI / 2), curbMat);
+                    // Curb arc: thin ring at the inner curve edge, slightly elevated
+                    const curb = new THREE.Mesh(new THREE.RingGeometry(1.8, 2.0, 12, 1, theta, Math.PI / 2), curbMat);
                     curb.rotation.x = -Math.PI / 2;
-                    curb.position.set(cx, 0.12, cz); // raised above road to simulate curb
+                    curb.position.set(cx, 0.12, cz);
                     this.scene.add(curb);
                 }
             }
