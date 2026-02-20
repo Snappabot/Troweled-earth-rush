@@ -21,21 +21,24 @@ export class Characters {
     const matt     = this.buildMatt();
     const phil     = this.buildPhil();
     const tsuyoshi = this.buildTsuyoshi();
+    const joe      = this.buildJoe();
 
-    jose.position.set(x - 5, 0, z);
-    jarrad.position.set(x - 2, 0, z + 1);
-    matt.position.set(x + 1, 0, z);
+    jose.position.set(x - 5.5, 0, z);
+    jarrad.position.set(x - 2.5, 0, z + 1);
+    matt.position.set(x + 0.5, 0, z);
     phil.position.set(x + 4, 0, z + 0.5);
-    tsuyoshi.position.set(x - 3.5, 0, z + 3);  // Slightly back, "watching" the crew
+    tsuyoshi.position.set(x - 4, 0, z + 3.5);
+    joe.position.set(x + 7, 0, z + 1);  // Site foreman standing nearby
 
     jose.rotation.y   =  0.3;
     jarrad.rotation.y = -0.1;
     matt.rotation.y   = -0.3;
     phil.rotation.y   = -0.5;
-    tsuyoshi.rotation.y =  0.8;
+    tsuyoshi.rotation.y = 0.8;
+    joe.rotation.y    = -1.2;  // Facing the TEM crew, clipboard energy
 
-    this.scene.add(jose, jarrad, matt, phil, tsuyoshi);
-    this.characters.push(jose, jarrad, matt, phil, tsuyoshi);
+    this.scene.add(jose, jarrad, matt, phil, tsuyoshi, joe);
+    this.characters.push(jose, jarrad, matt, phil, tsuyoshi, joe);
   }
 
   // ── Jose ──────────────────────────────────────────────────────────────────
@@ -316,6 +319,65 @@ export class Characters {
     // Shoes
     this.addBox(g, 0x222222, 0.42, 0.15, 0.52, -0.17, 0.06, 0.08);
     this.addBox(g, 0x222222, 0.42, 0.15, 0.52,  0.17, 0.06, 0.08);
+
+    return g;
+  }
+
+  // ── Joe ───────────────────────────────────────────────────────────────────
+  // Tall lanky site foreman — WHITE HARD HAT, LIME-GREEN high-vis polo,
+  // safety vest with reflective strips, short dark hair, clean-shaven
+  private buildJoe(): THREE.Group {
+    const g = new THREE.Group();
+    const skin   = 0xC8A070;  // warm light tan
+    const polo   = 0x88CC22;  // lime-green high-vis polo
+    const vest   = 0xDDCC00;  // hi-vis yellow-lime safety vest
+    const pants  = 0x222228;  // dark work pants
+    const hat    = 0xEEEEE8;  // white hard hat
+
+    // Legs (tall — slightly longer)
+    this.addBox(g, pants, 0.38, 1.05, 0.32, -0.16, 0.525, 0);
+    this.addBox(g, pants, 0.38, 1.05, 0.32,  0.16, 0.525, 0);
+
+    // Body — lime green polo underneath vest
+    this.addBox(g, polo, 0.76, 1.05, 0.44, 0, 1.525, 0);
+
+    // Safety vest over the polo (slightly proud of polo)
+    this.addBox(g, vest, 0.82, 1.0, 0.10, 0, 1.52, 0.23);   // front panel
+    this.addBox(g, vest, 0.82, 1.0, 0.10, 0, 1.52, -0.23);  // back panel
+    // Vest shoulder straps
+    this.addBox(g, vest, 0.12, 0.90, 0.10, -0.28, 1.62, 0);
+    this.addBox(g, vest, 0.12, 0.90, 0.10,  0.28, 1.62, 0);
+    // Reflective strips (silver horizontal bands)
+    this.addBox(g, 0xDDDDD0, 0.84, 0.10, 0.12, 0, 1.42, 0.23);
+    this.addBox(g, 0xDDDDD0, 0.84, 0.10, 0.12, 0, 1.62, 0.23);
+
+    // Arms — lime polo sleeves, slim
+    this.addBox(g, polo, 0.19, 0.80, 0.19, -0.50, 1.28, 0);
+    this.addBox(g, polo, 0.19, 0.80, 0.19,  0.50, 1.28, 0);
+    // Wrists/hands
+    this.addBox(g, skin, 0.17, 0.18, 0.17, -0.50, 0.84, 0);
+    this.addBox(g, skin, 0.17, 0.18, 0.17,  0.50, 0.84, 0);
+
+    // Neck
+    this.addBox(g, skin, 0.20, 0.22, 0.20, 0, 2.11, 0);
+
+    // Head (slightly long face)
+    this.addSphere(g, skin, 0.38, 0, 2.60, 0);
+
+    // Short dark black hair (under the hat, barely visible)
+    this.addBox(g, 0x0A0A08, 0.60, 0.12, 0.64, 0, 2.92, -0.02);
+
+    // ── WHITE HARD HAT — the signature detail ──
+    // Helmet dome
+    this.addSphere(g, hat, 0.46, 0, 3.04, 0);
+    // Brim — flat wide ring all around
+    this.addBox(g, hat, 1.10, 0.08, 1.10, 0, 2.84, 0);
+    // Inner shadow line
+    this.addBox(g, 0xCCCCC8, 0.92, 0.06, 0.92, 0, 2.82, 0);
+
+    // Shoes — dark work boots
+    this.addBox(g, 0x2A2218, 0.42, 0.18, 0.56, -0.16, 0.06, 0.10);
+    this.addBox(g, 0x2A2218, 0.42, 0.18, 0.56,  0.16, 0.06, 0.10);
 
     return g;
   }
