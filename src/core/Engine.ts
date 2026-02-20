@@ -595,6 +595,7 @@ export class Engine {
     this.buildHouseTerracotta(20, -60);    // House 3 — St Kilda edge
     this.buildHouseLoggia(-60, -60);       // House 4 — Brunswick/StKilda
     this.buildHouseRokka(60, -20);         // House 5 — Richmond
+    this.buildHouseTimberStone(100, 60);   // House 6 — Richmond (Snappa's house)
   }
 
   // ── House 1 — Marbellino Modern ──────────────────────────────────────────────
@@ -871,6 +872,124 @@ export class Engine {
 
     // Low boundary wall / garden edge
     this.addBox(g, 0xB0A088, 20, 0.8, 0.3, 0, 0.4, -10);
+
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  // ── House 6 — Timber & Bluestone Richmond (Snappa's house) ──────────────────
+  // Two-storey: grey render base, horizontal timber cladding upper, bluestone feature
+  // wall right side, black steel carport left, stepping stone path, glass balcony
+  private buildHouseTimberStone(x: number, z: number) {
+    const g = new THREE.Group();
+
+    // ── Lower level — smooth mid-grey render ──
+    this.addBox(g, 0x888880, 22, 4, 14, 0, 2, 0);
+
+    // Lower level reveal/shadow at base
+    this.addBox(g, 0x666660, 22.2, 0.4, 14.2, 0, 0.2, 0);
+
+    // ── Upper level — horizontal timber cladding (warm amber) ──
+    // Main timber body
+    this.addBox(g, 0xB8742A, 22, 4.5, 13, 0, 6.25, 0);
+
+    // Horizontal cladding strips — 8 bands across full width
+    for (let ty = 0; ty < 8; ty++) {
+      this.addBox(g, 0x9A5E1A, 22.1, 0.12, 13.1, 0, 4.3 + ty * 0.57, 0);
+    }
+
+    // ── Bluestone feature wall — right side, full height ──
+    // (dark blue-grey rough stone texture via layered boxes)
+    this.addBox(g, 0x4A5055, 5, 8.5, 14.2, 8.5, 4.25, 0);
+    // Stone texture variation strips
+    for (let sy = 0; sy < 12; sy++) {
+      const shade = sy % 2 === 0 ? 0x3A4045 : 0x555A60;
+      this.addBox(g, shade, 5.1, 0.3, 14.3, 8.5, 0.5 + sy * 0.65, 0);
+    }
+
+    // ── Flat roof slab ──
+    this.addBox(g, 0x2A2A2A, 22.5, 0.5, 14.5, 0, 8.75, 0);
+
+    // ── Floor-to-ceiling windows — upper level, 3 large panels ──
+    for (const wx of [-6, -2, 2]) {
+      // Frame
+      this.addBox(g, 0x1A1A1A, 2.8, 3.2, 0.2, wx, 6.0, -6.6);
+      // Glass
+      const glass = new THREE.Mesh(
+        new THREE.BoxGeometry(2.4, 2.9, 0.15),
+        new THREE.MeshLambertMaterial({
+          color: 0x8AAABB,
+          emissive: new THREE.Color(0x2A4455),
+          emissiveIntensity: 0.2,
+        })
+      );
+      glass.position.set(wx, 6.0, -6.6);
+      g.add(glass);
+    }
+
+    // ── Glass balcony rail — upper level front ──
+    this.addBox(g, 0x1A1A1A, 13, 0.15, 0.5, -3, 8.0, -6.8);
+    // Glass panel (semi-transparent look)
+    this.addBox(g, 0x9ABACC, 12.5, 0.8, 0.1, -3, 7.6, -6.75);
+
+    // ── Lower level windows — left side ──
+    for (const wx of [-7, -4.5]) {
+      this.addBox(g, 0x1A1A1A, 2.2, 1.8, 0.2, wx, 2.0, -7.1);
+      this.addBox(g, 0x334455, 1.8, 1.5, 0.15, wx, 2.0, -7.0);
+    }
+
+    // ── Tall timber entry door (warm brown, centre-right) ──
+    this.addBox(g, 0x6A3C1A, 1.8, 3.2, 0.2, 2.5, 1.6, -7.1);
+    // Door brass handle hint
+    this.addBox(g, 0xB8860A, 0.12, 0.12, 0.15, 3.1, 1.6, -7.1);
+    // Entry canopy (black steel, overhangs door)
+    this.addBox(g, 0x1A1A1A, 4, 0.15, 2.5, 2.5, 3.5, -7.3);
+    this.addCyl(g, 0x1A1A1A, 0.06, 0.06, 3.5, 5, 1.0, 1.75, -8.2);
+    this.addCyl(g, 0x1A1A1A, 0.06, 0.06, 3.5, 5, 4.0, 1.75, -8.2);
+
+    // ── Black steel carport — left side ──
+    // Flat roof
+    this.addBox(g, 0x1A1A1A, 8, 0.18, 6, -9, 4.1, -5.0);
+    // 2 support posts
+    this.addCyl(g, 0x111111, 0.12, 0.12, 4.1, 6, -6.5, 2.05, -7.8);
+    this.addCyl(g, 0x111111, 0.12, 0.12, 4.1, 6, -11.5, 2.05, -7.8);
+    // Carport back wall (house-side) — merge with lower level
+    // Covered car (parked, with car cover)
+    this.addBox(g, 0x999999, 2.0, 0.8, 3.5, -9.5, 0.4, -4.5); // cover
+    this.addBox(g, 0xAAAAAA, 1.9, 0.3, 3.4, -9.5, 0.9, -4.5); // roof hump
+
+    // ── Black vertical slat fence — right boundary ──
+    for (let fx = 5; fx <= 13; fx += 0.7) {
+      this.addBox(g, 0x1A1A1A, 0.12, 1.6, 0.12, fx, 0.8, -8.5);
+    }
+
+    // ── Low front boundary wall with aggregate stone ──
+    this.addBox(g, 0x666660, 20, 0.8, 0.3, 0, 0.4, -9.5);
+    // Stone aggregate texture strip
+    this.addBox(g, 0x4A5055, 20, 0.35, 0.4, 0, 0.18, -9.5);
+
+    // ── Stepping stone path (white pavers, grass between) ──
+    for (let si = 0; si < 5; si++) {
+      this.addBox(g, 0xDDDDCC, 1.4, 0.08, 0.7, 5, 0.05, -10.2 + si * 0.9);
+    }
+
+    // ── Front lawn + tropical plants (cordyline / yucca style) ──
+    this.addBox(g, 0x4A7A3A, 8, 0.1, 3, 5, 0.0, -9.8);
+    // Cordyline plant — spiky form
+    for (const [px, pz] of [[3.5, -8.5], [6.5, -8.0]] as [number,number][]) {
+      this.addCyl(g, 0x5A3820, 0.12, 0.15, 2.5, 6, px, 1.25, pz);
+      // Spiky crown (cone)
+      const spiky = new THREE.Mesh(
+        new THREE.ConeGeometry(1.0, 2.2, 7),
+        new THREE.MeshLambertMaterial({ color: 0x3A6A2A })
+      );
+      spiky.position.set(px, 2.8, pz);
+      g.add(spiky);
+    }
+
+    // ── Upper level right-side window (on bluestone wall) ──
+    this.addBox(g, 0x1A1A1A, 3.5, 1.8, 0.2, 7.5, 6.5, -6.6);
+    this.addBox(g, 0x334455, 3.0, 1.5, 0.15, 7.5, 6.5, -6.55);
 
     g.position.set(x, 0, z);
     this.scene.add(g);
