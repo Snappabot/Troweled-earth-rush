@@ -883,7 +883,7 @@ export class Engine {
 
     for (let ix = -200; ix <= 200; ix += 40) {
       for (let iz = -200; iz <= 200; iz += 40) {
-        if (Math.abs(ix) > 160 || Math.abs(iz) > 160) continue;
+        if (Math.abs(ix) > 200 || Math.abs(iz) > 200) continue;
 
         // Zebra crossing: white + black stripes alternating, length = sidewalk width (2 units)
         // Centred at road edge (iz±5 = middle of 2-unit sidewalk from ±4 to ±6)
@@ -895,48 +895,48 @@ export class Engine {
         // North approach (centred at iz-5, length spans iz-4 to iz-6)
         for (const s of whiteX) {
           const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, stripeLen), stripeMat);
-          m.position.set(ix + s, 0.025, iz - 5);
+          m.position.set(ix + s, 0.05, iz - 5);
           this.scene.add(m);
         }
         for (const s of blackX) {
           const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, stripeLen), blackMat);
-          m.position.set(ix + s, 0.024, iz - 5);
+          m.position.set(ix + s, 0.04, iz - 5);
           this.scene.add(m);
         }
 
         // South approach (centred at iz+5)
         for (const s of whiteX) {
           const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, stripeLen), stripeMat);
-          m.position.set(ix + s, 0.025, iz + 5);
+          m.position.set(ix + s, 0.05, iz + 5);
           this.scene.add(m);
         }
         for (const s of blackX) {
           const m = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, stripeLen), blackMat);
-          m.position.set(ix + s, 0.024, iz + 5);
+          m.position.set(ix + s, 0.04, iz + 5);
           this.scene.add(m);
         }
 
         // West approach (centred at ix-5, stripes spread across Z)
         for (const s of whiteX) {
           const m = new THREE.Mesh(new THREE.BoxGeometry(stripeLen, 0.03, 0.8), stripeMat);
-          m.position.set(ix - 5, 0.025, iz + s);
+          m.position.set(ix - 5, 0.05, iz + s);
           this.scene.add(m);
         }
         for (const s of blackX) {
           const m = new THREE.Mesh(new THREE.BoxGeometry(stripeLen, 0.03, 0.8), blackMat);
-          m.position.set(ix - 5, 0.024, iz + s);
+          m.position.set(ix - 5, 0.04, iz + s);
           this.scene.add(m);
         }
 
         // East approach (centred at ix+5)
         for (const s of whiteX) {
           const m = new THREE.Mesh(new THREE.BoxGeometry(stripeLen, 0.03, 0.8), stripeMat);
-          m.position.set(ix + 5, 0.025, iz + s);
+          m.position.set(ix + 5, 0.05, iz + s);
           this.scene.add(m);
         }
         for (const s of blackX) {
           const m = new THREE.Mesh(new THREE.BoxGeometry(stripeLen, 0.03, 0.8), blackMat);
-          m.position.set(ix + 5, 0.024, iz + s);
+          m.position.set(ix + 5, 0.04, iz + s);
           this.scene.add(m);
         }
       }
