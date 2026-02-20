@@ -9,6 +9,7 @@ const ALL_JOBS = [
         description: "Brad wants the boardroom feature wall to look expensive. It doesn't.",
         pay: 420_000,
         timeLimit: 0,
+        travelTimeLimit: 120, // cbd — close
         triggerRadius: 12,
         completed: false,
     },
@@ -22,6 +23,7 @@ const ALL_JOBS = [
         description: "Big Kev's got a massive shed. Bigger than he let on over the phone.",
         pay: 680_000,
         timeLimit: 0,
+        travelTimeLimit: 180, // footscray far (x=-120)
         triggerRadius: 12,
         completed: false,
     },
@@ -35,6 +37,7 @@ const ALL_JOBS = [
         description: "Matilda's doing a reno and needs three rooms done by Thursday. It's Wednesday.",
         pay: 550_000,
         timeLimit: 0,
+        travelTimeLimit: 150, // brunswick — mid
         triggerRadius: 12,
         completed: false,
     },
@@ -48,6 +51,7 @@ const ALL_JOBS = [
         description: "Council heritage job. Nobody told you about the asbestos audit. Nobody.",
         pay: 800_000,
         timeLimit: 0,
+        travelTimeLimit: 180, // richmond far (x=120)
         triggerRadius: 12,
         completed: false,
     },
@@ -61,6 +65,7 @@ const ALL_JOBS = [
         description: "Chloe wants 'something textured but also smooth'. Good luck with that, mate.",
         pay: 610_000,
         timeLimit: 0,
+        travelTimeLimit: 180, // stkilda far (z=-120)
         triggerRadius: 12,
         completed: false,
     },
@@ -74,6 +79,7 @@ const ALL_JOBS = [
         description: "Darren's got an open home in 4 hours and a hole in his feature wall. Actual hole.",
         pay: 950_000,
         timeLimit: 240,
+        travelTimeLimit: 240, // emergency — use existing timeLimit
         triggerRadius: 12,
         completed: false,
     },
@@ -87,6 +93,7 @@ const ALL_JOBS = [
         description: "Zephyr built a mudbrick wall himself. He was not qualified to do that.",
         pay: 390_000,
         timeLimit: 0,
+        travelTimeLimit: 150, // brunswick — mid
         triggerRadius: 12,
         completed: false,
     },
@@ -100,6 +107,7 @@ const ALL_JOBS = [
         description: "Mustafa wants the walls done before the health inspector returns. No questions.",
         pay: 470_000,
         timeLimit: 0,
+        travelTimeLimit: 180, // footscray far (x=-160)
         triggerRadius: 12,
         completed: false,
     },
@@ -113,6 +121,7 @@ const ALL_JOBS = [
         description: "Patricia insists on lime render only. She's printed 11 pages of Wikipedia to prove it.",
         pay: 720_000,
         timeLimit: 0,
+        travelTimeLimit: 180, // stkilda far (z=-160)
         triggerRadius: 12,
         completed: false,
     },
@@ -126,6 +135,7 @@ const ALL_JOBS = [
         description: "The Hendersons want it done before Christmas. You ask which Christmas.",
         pay: 580_000,
         timeLimit: 0,
+        travelTimeLimit: 180, // richmond far (x=160)
         triggerRadius: 12,
         completed: false,
     },
@@ -139,6 +149,7 @@ const ALL_JOBS = [
         description: "Gary's upstairs neighbor left the bath running. Gary is not speaking to upstairs.",
         pay: 880_000,
         timeLimit: 300,
+        travelTimeLimit: 300, // emergency — use existing timeLimit
         triggerRadius: 12,
         completed: false,
     },
@@ -152,6 +163,7 @@ const ALL_JOBS = [
         client: 'Alejandro',
         pay: 640_000,
         timeLimit: 0,
+        travelTimeLimit: 180, // stkilda far (z=-160)
         triggerRadius: 12,
         completed: false,
     },
@@ -161,11 +173,33 @@ export class JobManager {
     activeJob = null;
     completedJobIds = new Set();
     money = 500_000; // sats
+    travelTimer = 0; // counts down while job is active
+    travelFailed = false; // true if timer expired
     getAvailableJobs() {
         return this.jobs.filter(j => !this.completedJobIds.has(j.id) && j !== this.activeJob);
     }
     acceptJob(job) {
         this.activeJob = job;
+        this.startTravelTimer();
+    }
+    startTravelTimer() {
+        if (this.activeJob) {
+            this.travelTimer = this.activeJob.travelTimeLimit ?? 120;
+            this.travelFailed = false;
+        }
+    }
+    tickTravel(dt) {
+        if (!this.activeJob || this.travelFailed)
+            return null;
+        this.travelTimer -= dt;
+        if (this.travelTimer <= 0) {
+            this.travelFailed = true;
+            const penalty = 150_000; // 150K sats penalty for being late
+            this.money = Math.max(0, this.money - penalty);
+            this.activeJob = null;
+            return { failed: true, penalty };
+        }
+        return null;
     }
     checkArrival(vanX, vanZ) {
         if (!this.activeJob)

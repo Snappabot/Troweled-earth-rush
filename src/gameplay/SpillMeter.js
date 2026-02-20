@@ -1,6 +1,8 @@
 /** SpillMeter — tracks and displays how close the plaster is to spilling. */
 export class SpillMeter {
     level = 0; // 0.0–1.0
+    /** Called with a penalty amount (sats) whenever the bucket spills. */
+    onSpill;
     container;
     fill;
     bucketEl;
@@ -140,6 +142,7 @@ export class SpillMeter {
         if (this.level >= 1.0 && !this.spillFlashing) {
             this.spillFlashing = true;
             this.level = 0.5;
+            this.onSpill?.(50_000); // 50K sats penalty per spill
             this.container.classList.add('spill-flash');
             setTimeout(() => {
                 this.container.classList.remove('spill-flash');

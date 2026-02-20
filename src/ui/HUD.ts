@@ -8,16 +8,49 @@ function formatSats(n: number): string {
   return `${n} sats`;
 }
 
+function formatMMSS(seconds: number): string {
+  const s = Math.max(0, Math.ceil(seconds));
+  const m = Math.floor(s / 60);
+  const ss = s % 60;
+  return `${m}:${ss.toString().padStart(2, '0')}`;
+}
+
 export class HUD {
   private btcAchieved = false;
   private speedText: HTMLDivElement;
   private moneyEl: HTMLDivElement;
   private jobStripEl: HTMLDivElement;
+  private travelTimerEl: HTMLDivElement;
   private flashOverlay: HTMLDivElement;
+  private timerFailOverlay: HTMLDivElement;
   private activeJob: Job | null = null;
   private flashTimeout: ReturnType<typeof setTimeout> | null = null;
+  private spillPenaltyTimeout: ReturnType<typeof setTimeout> | null = null;
+  private currentMoney: number = 500_000;
+  private timerPulseInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
+    // ── Inject keyframe animations ────────────────────────────────────────────
+    if (!document.getElementById('hud-styles')) {
+      const style = document.createElement('style');
+      style.id = 'hud-styles';
+      style.textContent = `
+        @keyframes timerPulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.35; }
+        }
+        .hud-timer-pulse {
+          animation: timerPulse 0.6s ease-in-out infinite;
+        }
+        @keyframes hudRedFlash {
+          0%   { background: rgba(220, 38, 38, 0.85); }
+          70%  { background: rgba(220, 38, 38, 0.85); }
+          100% { background: rgba(220, 38, 38, 0.0);  }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
     // ── Speed display — bottom-left ──────────────────────────────────────────
     const speedContainer = document.createElement('div');
     speedContainer.style.cssText = `
@@ -65,6 +98,7 @@ export class HUD {
       font-weight: 900;
       text-shadow: 0 1px 6px rgba(0,0,0,0.8);
       letter-spacing: 1px;
+      transition: color 0.2s;
     `;
     this.moneyEl.textContent = '500K sats';
     infoPanel.appendChild(this.moneyEl);
@@ -82,6 +116,23 @@ export class HUD {
       border-left: 3px solid #C1666B;
     `;
     infoPanel.appendChild(this.jobStripEl);
+
+    // Travel timer — below job strip
+    this.travelTimerEl = document.createElement('div');
+    this.travelTimerEl.style.cssText = `
+      display: none;
+      text-align: right;
+      font-size: 20px;
+      font-weight: 900;
+      font-family: system-ui, monospace;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.9);
+      letter-spacing: 1px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 8px;
+      padding: 4px 10px;
+    `;
+    infoPanel.appendChild(this.travelTimerEl);
+
     document.body.appendChild(infoPanel);
 
     // ── Job complete flash overlay ────────────────────────────────────────────
@@ -111,17 +162,41 @@ export class HUD {
     `;
     this.flashOverlay.appendChild(flashMsg);
     document.body.appendChild(this.flashOverlay);
+
+    // ── Timer fail overlay ────────────────────────────────────────────────────
+    this.timerFailOverlay = document.createElement('div');
+    this.timerFailOverlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1600;
+      pointer-events: none;
+      background: rgba(220, 38, 38, 0.18);
+    `;
+    const timerFailMsg = document.createElement('div');
+    timerFailMsg.id = 'hud-timer-fail-msg';
+    timerFailMsg.style.cssText = `
+      color: #ff4444;
+      font-size: clamp(28px, 6vw, 52px);
+      font-weight: 900;
+      font-family: system-ui, sans-serif;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.9);
+      text-align: center;
+      padding: 0 24px;
+      line-height: 1.4;
+    `;
+    timerFailMsg.textContent = '⏰ TOO SLOW! -150K sats';
+    this.timerFailOverlay.appendChild(timerFailMsg);
+    document.body.appendChild(this.timerFailOverlay);
   }
 
   /** Called every frame with speed (m/s) and spill level */
   update(speed: number, _spillPct: number): void {
     const kmh = Math.abs(Math.round(speed * 3.6));
     this.speedText.textContent = `${kmh} km/h`;
-
-    // Update distance in job strip if a job is active
-    if (this.activeJob) {
-      // Distance is updated separately via updateJobDistance()
-    }
   }
 
   /** Set active job in the HUD strip */
@@ -170,6 +245,76 @@ export class HUD {
     }
   }
 
+  /**
+   * Update the travel timer countdown.
+   * Pass null to hide it.
+   */
+  updateTravelTimer(seconds: number | null): void {
+    if (seconds === null) {
+      this.travelTimerEl.style.display = 'none';
+      this.travelTimerEl.classList.remove('hud-timer-pulse');
+      if (this.timerPulseInterval !== null) {
+        clearInterval(this.timerPulseInterval);
+        this.timerPulseInterval = null;
+      }
+      return;
+    }
+
+    this.travelTimerEl.style.display = 'block';
+    this.travelTimerEl.textContent = `⏱ ${formatMMSS(seconds)}`;
+
+    if (seconds > 60) {
+      // Green
+      this.travelTimerEl.style.color = '#5EDB7D';
+      this.travelTimerEl.classList.remove('hud-timer-pulse');
+    } else if (seconds > 30) {
+      // Yellow
+      this.travelTimerEl.style.color = '#FFD700';
+      this.travelTimerEl.classList.remove('hud-timer-pulse');
+    } else {
+      // Red + pulsing
+      this.travelTimerEl.style.color = '#ff4444';
+      if (!this.travelTimerEl.classList.contains('hud-timer-pulse')) {
+        this.travelTimerEl.classList.add('hud-timer-pulse');
+      }
+    }
+  }
+
+  /**
+   * Flash "⏰ TOO SLOW! -150K sats" red overlay for 3 seconds.
+   */
+  showTimerFail(penalty: number): void {
+    const msg = document.getElementById('hud-timer-fail-msg');
+    if (msg) {
+      msg.textContent = `⏰ TOO SLOW! -${formatSats(penalty)}`;
+    }
+    this.timerFailOverlay.style.display = 'flex';
+    setTimeout(() => {
+      this.timerFailOverlay.style.display = 'none';
+    }, 3000);
+  }
+
+  /**
+   * Brief red flash on money display showing spill penalty for 1.5 seconds.
+   */
+  showSpillPenalty(penalty: number): void {
+    // Clear any existing spill penalty display
+    if (this.spillPenaltyTimeout !== null) {
+      clearTimeout(this.spillPenaltyTimeout);
+      this.spillPenaltyTimeout = null;
+    }
+
+    const penaltyStr = `-${formatSats(penalty)}`;
+    this.moneyEl.style.color = '#ff4444';
+    this.moneyEl.textContent = `${formatSats(this.currentMoney)} ${penaltyStr}`;
+
+    this.spillPenaltyTimeout = setTimeout(() => {
+      this.moneyEl.style.color = '#5EDB7D';
+      this.moneyEl.textContent = formatSats(this.currentMoney);
+      this.spillPenaltyTimeout = null;
+    }, 1500);
+  }
+
   /** Show the job complete flash with title and earned sats */
   showJobComplete(jobTitle: string, earned: number): void {
     const flashMsg = document.getElementById('hud-flash-msg');
@@ -186,7 +331,12 @@ export class HUD {
 
   /** Update the money display and check for 1 BTC achievement */
   updateMoney(amount: number): void {
-    this.moneyEl.textContent = formatSats(amount);
+    this.currentMoney = amount;
+    // Don't overwrite an active spill penalty display
+    if (this.spillPenaltyTimeout === null) {
+      this.moneyEl.style.color = '#5EDB7D';
+      this.moneyEl.textContent = formatSats(amount);
+    }
     if (!this.btcAchieved && amount >= ONE_BTC) {
       this.btcAchieved = true;
       this._showBitcoinAchievement();

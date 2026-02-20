@@ -26,6 +26,12 @@ async function main() {
         jobBoard.hide();
         hud.setActiveJob(job);
     });
+    // ── Spill penalty callback ───────────────────────────────────────────────────
+    spillMeter.onSpill = (penalty) => {
+        jobManager.money = Math.max(0, jobManager.money - penalty);
+        hud.updateMoney(jobManager.money);
+        hud.showSpillPenalty(penalty);
+    };
     // ── JOBS button — bottom-right, unobtrusive ─────────────────────────────────
     const jobsBtn = document.createElement('button');
     jobsBtn.textContent = '📋 JOBS';
@@ -76,6 +82,23 @@ async function main() {
         const vanX = van.mesh.position.x;
         const vanZ = van.mesh.position.z;
         waypointSystem.update(dt, vanX, vanZ);
+        // Travel timer
+        if (jobManager.activeJob) {
+            const result = jobManager.tickTravel(dt);
+            hud.updateTravelTimer(jobManager.travelTimer);
+            if (result?.failed) {
+                waypointSystem.setJob(null);
+                hud.updateTravelTimer(null);
+                hud.showTimerFail(150_000);
+                hud.setActiveJob(null);
+                hud.updateMoney(jobManager.money);
+                // Re-show job board after 3.5 seconds
+                setTimeout(() => jobBoard.show(jobManager.getAvailableJobs()), 3500);
+            }
+        }
+        else {
+            hud.updateTravelTimer(null);
+        }
         // Update job distance in HUD
         if (jobManager.activeJob !== null) {
             const dist = jobManager.distanceTo(vanX, vanZ);

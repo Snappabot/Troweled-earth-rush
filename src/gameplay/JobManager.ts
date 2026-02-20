@@ -10,8 +10,9 @@ export interface Job {
   client: string;
   description: string;
   pay: number;
-  timeLimit: number;       // seconds (0 = no limit)
-  triggerRadius: number;   // distance to trigger job completion
+  timeLimit: number;          // seconds (0 = no limit)
+  travelTimeLimit: number;    // seconds to arrive after accepting
+  triggerRadius: number;      // distance to trigger job completion
   completed: boolean;
 }
 
@@ -26,6 +27,7 @@ const ALL_JOBS: Job[] = [
     description: "Brad wants the boardroom feature wall to look expensive. It doesn't.",
     pay: 420_000,
     timeLimit: 0,
+    travelTimeLimit: 120,   // cbd — close
     triggerRadius: 12,
     completed: false,
   },
@@ -39,6 +41,7 @@ const ALL_JOBS: Job[] = [
     description: "Big Kev's got a massive shed. Bigger than he let on over the phone.",
     pay: 680_000,
     timeLimit: 0,
+    travelTimeLimit: 180,   // footscray far (x=-120)
     triggerRadius: 12,
     completed: false,
   },
@@ -52,6 +55,7 @@ const ALL_JOBS: Job[] = [
     description: "Matilda's doing a reno and needs three rooms done by Thursday. It's Wednesday.",
     pay: 550_000,
     timeLimit: 0,
+    travelTimeLimit: 150,   // brunswick — mid
     triggerRadius: 12,
     completed: false,
   },
@@ -65,6 +69,7 @@ const ALL_JOBS: Job[] = [
     description: "Council heritage job. Nobody told you about the asbestos audit. Nobody.",
     pay: 800_000,
     timeLimit: 0,
+    travelTimeLimit: 180,   // richmond far (x=120)
     triggerRadius: 12,
     completed: false,
   },
@@ -78,6 +83,7 @@ const ALL_JOBS: Job[] = [
     description: "Chloe wants 'something textured but also smooth'. Good luck with that, mate.",
     pay: 610_000,
     timeLimit: 0,
+    travelTimeLimit: 180,   // stkilda far (z=-120)
     triggerRadius: 12,
     completed: false,
   },
@@ -91,6 +97,7 @@ const ALL_JOBS: Job[] = [
     description: "Darren's got an open home in 4 hours and a hole in his feature wall. Actual hole.",
     pay: 950_000,
     timeLimit: 240,
+    travelTimeLimit: 240,   // emergency — use existing timeLimit
     triggerRadius: 12,
     completed: false,
   },
@@ -104,6 +111,7 @@ const ALL_JOBS: Job[] = [
     description: "Zephyr built a mudbrick wall himself. He was not qualified to do that.",
     pay: 390_000,
     timeLimit: 0,
+    travelTimeLimit: 150,   // brunswick — mid
     triggerRadius: 12,
     completed: false,
   },
@@ -117,6 +125,7 @@ const ALL_JOBS: Job[] = [
     description: "Mustafa wants the walls done before the health inspector returns. No questions.",
     pay: 470_000,
     timeLimit: 0,
+    travelTimeLimit: 180,   // footscray far (x=-160)
     triggerRadius: 12,
     completed: false,
   },
@@ -130,6 +139,7 @@ const ALL_JOBS: Job[] = [
     description: "Patricia insists on lime render only. She's printed 11 pages of Wikipedia to prove it.",
     pay: 720_000,
     timeLimit: 0,
+    travelTimeLimit: 180,   // stkilda far (z=-160)
     triggerRadius: 12,
     completed: false,
   },
@@ -143,6 +153,7 @@ const ALL_JOBS: Job[] = [
     description: "The Hendersons want it done before Christmas. You ask which Christmas.",
     pay: 580_000,
     timeLimit: 0,
+    travelTimeLimit: 180,   // richmond far (x=160)
     triggerRadius: 12,
     completed: false,
   },
@@ -156,6 +167,7 @@ const ALL_JOBS: Job[] = [
     description: "Gary's upstairs neighbor left the bath running. Gary is not speaking to upstairs.",
     pay: 880_000,
     timeLimit: 300,
+    travelTimeLimit: 300,   // emergency — use existing timeLimit
     triggerRadius: 12,
     completed: false,
   },
@@ -169,6 +181,7 @@ const ALL_JOBS: Job[] = [
     client: 'Alejandro',
     pay: 640_000,
     timeLimit: 0,
+    travelTimeLimit: 180,   // stkilda far (z=-160)
     triggerRadius: 12,
     completed: false,
   },
@@ -180,6 +193,9 @@ export class JobManager {
   completedJobIds: Set<string> = new Set();
   money: number = 500_000;  // sats
 
+  travelTimer: number = 0;       // counts down while job is active
+  travelFailed: boolean = false; // true if timer expired
+
   getAvailableJobs(): Job[] {
     return this.jobs.filter(
       j => !this.completedJobIds.has(j.id) && j !== this.activeJob
@@ -188,6 +204,27 @@ export class JobManager {
 
   acceptJob(job: Job): void {
     this.activeJob = job;
+    this.startTravelTimer();
+  }
+
+  startTravelTimer(): void {
+    if (this.activeJob) {
+      this.travelTimer = this.activeJob.travelTimeLimit ?? 120;
+      this.travelFailed = false;
+    }
+  }
+
+  tickTravel(dt: number): { failed: boolean; penalty: number } | null {
+    if (!this.activeJob || this.travelFailed) return null;
+    this.travelTimer -= dt;
+    if (this.travelTimer <= 0) {
+      this.travelFailed = true;
+      const penalty = 150_000; // 150K sats penalty for being late
+      this.money = Math.max(0, this.money - penalty);
+      this.activeJob = null;
+      return { failed: true, penalty };
+    }
+    return null;
   }
 
   checkArrival(vanX: number, vanZ: number): Job | null {
