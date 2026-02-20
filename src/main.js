@@ -83,6 +83,15 @@ async function main() {
     const miniGameManager = new MiniGameManager();
     // Guard to prevent job completion firing more than once per arrival
     let jobCompleting = false;
+    // ── Debug panel (small, top-left) ──────────────────────────────────────────
+    const dbg = document.createElement('div');
+    dbg.style.cssText = `
+    position:fixed; top:8px; left:8px; z-index:5000;
+    background:rgba(0,0,0,0.6); color:#fff; font-size:11px;
+    font-family:monospace; padding:6px 10px; border-radius:6px;
+    pointer-events:none; line-height:1.5;
+  `;
+    document.body.appendChild(dbg);
     // ── Update loop ─────────────────────────────────────────────────────────────
     engine.onUpdate((dt) => {
         physics.update(dt);
@@ -210,6 +219,24 @@ async function main() {
         }
         engine.camera.follow(van.mesh.position, van.velocity, van.heading);
         hud.update(physics.speed, spillMeter.level);
+        // Debug panel
+        const job = jobManager.activeJob;
+        const phase = job ? `P${jobManager.activePhase}` : 'idle';
+        const dist = job
+            ? (jobManager.activePhase === 1
+                ? Math.round(jobManager.distanceToWorkshop(vanX, vanZ))
+                : jobManager.activePhase === 2
+                    ? Math.round(jobManager.distanceToPoint(vanX, vanZ, ...(() => {
+                        const nc = jobManager.nextCrewNeeded();
+                        if (!nc)
+                            return [vanX, vanZ];
+                        const p = characters.getCrewPosition(nc);
+                        return [p.x, p.z];
+                    })()))
+                    : Math.round(jobManager.distanceTo(vanX, vanZ)))
+            : 0;
+        const crew = job ? `crew:${jobManager.crewPickedUp.length}/${jobManager.crewToPickup.length}` : '';
+        dbg.textContent = `${phase} | dist:${dist} | ${crew} | lock:${jobCompleting} | mg:${miniGameManager.isActive()}`;
     });
     // Show job board on first load so player can pick a job immediately
     setTimeout(() => {
