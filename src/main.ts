@@ -1,4 +1,5 @@
 import { Engine } from './core/Engine';
+import { Characters } from './entities/Characters';
 import { VanModel } from './vehicle/VanModel';
 import { VanPhysics } from './vehicle/VanPhysics';
 import { InputManager } from './core/InputManager';
@@ -12,6 +13,10 @@ import { MiniGameManager } from './minigames/MiniGameManager';
 async function main() {
   const engine = new Engine();
   await engine.init();
+
+  // ── Spawn the crew at the depot (Footscray, near start) ────────────────────
+  const characters = new Characters(engine.scene);
+  characters.spawnCrew(8, 10);  // Standing near spawn point
 
   const input = new InputManager();
   const van = new VanModel(engine.scene);
