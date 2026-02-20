@@ -20,27 +20,42 @@ export class Engine {
     };
     async init() {
         // Renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: false });
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = false;
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.1;
         document.body.appendChild(this.renderer.domElement);
         // Scene
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x87CEEB);
-        this.scene.fog = new THREE.Fog(0x87CEEB, 200, 500);
+        this.scene.fog = new THREE.Fog(0x87CEEB, 150, 400);
         // Camera
         this.camera = new CameraController();
         this.scene.add(this.camera.camera);
-        // Lighting — ambient + sun + fill
-        const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+        // Lighting — ambient + sun + fill + hemisphere
+        const ambient = new THREE.AmbientLight(0xffffff, 0.5);
         this.scene.add(ambient);
-        const sun = new THREE.DirectionalLight(0xfff4e0, 1.2);
+        const sun = new THREE.DirectionalLight(0xfff4e0, 1.4);
         sun.position.set(80, 120, 40);
+        sun.castShadow = true;
+        sun.shadow.mapSize.width = 1024;
+        sun.shadow.mapSize.height = 1024;
+        sun.shadow.camera.near = 0.5;
+        sun.shadow.camera.far = 600;
+        sun.shadow.camera.left = -300;
+        sun.shadow.camera.right = 300;
+        sun.shadow.camera.top = 300;
+        sun.shadow.camera.bottom = -300;
+        sun.shadow.bias = -0.001;
         this.scene.add(sun);
         const fill = new THREE.DirectionalLight(0xffe8d0, 0.5);
         fill.position.set(-60, 40, -80);
         this.scene.add(fill);
+        const hemi = new THREE.HemisphereLight(0x87CEEB, 0x887766, 0.3);
+        this.scene.add(hemi);
         // Build city
         this.createCityGround();
         this.createCity();
@@ -99,6 +114,7 @@ export class Engine {
         const baseGround = new THREE.Mesh(new THREE.PlaneGeometry(2048, 2048), baseMat);
         baseGround.rotation.x = -Math.PI / 2;
         baseGround.position.y = 0;
+        baseGround.receiveShadow = true;
         this.scene.add(baseGround);
         const zoneColours = {
             cbd: 0x888880, // urban concrete
@@ -119,6 +135,7 @@ export class Engine {
                 const tile = new THREE.Mesh(new THREE.PlaneGeometry(BLOCK - 2, BLOCK - 2), tileMat);
                 tile.rotation.x = -Math.PI / 2;
                 tile.position.set(cx, 0.005, cz);
+                tile.receiveShadow = true;
                 this.scene.add(tile);
             }
         }
@@ -139,12 +156,14 @@ export class Engine {
             const road = new THREE.Mesh(new THREE.PlaneGeometry(len, ROAD_W), asphaltMat);
             road.rotation.x = -Math.PI / 2;
             road.position.set(0, 0.01, z);
+            road.receiveShadow = true;
             this.scene.add(road);
             // Sidewalks either side
             for (const side of [-1, 1]) {
                 const sw = new THREE.Mesh(new THREE.PlaneGeometry(len, 2), sidewalkMat);
                 sw.rotation.x = -Math.PI / 2;
                 sw.position.set(0, 0.02, z + side * (ROAD_W / 2 + 1));
+                sw.receiveShadow = true;
                 this.scene.add(sw);
             }
             // Yellow edge lines
@@ -190,12 +209,14 @@ export class Engine {
             const road = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_W, len), asphaltMat);
             road.rotation.x = -Math.PI / 2;
             road.position.set(x, 0.01, 0);
+            road.receiveShadow = true;
             this.scene.add(road);
             // Sidewalks either side
             for (const side of [-1, 1]) {
                 const sw = new THREE.Mesh(new THREE.PlaneGeometry(2, len), sidewalkMat);
                 sw.rotation.x = -Math.PI / 2;
                 sw.position.set(x + side * (ROAD_W / 2 + 1), 0.02, 0);
+                sw.receiveShadow = true;
                 this.scene.add(sw);
             }
             // Yellow edge lines
@@ -245,20 +266,24 @@ export class Engine {
     addTree(x, z, sx, sz) {
         const r = this.seed(sx, sz, 99);
         const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
-        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2, 6), trunkMat);
+        const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2, 8), trunkMat);
         trunk.position.set(x, 1, z);
+        trunk.castShadow = true;
+        trunk.receiveShadow = true;
         this.scene.add(trunk);
         const green = r > 0.5 ? 0x3d6e3d : 0x2d5e2d;
         const canopyMat = new THREE.MeshLambertMaterial({ color: green });
         let canopy;
         if (r > 0.5) {
-            canopy = new THREE.Mesh(new THREE.SphereGeometry(2.5, 6, 5), canopyMat);
+            canopy = new THREE.Mesh(new THREE.SphereGeometry(2.5, 8, 7), canopyMat);
             canopy.position.set(x, 3.5, z);
         }
         else {
-            canopy = new THREE.Mesh(new THREE.ConeGeometry(2, 4, 6), canopyMat);
+            canopy = new THREE.Mesh(new THREE.ConeGeometry(2, 4, 8), canopyMat);
             canopy.position.set(x, 4, z);
         }
+        canopy.castShadow = true;
+        canopy.receiveShadow = true;
         this.scene.add(canopy);
     }
     // ── Parked car ──
@@ -320,12 +345,16 @@ export class Engine {
             mesh.rotation.y = ry;
         if (rz !== 0)
             mesh.rotation.z = rz;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
         group.add(mesh);
     }
     // ── Helper: add a cylinder mesh to a group ──
     addCyl(group, color, rt, rb, h, seg, x, y, z) {
         const mesh = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), new THREE.MeshLambertMaterial({ color }));
         mesh.position.set(x, y, z);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
         group.add(mesh);
     }
     // ────────────────────────────────────────────────
@@ -1297,14 +1326,16 @@ export class Engine {
                     const cx = ix + dx;
                     const cz = iz + dz;
                     // Fill the corner gap with sidewalk colour, flush with sidewalk strips (y=0.021)
-                    const fill = new THREE.Mesh(new THREE.CircleGeometry(2, 16, theta, Math.PI / 2), sidewalkMat);
+                    const fill = new THREE.Mesh(new THREE.CircleGeometry(2, 24, theta, Math.PI / 2), sidewalkMat);
                     fill.rotation.x = -Math.PI / 2;
                     fill.position.set(cx, 0.021, cz);
+                    fill.receiveShadow = true;
                     this.scene.add(fill);
                     // Curb ring marks the curved inner edge (road-facing side), slightly raised
-                    const curb = new THREE.Mesh(new THREE.RingGeometry(1.8, 2.0, 16, 1, theta, Math.PI / 2), curbMat);
+                    const curb = new THREE.Mesh(new THREE.RingGeometry(1.8, 2.0, 24, 1, theta, Math.PI / 2), curbMat);
                     curb.rotation.x = -Math.PI / 2;
                     curb.position.set(cx, 0.08, cz);
+                    curb.receiveShadow = true;
                     this.scene.add(curb);
                 }
             }
