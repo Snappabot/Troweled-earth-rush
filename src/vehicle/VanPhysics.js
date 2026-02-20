@@ -43,10 +43,13 @@ function countCurbCrossings(prev, curr) {
 export class VanPhysics {
     van;
     input;
-    speed = 0;
+    _speed = 0;
     velocityAngle = 0;
     prevPos = new THREE.Vector3();
     onBump;
+    // Grid collision constants — road(4) + sidewalk(2) + tiny buffer(0.5)
+    COLL_GRID = 40;
+    COLL_ROAD_HALF = 6.5;
     constructor(van, input, onBump) {
         this.van = van;
         this.input = input;
@@ -54,32 +57,31 @@ export class VanPhysics {
         this.velocityAngle = this.van.heading;
         this.prevPos.copy(this.van.mesh.position);
     }
+    /** Current speed — positive = forward, negative = reverse */
+    get speed() { return this._speed; }
     update(dt) {
         // Record previous position before moving
         this.prevPos.copy(this.van.mesh.position);
-        const absSpeed = Math.abs(this.speed);
+        const absSpeed = Math.abs(this._speed);
         // --- THROTTLE ---
         if (this.input.forward) {
-            this.speed += PHYSICS.acceleration * dt;
+            this._speed += PHYSICS.acceleration * dt;
         }
         // --- BRAKE = REVERSE ---
         if (this.input.brake) {
-            this.speed -= PHYSICS.reverseForce * dt;
+            this._speed -= PHYSICS.reverseForce * dt;
         }
         // --- FRICTION ---
-        this.speed *= Math.pow(PHYSICS.friction, dt * 60);
-        this.speed = Math.max(-PHYSICS.maxSpeed * 0.5, Math.min(PHYSICS.maxSpeed, this.speed));
+        this._speed *= Math.pow(PHYSICS.friction, dt * 60);
+        this._speed = Math.max(-PHYSICS.maxSpeed * 0.5, Math.min(PHYSICS.maxSpeed, this._speed));
         // --- DIRECT STEERING ---
-        // No accumulation — heading changes directly proportional to stick/key input
         if (absSpeed > PHYSICS.minSpeedToSteer) {
             const steerInput = this.input.left ? -1 : this.input.right ? 1 :
                 Math.abs(this.input.steerAxis) > 0.1 ? this.input.steerAxis : 0;
-            // Scale turning with speed — full turning at 15+ units/s, proportional below
             const speedFactor = Math.min(1.0, absSpeed / 15);
-            this.van.heading += steerInput * PHYSICS.steerRate * speedFactor * Math.sign(this.speed) * dt;
+            this.van.heading += steerInput * PHYSICS.steerRate * speedFactor * Math.sign(this._speed) * dt;
         }
         // --- DRIFT PHYSICS ---
-        // Velocity direction lags heading — bigger lag at speed = visible drift angle
         const speedRatio = Math.min(absSpeed / PHYSICS.maxSpeed, 1);
         const gripStrength = PHYSICS.gripAtLowSpeed +
             (PHYSICS.gripAtHighSpeed - PHYSICS.gripAtLowSpeed) * speedRatio;
@@ -87,13 +89,48 @@ export class VanPhysics {
         this.velocityAngle += angleDiff * gripStrength * dt;
         // --- MOVE VAN ---
         const dir = new THREE.Vector3(Math.sin(this.velocityAngle), 0, -Math.cos(this.velocityAngle));
-        this.van.velocity.copy(dir).multiplyScalar(this.speed);
+        this.van.velocity.copy(dir).multiplyScalar(this._speed);
         this.van.mesh.position.add(this.van.velocity.clone().multiplyScalar(dt));
         // Van faces heading — shows drift angle visually
         this.van.mesh.rotation.y = -this.van.heading;
+        // --- BUILDING COLLISION ---
+        const resolved = this.resolveCollision(this.prevPos.x, this.prevPos.z, this.van.mesh.position.x, this.van.mesh.position.z);
+        if (resolved.x !== this.van.mesh.position.x || resolved.z !== this.van.mesh.position.z) {
+            // Wall hit — scrub 40% of speed (feels like sliding, not a brick wall)
+            this._speed *= 0.6;
+            this.van.mesh.position.x = resolved.x;
+            this.van.mesh.position.z = resolved.z;
+        }
         // --- CURB DETECTION ---
         this._checkCurbCrossings();
     }
+    // ── Grid collision helpers ───────────────────────────────────────────────────
+    distToNearestRoad(pos) {
+        // Distance from pos to the nearest grid line (0..20)
+        const mod = ((pos % this.COLL_GRID) + this.COLL_GRID) % this.COLL_GRID;
+        return Math.min(mod, this.COLL_GRID - mod);
+    }
+    isOnRoad(x, z) {
+        // Van is on driveable surface if within COLL_ROAD_HALF of ANY road line
+        // Roads run horizontally (z = multiples of 40) and vertically (x = multiples of 40)
+        const dx = this.distToNearestRoad(x);
+        const dz = this.distToNearestRoad(z);
+        return dx < this.COLL_ROAD_HALF || dz < this.COLL_ROAD_HALF;
+    }
+    resolveCollision(prevX, prevZ, newX, newZ) {
+        if (!this.isOnRoad(newX, newZ)) {
+            // Try sliding along Z axis (revert only X)
+            if (this.isOnRoad(prevX, newZ))
+                return { x: prevX, z: newZ };
+            // Try sliding along X axis (revert only Z)
+            if (this.isOnRoad(newX, prevZ))
+                return { x: newX, z: prevZ };
+            // Full stop — revert both
+            return { x: prevX, z: prevZ };
+        }
+        return { x: newX, z: newZ };
+    }
+    // ── Curb detection (suspension bump + spill) ────────────────────────────────
     _checkCurbCrossings() {
         const curr = this.van.mesh.position;
         const prev = this.prevPos;
@@ -102,15 +139,11 @@ export class VanPhysics {
         const totalCrossings = xCrossings + zCrossings;
         if (totalCrossings === 0)
             return;
-        // Bump intensity ∝ crossing speed, clamped, minimum guaranteed
-        const crossingSpeed = Math.abs(this.speed);
+        const crossingSpeed = Math.abs(this._speed);
         const rawIntensity = crossingSpeed / MAX_BUMP_SPEED;
         const intensity = Math.max(MIN_BUMP_INTENSITY, Math.min(1.0, rawIntensity));
-        // Apply bump to suspension
         this.van.triggerBump(intensity);
-        // Speed penalty — rolling over a curb scrubs speed
-        this.speed *= 0.85;
-        // Notify external listeners (spill meter, etc.)
+        this._speed *= 0.85;
         if (this.onBump) {
             this.onBump(intensity);
         }

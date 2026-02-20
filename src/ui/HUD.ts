@@ -1,37 +1,186 @@
+import type { Job } from '../gameplay/JobManager';
+
 export class HUD {
-  private container: HTMLDivElement;
-  private spillBar: HTMLDivElement;
   private speedText: HTMLDivElement;
+  private moneyEl: HTMLDivElement;
+  private jobStripEl: HTMLDivElement;
+  private flashOverlay: HTMLDivElement;
+  private activeJob: Job | null = null;
+  private flashTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    this.container = document.createElement('div');
-    this.container.style.cssText = `
-      position: fixed; bottom: 20px; left: 20px; right: 20px;
-      pointer-events: none; font-family: monospace; color: white;
+    // ── Speed display — bottom-left ──────────────────────────────────────────
+    const speedContainer = document.createElement('div');
+    speedContainer.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      pointer-events: none;
+      font-family: system-ui, monospace;
+      z-index: 1000;
     `;
-
-    this.spillBar = document.createElement('div');
-    this.spillBar.style.cssText = `
-      width: 200px; height: 20px; background: #333;
-      border: 2px solid #fff; border-radius: 4px; overflow: hidden;
-      margin-bottom: 8px;
-    `;
-    const spillFill = document.createElement('div');
-    spillFill.id = 'spill-fill';
-    spillFill.style.cssText = `height: 100%; width: 0%; background: #C1666B; transition: width 0.1s;`;
-    this.spillBar.appendChild(spillFill);
 
     this.speedText = document.createElement('div');
-    this.speedText.style.cssText = `font-size: 18px; text-shadow: 1px 1px 2px #000;`;
+    this.speedText.style.cssText = `
+      font-size: 22px;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+      letter-spacing: 1px;
+    `;
+    this.speedText.textContent = '0 km/h';
+    speedContainer.appendChild(this.speedText);
+    document.body.appendChild(speedContainer);
 
-    this.container.appendChild(this.spillBar);
-    this.container.appendChild(this.speedText);
-    document.body.appendChild(this.container);
+    // ── Money + job strip — top-right ────────────────────────────────────────
+    const infoPanel = document.createElement('div');
+    infoPanel.style.cssText = `
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      pointer-events: none;
+      font-family: system-ui, sans-serif;
+      z-index: 1000;
+      max-width: 280px;
+    `;
+
+    // Money counter
+    this.moneyEl = document.createElement('div');
+    this.moneyEl.style.cssText = `
+      color: #5EDB7D;
+      font-size: 26px;
+      font-weight: 900;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.8);
+      letter-spacing: 1px;
+    `;
+    this.moneyEl.textContent = '$500';
+    infoPanel.appendChild(this.moneyEl);
+
+    // Active job strip
+    this.jobStripEl = document.createElement('div');
+    this.jobStripEl.style.cssText = `
+      display: none;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 2px;
+      background: rgba(0,0,0,0.55);
+      border-radius: 10px;
+      padding: 8px 12px;
+      border-left: 3px solid #C1666B;
+    `;
+    infoPanel.appendChild(this.jobStripEl);
+    document.body.appendChild(infoPanel);
+
+    // ── Job complete flash overlay ────────────────────────────────────────────
+    this.flashOverlay = document.createElement('div');
+    this.flashOverlay.style.cssText = `
+      position: fixed;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1500;
+      pointer-events: none;
+      background: rgba(94, 219, 125, 0.15);
+    `;
+    const flashMsg = document.createElement('div');
+    flashMsg.id = 'hud-flash-msg';
+    flashMsg.style.cssText = `
+      color: #5EDB7D;
+      font-size: clamp(28px, 6vw, 52px);
+      font-weight: 900;
+      font-family: system-ui, sans-serif;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.9);
+      text-align: center;
+      padding: 0 24px;
+      line-height: 1.3;
+    `;
+    this.flashOverlay.appendChild(flashMsg);
+    document.body.appendChild(this.flashOverlay);
   }
 
-  update(speed: number, spillPct: number) {
-    this.speedText.textContent = `${Math.abs(Math.round(speed * 3.6))} km/h`;
-    const fill = document.getElementById('spill-fill');
-    if (fill) fill.style.width = `${spillPct * 100}%`;
+  /** Called every frame with speed (m/s) and spill level */
+  update(speed: number, _spillPct: number): void {
+    const kmh = Math.abs(Math.round(speed * 3.6));
+    this.speedText.textContent = `${kmh} km/h`;
+
+    // Update distance in job strip if a job is active
+    if (this.activeJob) {
+      // Distance is updated separately via updateJobDistance()
+    }
+  }
+
+  /** Set active job in the HUD strip */
+  setActiveJob(job: Job | null): void {
+    this.activeJob = job;
+    if (!job) {
+      this.jobStripEl.style.display = 'none';
+      return;
+    }
+    this.jobStripEl.style.display = 'flex';
+    this._refreshJobStrip(job, null);
+  }
+
+  /** Update displayed distance to waypoint */
+  updateJobDistance(metres: number): void {
+    if (!this.activeJob) return;
+    this._refreshJobStrip(this.activeJob, metres);
+  }
+
+  private _refreshJobStrip(job: Job, metres: number | null): void {
+    this.jobStripEl.innerHTML = '';
+
+    const titleEl = document.createElement('div');
+    titleEl.style.cssText = `
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+      text-align: right;
+    `;
+    titleEl.textContent = `📍 ${job.title}`;
+    this.jobStripEl.appendChild(titleEl);
+
+    if (metres !== null) {
+      const distEl = document.createElement('div');
+      distEl.style.cssText = `
+        color: #C1666B;
+        font-size: 12px;
+        font-weight: 600;
+        text-align: right;
+      `;
+      distEl.textContent = metres < 1000
+        ? `${Math.round(metres)} m away`
+        : `${(metres / 1000).toFixed(1)} km away`;
+      this.jobStripEl.appendChild(distEl);
+    }
+  }
+
+  /** Show the job complete flash with title and earned amount */
+  showJobComplete(jobTitle: string, earned: number): void {
+    const flashMsg = document.getElementById('hud-flash-msg');
+    if (flashMsg) {
+      flashMsg.innerHTML = `✅ JOB DONE!<br><span style="font-size:0.7em">+$${earned} — ${jobTitle}</span>`;
+    }
+
+    this.flashOverlay.style.display = 'flex';
+
+    if (this.flashTimeout !== null) {
+      clearTimeout(this.flashTimeout);
+    }
+    this.flashTimeout = setTimeout(() => {
+      this.flashOverlay.style.display = 'none';
+      this.flashTimeout = null;
+    }, 3000);
+  }
+
+  /** Update the money display */
+  updateMoney(amount: number): void {
+    this.moneyEl.textContent = `$${amount.toLocaleString()}`;
   }
 }
