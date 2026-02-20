@@ -943,19 +943,19 @@ export class Engine {
     }
   }
 
-  // ── Curved Road Corners — convex sidewalk arcs bulging INTO the intersection ──
+  // ── Curved Road Corners — rounded sidewalk corners aligned with block edges ──
   private createRoadCorners() {
     const sidewalkMat = new THREE.MeshLambertMaterial({ color: 0xc8c0b0 });
     const curbMat     = new THREE.MeshLambertMaterial({ color: 0xa8a098 });
 
-    // Each corner is centred at the road edge (±4 from intersection centre).
-    // theta fills the quadrant that faces INTO the road → convex from road's view.
-    // (Opposite quadrant to what you'd use to fill the block corner.)
+    // Centres at the OUTER sidewalk corner (±6 from intersection centre).
+    // Each arc fills the quadrant facing INTO the intersection → convex from road.
+    // Road edge = ±4, sidewalk outer edge = ±6, so radius 2 spans exactly the sidewalk width.
     const corners = [
-      { dx: -4, dz: -4, theta: 3 * Math.PI / 2 },  // NW centre → SE quadrant (into road)
-      { dx:  4, dz: -4, theta: Math.PI },            // NE centre → SW quadrant
-      { dx: -4, dz:  4, theta: 0 },                  // SW centre → NE quadrant
-      { dx:  4, dz:  4, theta: Math.PI / 2 },        // SE centre → NW quadrant
+      { dx: -6, dz: -6, theta: 3 * Math.PI / 2 },  // NW outer → SE quadrant fills toward road
+      { dx:  6, dz: -6, theta: Math.PI },            // NE outer → SW quadrant
+      { dx: -6, dz:  6, theta: 0 },                  // SW outer → NE quadrant
+      { dx:  6, dz:  6, theta: Math.PI / 2 },        // SE outer → NW quadrant
     ];
 
     for (let ix = -200; ix <= 200; ix += 40) {
@@ -964,23 +964,22 @@ export class Engine {
           const cx = ix + dx;
           const cz = iz + dz;
 
-          // Sidewalk fill: radius 2 (= sidewalk width), sits above road (y=0.015)
-          // and below sidewalk strips so it reads as a flush corner.
+          // Fill the corner gap with sidewalk colour, flush with sidewalk strips (y=0.021)
           const fill = new THREE.Mesh(
             new THREE.CircleGeometry(2, 16, theta, Math.PI / 2),
             sidewalkMat
           );
           fill.rotation.x = -Math.PI / 2;
-          fill.position.set(cx, 0.015, cz);
+          fill.position.set(cx, 0.021, cz);
           this.scene.add(fill);
 
-          // Curb arc at the inner (road-facing) edge of the fill
+          // Curb ring marks the curved inner edge (road-facing side), slightly raised
           const curb = new THREE.Mesh(
             new THREE.RingGeometry(1.8, 2.0, 16, 1, theta, Math.PI / 2),
             curbMat
           );
           curb.rotation.x = -Math.PI / 2;
-          curb.position.set(cx, 0.10, cz);
+          curb.position.set(cx, 0.08, cz);
           this.scene.add(curb);
         }
       }
