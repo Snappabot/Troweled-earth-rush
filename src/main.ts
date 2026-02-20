@@ -14,9 +14,9 @@ async function main() {
   const engine = new Engine();
   await engine.init();
 
-  // ── Spawn the crew at the depot (Footscray, near start) ────────────────────
+  // ── Spawn crew scattered across the city ───────────────────────────────────
   const characters = new Characters(engine.scene);
-  characters.spawnCrew(10, -6);  // Standing on concrete apron in front of roller door
+  characters.spawnCrewAtCityPositions();
 
   const input = new InputManager();
   const van = new VanModel(engine.scene);
@@ -37,6 +37,7 @@ async function main() {
     waypointSystem.setTarget(JobManager.WORKSHOP_POS);
     jobBoard.hide();
     hud.setActiveJob(job, 1);
+    hud.updateCrewStatus([], [], false);
   });
 
   // ── Spill penalty callback ───────────────────────────────────────────────────
@@ -113,7 +114,9 @@ async function main() {
         hud.showTimerFail(150_000);
         hud.setActiveJob(null, 1);
         hud.updateMoney(jobManager.money);
-        // Re-show job board after 3.5 seconds
+        hud.updateCrewStatus([], [], false);
+        // Restore all crew after failed job
+        characters.showAllCrew();
         setTimeout(() => jobBoard.show(jobManager.getAvailableJobs()), 3500);
       }
     } else {
@@ -124,7 +127,17 @@ async function main() {
     if (jobManager.activeJob !== null) {
       if (jobManager.activePhase === 1) {
         hud.updateJobDistance(jobManager.distanceToWorkshop(vanX, vanZ));
+      } else if (jobManager.activePhase === 2) {
+        // Distance to next crew member needed
+        const nextCrew = jobManager.nextCrewNeeded();
+        if (nextCrew) {
+          const crewPos = characters.getCrewPosition(nextCrew);
+          hud.updateJobDistance(
+            jobManager.distanceToPoint(vanX, vanZ, crewPos.x, crewPos.z)
+          );
+        }
       } else {
+        // Phase 3: distance to job site
         hud.updateJobDistance(jobManager.distanceTo(vanX, vanZ));
       }
     }
@@ -134,19 +147,73 @@ async function main() {
       if (jobManager.checkPhase1Arrival(vanX, vanZ)) {
         jobCompleting = true;
         jobManager.advanceToPhase2();
-        // Redirect waypoint to the job site
-        waypointSystem.setTarget(jobManager.activeJob.position);
-        // Update HUD to Phase 2
+
+        // Point waypoint at first required crew member
+        const firstCrew = jobManager.nextCrewNeeded();
+        if (firstCrew) {
+          const crewPos = characters.getCrewPosition(firstCrew);
+          waypointSystem.setTarget(crewPos);
+        }
+
         hud.showPhase1Complete();
         hud.setActiveJob(jobManager.activeJob, 2);
+        hud.updateCrewStatus(
+          jobManager.crewToPickup,
+          jobManager.crewPickedUp,
+          true
+        );
+
         setTimeout(() => { jobCompleting = false; }, 2000);
       }
     }
 
-    // ── Phase 2: job site arrival → troweling mini-game ───────────────────────
+    // ── Phase 2: crew pickup ──────────────────────────────────────────────────
+    if (jobManager.activeJob && jobManager.activePhase === 2 && !jobCompleting) {
+      for (const name of jobManager.crewToPickup) {
+        if (jobManager.crewPickedUp.includes(name)) continue;
+
+        const crewPos = characters.getCrewPosition(name);
+        const dist = jobManager.distanceToPoint(vanX, vanZ, crewPos.x, crewPos.z);
+
+        if (dist < 10) {
+          // Pick up this crew member
+          jobCompleting = true;
+          characters.hideCrew(name);
+          const allCollected = jobManager.pickupCrew(name);
+
+          // Update crew status in HUD
+          hud.updateCrewStatus(
+            jobManager.crewToPickup,
+            jobManager.crewPickedUp,
+            true
+          );
+
+          if (allCollected) {
+            // All crew collected → advance to Phase 3
+            jobManager.advanceToPhase3();
+            waypointSystem.setTarget(jobManager.activeJob!.position);
+            hud.showCrewPickup(name, null);
+            hud.setActiveJob(jobManager.activeJob, 3);
+          } else {
+            // Point waypoint at next crew member
+            const nextCrew = jobManager.nextCrewNeeded();
+            if (nextCrew) {
+              const nextPos = characters.getCrewPosition(nextCrew);
+              waypointSystem.setTarget(nextPos);
+              hud.showCrewPickup(name, nextCrew);
+            }
+          }
+
+          setTimeout(() => { jobCompleting = false; }, 1500);
+          break; // Only pick up one per frame
+        }
+      }
+    }
+
+    // ── Phase 3: job site arrival → troweling mini-game ───────────────────────
     if (
       jobManager.activeJob &&
-      jobManager.activePhase === 2 &&
+      jobManager.activePhase === 3 &&
       !jobCompleting &&
       !miniGameManager.isActive()
     ) {
@@ -154,15 +221,17 @@ async function main() {
       if (arrived !== null) {
         jobCompleting = true;
         waypointSystem.setTarget(null);
-        hud.setActiveJob(null, 2);
+        hud.setActiveJob(null, 3);
+        hud.updateCrewStatus([], [], false);
 
         // Launch the troweling mini-game
         miniGameManager.startTroweling((result) => {
           const earned = jobManager.completeJob(arrived, result.qualityPct);
           hud.showJobComplete(arrived.title, earned);
           hud.updateMoney(jobManager.money);
+          // Restore all crew to their city positions for next job
+          characters.showAllCrew();
           jobCompleting = false;
-          // Show job board 3.5 seconds after result (gives flash overlay time to clear)
           setTimeout(() => {
             const available = jobManager.getAvailableJobs();
             if (available.length > 0) {

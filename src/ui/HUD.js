@@ -12,6 +12,10 @@ function formatMMSS(seconds) {
     const ss = s % 60;
     return `${m}:${ss.toString().padStart(2, '0')}`;
 }
+/** Get initials from a crew name (first letter) */
+function initials(name) {
+    return name.charAt(0).toUpperCase();
+}
 export class HUD {
     btcAchieved = false;
     speedText;
@@ -20,6 +24,7 @@ export class HUD {
     travelTimerEl;
     flashOverlay;
     timerFailOverlay;
+    crewPanelEl;
     activeJob = null;
     activePhase = 1;
     flashTimeout = null;
@@ -124,6 +129,20 @@ export class HUD {
     `;
         infoPanel.appendChild(this.travelTimerEl);
         document.body.appendChild(infoPanel);
+        // ── Crew status panel — top-left ──────────────────────────────────────────
+        this.crewPanelEl = document.createElement('div');
+        this.crewPanelEl.style.cssText = `
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      display: none;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: none;
+      font-family: system-ui, sans-serif;
+      z-index: 1000;
+    `;
+        document.body.appendChild(this.crewPanelEl);
         // ── Job complete / phase flash overlay ────────────────────────────────────
         this.flashOverlay = document.createElement('div');
         this.flashOverlay.style.cssText = `
@@ -191,6 +210,7 @@ export class HUD {
         this.activePhase = phase;
         if (!job) {
             this.jobStripEl.style.display = 'none';
+            this.crewPanelEl.style.display = 'none';
             return;
         }
         this.jobStripEl.style.display = 'flex';
@@ -201,6 +221,63 @@ export class HUD {
         if (!this.activeJob)
             return;
         this._refreshJobStrip(this.activeJob, metres);
+    }
+    /**
+     * Update the crew status display.
+     * crewToPickup: all required crew names
+     * crewPickedUp: which ones are collected
+     */
+    updateCrewStatus(crewToPickup, crewPickedUp, show) {
+        if (!show || crewToPickup.length === 0) {
+            this.crewPanelEl.style.display = 'none';
+            return;
+        }
+        this.crewPanelEl.style.display = 'flex';
+        this.crewPanelEl.innerHTML = '';
+        // Label
+        const label = document.createElement('div');
+        label.style.cssText = `
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    `;
+        label.textContent = 'Crew';
+        this.crewPanelEl.appendChild(label);
+        // Row of crew avatar circles
+        const row = document.createElement('div');
+        row.style.cssText = `
+      display: flex;
+      flex-direction: row;
+      gap: 6px;
+      align-items: center;
+    `;
+        for (const name of crewToPickup) {
+            const collected = crewPickedUp.includes(name);
+            const circle = document.createElement('div');
+            circle.style.cssText = `
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: ${collected ? '#5EDB7D' : '#555'};
+        border: 2px solid ${collected ? '#3AC060' : '#888'};
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 900;
+        color: ${collected ? '#003318' : '#bbb'};
+        text-shadow: none;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+        transition: background 0.2s, border-color 0.2s;
+      `;
+            circle.textContent = initials(name);
+            circle.title = name;
+            row.appendChild(circle);
+        }
+        this.crewPanelEl.appendChild(row);
     }
     _refreshJobStrip(job, metres) {
         this.jobStripEl.innerHTML = '';
@@ -220,16 +297,23 @@ export class HUD {
                 lineEl.textContent = `📦 To workshop: ${distStr} — ${job.title}`;
                 lineEl.style.color = '#FFD700';
             }
+            else if (this.activePhase === 2) {
+                lineEl.textContent = `👥 Pick up crew: ${distStr} — ${job.title}`;
+                lineEl.style.color = '#60AAFF';
+            }
             else {
                 lineEl.textContent = `🧱 To job site: ${distStr} — ${job.title}`;
                 lineEl.style.color = '#C1666B';
             }
         }
         else {
-            // No distance yet — show basic label
             if (this.activePhase === 1) {
                 lineEl.textContent = `📦 Workshop pickup — ${job.title}`;
                 lineEl.style.color = '#FFD700';
+            }
+            else if (this.activePhase === 2) {
+                lineEl.textContent = `👥 Pick up the crew — ${job.title}`;
+                lineEl.style.color = '#60AAFF';
             }
             else {
                 lineEl.textContent = `🧱 ${job.title}`;
@@ -255,26 +339,21 @@ export class HUD {
         this.travelTimerEl.style.display = 'block';
         this.travelTimerEl.textContent = `⏱ ${formatMMSS(seconds)}`;
         if (seconds > 60) {
-            // Green
             this.travelTimerEl.style.color = '#5EDB7D';
             this.travelTimerEl.classList.remove('hud-timer-pulse');
         }
         else if (seconds > 30) {
-            // Yellow
             this.travelTimerEl.style.color = '#FFD700';
             this.travelTimerEl.classList.remove('hud-timer-pulse');
         }
         else {
-            // Red + pulsing
             this.travelTimerEl.style.color = '#ff4444';
             if (!this.travelTimerEl.classList.contains('hud-timer-pulse')) {
                 this.travelTimerEl.classList.add('hud-timer-pulse');
             }
         }
     }
-    /**
-     * Flash "⏰ TOO SLOW! -150K sats" red overlay for 3 seconds.
-     */
+    /** Flash "⏰ TOO SLOW! -150K sats" red overlay for 3 seconds. */
     showTimerFail(penalty) {
         const msg = document.getElementById('hud-timer-fail-msg');
         if (msg) {
@@ -286,13 +365,12 @@ export class HUD {
         }, 3000);
     }
     /**
-     * Brief green flash for 2.5s: "📦 Materials loaded! Drive to the job."
-     * Shown when the player arrives at the workshop (Phase 1 → Phase 2 transition).
+     * Flash for Phase 1 complete: "Materials loaded! Go pick up the crew."
      */
     showPhase1Complete() {
         const flashMsg = document.getElementById('hud-flash-msg');
         if (flashMsg) {
-            flashMsg.innerHTML = `📦 Materials loaded!<br><span style="font-size:0.65em">Drive to the job site.</span>`;
+            flashMsg.innerHTML = `📦 Materials loaded!<br><span style="font-size:0.65em">Go pick up the crew.</span>`;
             flashMsg.style.color = '#FFD700';
         }
         this.flashOverlay.style.background = 'rgba(255, 210, 0, 0.10)';
@@ -306,10 +384,37 @@ export class HUD {
         }, 2500);
     }
     /**
+     * Flash for crew member pickup: "Picked up [Name]! Next: [Name] / All crew assembled!"
+     */
+    showCrewPickup(name, nextName) {
+        const flashMsg = document.getElementById('hud-flash-msg');
+        if (flashMsg) {
+            if (nextName) {
+                flashMsg.innerHTML = `👤 ${name} on board!<br><span style="font-size:0.65em">Pick up ${nextName}!</span>`;
+            }
+            else {
+                flashMsg.innerHTML = `✅ Crew assembled!<br><span style="font-size:0.65em">Head to the job site.</span>`;
+                flashMsg.style.color = '#5EDB7D';
+            }
+            if (nextName)
+                flashMsg.style.color = '#60AAFF';
+        }
+        this.flashOverlay.style.background = nextName
+            ? 'rgba(96, 170, 255, 0.08)'
+            : 'rgba(94, 219, 125, 0.12)';
+        this.flashOverlay.style.display = 'flex';
+        if (this.flashTimeout !== null)
+            clearTimeout(this.flashTimeout);
+        this.flashTimeout = setTimeout(() => {
+            this.flashOverlay.style.display = 'none';
+            this.flashOverlay.style.background = 'rgba(94, 219, 125, 0.15)';
+            this.flashTimeout = null;
+        }, 2200);
+    }
+    /**
      * Brief red flash on money display showing spill penalty for 1.5 seconds.
      */
     showSpillPenalty(penalty) {
-        // Clear any existing spill penalty display
         if (this.spillPenaltyTimeout !== null) {
             clearTimeout(this.spillPenaltyTimeout);
             this.spillPenaltyTimeout = null;
@@ -342,7 +447,6 @@ export class HUD {
     /** Update the money display and check for 1 BTC achievement */
     updateMoney(amount) {
         this.currentMoney = amount;
-        // Don't overwrite an active spill penalty display
         if (this.spillPenaltyTimeout === null) {
             this.moneyEl.style.color = '#5EDB7D';
             this.moneyEl.textContent = formatSats(amount);

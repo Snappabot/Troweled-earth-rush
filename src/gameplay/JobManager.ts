@@ -13,6 +13,7 @@ export interface Job {
   timeLimit: number;          // seconds (0 = no limit)
   travelTimeLimit: number;    // seconds to arrive after accepting
   triggerRadius: number;      // distance to trigger job completion
+  crewNeeded: number;         // how many crew members needed for this job
   completed: boolean;
 }
 
@@ -27,8 +28,9 @@ const ALL_JOBS: Job[] = [
     description: "Brad wants the boardroom feature wall to look expensive. It doesn't.",
     pay: 420_000,
     timeLimit: 0,
-    travelTimeLimit: 120,   // cbd — close
+    travelTimeLimit: 120,
     triggerRadius: 18,
+    crewNeeded: 2,
     completed: false,
   },
   {
@@ -41,8 +43,9 @@ const ALL_JOBS: Job[] = [
     description: "Big Kev's got a massive shed. Bigger than he let on over the phone.",
     pay: 680_000,
     timeLimit: 0,
-    travelTimeLimit: 180,   // footscray far (x=-120)
+    travelTimeLimit: 180,
     triggerRadius: 18,
+    crewNeeded: 2,
     completed: false,
   },
   {
@@ -55,8 +58,9 @@ const ALL_JOBS: Job[] = [
     description: "Matilda's doing a reno and needs three rooms done by Thursday. It's Wednesday.",
     pay: 550_000,
     timeLimit: 0,
-    travelTimeLimit: 150,   // brunswick — mid
+    travelTimeLimit: 150,
     triggerRadius: 18,
+    crewNeeded: 1,
     completed: false,
   },
   {
@@ -69,8 +73,9 @@ const ALL_JOBS: Job[] = [
     description: "Council heritage job. Nobody told you about the asbestos audit. Nobody.",
     pay: 800_000,
     timeLimit: 0,
-    travelTimeLimit: 180,   // richmond far (x=120)
+    travelTimeLimit: 180,
     triggerRadius: 18,
+    crewNeeded: 3,
     completed: false,
   },
   {
@@ -83,8 +88,9 @@ const ALL_JOBS: Job[] = [
     description: "Chloe wants 'something textured but also smooth'. Good luck with that, mate.",
     pay: 610_000,
     timeLimit: 0,
-    travelTimeLimit: 180,   // stkilda far (z=-120)
+    travelTimeLimit: 180,
     triggerRadius: 18,
+    crewNeeded: 1,
     completed: false,
   },
   {
@@ -97,8 +103,9 @@ const ALL_JOBS: Job[] = [
     description: "Darren's got an open home in 4 hours and a hole in his feature wall. Actual hole.",
     pay: 950_000,
     timeLimit: 240,
-    travelTimeLimit: 240,   // emergency — use existing timeLimit
+    travelTimeLimit: 240,
     triggerRadius: 18,
+    crewNeeded: 2,
     completed: false,
   },
   {
@@ -111,8 +118,9 @@ const ALL_JOBS: Job[] = [
     description: "Zephyr built a mudbrick wall himself. He was not qualified to do that.",
     pay: 390_000,
     timeLimit: 0,
-    travelTimeLimit: 150,   // brunswick — mid
+    travelTimeLimit: 150,
     triggerRadius: 18,
+    crewNeeded: 1,
     completed: false,
   },
   {
@@ -125,8 +133,9 @@ const ALL_JOBS: Job[] = [
     description: "Mustafa wants the walls done before the health inspector returns. No questions.",
     pay: 470_000,
     timeLimit: 0,
-    travelTimeLimit: 180,   // footscray far (x=-160)
+    travelTimeLimit: 180,
     triggerRadius: 18,
+    crewNeeded: 2,
     completed: false,
   },
   {
@@ -139,8 +148,9 @@ const ALL_JOBS: Job[] = [
     description: "Patricia insists on lime render only. She's printed 11 pages of Wikipedia to prove it.",
     pay: 720_000,
     timeLimit: 0,
-    travelTimeLimit: 180,   // stkilda far (z=-160)
+    travelTimeLimit: 180,
     triggerRadius: 18,
+    crewNeeded: 3,
     completed: false,
   },
   {
@@ -153,8 +163,9 @@ const ALL_JOBS: Job[] = [
     description: "The Hendersons want it done before Christmas. You ask which Christmas.",
     pay: 580_000,
     timeLimit: 0,
-    travelTimeLimit: 180,   // richmond far (x=160)
+    travelTimeLimit: 180,
     triggerRadius: 18,
+    crewNeeded: 1,
     completed: false,
   },
   {
@@ -167,8 +178,9 @@ const ALL_JOBS: Job[] = [
     description: "Gary's upstairs neighbor left the bath running. Gary is not speaking to upstairs.",
     pay: 880_000,
     timeLimit: 300,
-    travelTimeLimit: 300,   // emergency — use existing timeLimit
+    travelTimeLimit: 300,
     triggerRadius: 18,
+    crewNeeded: 2,
     completed: false,
   },
   {
@@ -181,11 +193,14 @@ const ALL_JOBS: Job[] = [
     client: 'Alejandro',
     pay: 640_000,
     timeLimit: 0,
-    travelTimeLimit: 180,   // stkilda far (z=-160)
+    travelTimeLimit: 180,
     triggerRadius: 18,
+    crewNeeded: 2,
     completed: false,
   },
 ];
+
+const ALL_CREW_NAMES = ['Jose', 'Jarrad', 'Matt', 'Phil', 'Tsuyoshi', 'Fabio'];
 
 export class JobManager {
   /** Fixed workshop location — near spawn, TEM depot */
@@ -193,12 +208,17 @@ export class JobManager {
 
   private jobs: Job[] = ALL_JOBS.map(j => ({ ...j }));
   activeJob: Job | null = null;
-  activePhase: 1 | 2 = 1;
+  activePhase: 1 | 2 | 3 = 1;
   completedJobIds: Set<string> = new Set();
   money: number = 500_000;  // sats
 
   travelTimer: number = 0;       // counts down while job is active
   travelFailed: boolean = false; // true if timer expired
+
+  /** Which crew members need to be picked up for the current job */
+  crewToPickup: string[] = [];
+  /** Which crew members have been collected so far */
+  crewPickedUp: string[] = [];
 
   getAvailableJobs(): Job[] {
     return this.jobs.filter(
@@ -209,7 +229,15 @@ export class JobManager {
   acceptJob(job: Job): void {
     this.activeJob = job;
     this.activePhase = 1;
+    this.crewToPickup = this._pickCrew(job.crewNeeded);
+    this.crewPickedUp = [];
     this.startTravelTimer();
+  }
+
+  /** Pick N random crew from the 6, no duplicates */
+  private _pickCrew(n: number): string[] {
+    const shuffled = [...ALL_CREW_NAMES].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, Math.min(n, ALL_CREW_NAMES.length));
   }
 
   startTravelTimer(): void {
@@ -221,7 +249,6 @@ export class JobManager {
 
   /**
    * Check if the van has arrived at the workshop (Phase 1 target).
-   * Uses a generous radius since the workshop is a large building.
    */
   checkPhase1Arrival(vanX: number, vanZ: number): boolean {
     const dx = vanX - JobManager.WORKSHOP_POS.x;
@@ -230,12 +257,43 @@ export class JobManager {
   }
 
   /**
-   * Transition from Phase 1 (workshop pickup) to Phase 2 (job site).
-   * Resets the travel timer for the second leg.
+   * Transition from Phase 1 (workshop pickup) to Phase 2 (crew pickup).
    */
   advanceToPhase2(): void {
     this.activePhase = 2;
     this.startTravelTimer();
+  }
+
+  /**
+   * Transition from Phase 2 (crew pickup) to Phase 3 (job site).
+   */
+  advanceToPhase3(): void {
+    this.activePhase = 3;
+    this.startTravelTimer();
+  }
+
+  /**
+   * Try to pick up a crew member by name. Returns true if all required crew
+   * are now collected.
+   */
+  pickupCrew(name: string): boolean {
+    if (!this.crewPickedUp.includes(name) && this.crewToPickup.includes(name)) {
+      this.crewPickedUp.push(name);
+    }
+    return this.allCrewCollected();
+  }
+
+  /** Returns true when every required crew member has been picked up */
+  allCrewCollected(): boolean {
+    return this.crewToPickup.every(name => this.crewPickedUp.includes(name));
+  }
+
+  /** Returns the next crew member still needed (for waypoint targeting) */
+  nextCrewNeeded(): string | null {
+    for (const name of this.crewToPickup) {
+      if (!this.crewPickedUp.includes(name)) return name;
+    }
+    return null;
   }
 
   tickTravel(dt: number): { failed: boolean; penalty: number } | null {
@@ -243,9 +301,11 @@ export class JobManager {
     this.travelTimer -= dt;
     if (this.travelTimer <= 0) {
       this.travelFailed = true;
-      const penalty = 150_000; // 150K sats penalty for being late
+      const penalty = 150_000;
       this.money = Math.max(0, this.money - penalty);
       this.activeJob = null;
+      this.crewToPickup = [];
+      this.crewPickedUp = [];
       return { failed: true, penalty };
     }
     return null;
@@ -253,10 +313,10 @@ export class JobManager {
 
   /**
    * Check if the van has arrived at the job site.
-   * Only triggers in Phase 2 — Phase 1 uses checkPhase1Arrival() instead.
+   * Only triggers in Phase 3.
    */
   checkArrival(vanX: number, vanZ: number): Job | null {
-    if (!this.activeJob || this.activePhase !== 2) return null;
+    if (!this.activeJob || this.activePhase !== 3) return null;
     const dx = vanX - this.activeJob.position.x;
     const dz = vanZ - this.activeJob.position.z;
     if (Math.sqrt(dx * dx + dz * dz) < this.activeJob.triggerRadius) {
@@ -270,10 +330,12 @@ export class JobManager {
     this.money += earned;
     this.completedJobIds.add(job.id);
     this.activeJob = null;
+    this.crewToPickup = [];
+    this.crewPickedUp = [];
     return earned;
   }
 
-  /** Distance from van to the active job site (for Phase 2 HUD display). */
+  /** Distance from van to the active job site (for Phase 3 HUD display). */
   distanceTo(vanX: number, vanZ: number): number {
     if (!this.activeJob) return 0;
     const dx = vanX - this.activeJob.position.x;
@@ -285,6 +347,13 @@ export class JobManager {
   distanceToWorkshop(vanX: number, vanZ: number): number {
     const dx = vanX - JobManager.WORKSHOP_POS.x;
     const dz = vanZ - JobManager.WORKSHOP_POS.z;
+    return Math.sqrt(dx * dx + dz * dz);
+  }
+
+  /** Distance from van to a given world position */
+  distanceToPoint(vanX: number, vanZ: number, px: number, pz: number): number {
+    const dx = vanX - px;
+    const dz = vanZ - pz;
     return Math.sqrt(dx * dx + dz * dz);
   }
 }
