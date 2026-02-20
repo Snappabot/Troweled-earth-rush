@@ -37,8 +37,12 @@ export class Characters {
     tsuyoshi.rotation.y = 0.8;
     joe.rotation.y    = -1.2;  // Facing the TEM crew, clipboard energy
 
-    this.scene.add(jose, jarrad, matt, phil, tsuyoshi, joe);
-    this.characters.push(jose, jarrad, matt, phil, tsuyoshi, joe);
+    const fabio = this.buildFabio();
+    fabio.position.set(x + 2.5, 0, z + 3.5);  // Centre stage (naturally)
+    fabio.rotation.y = -0.6;
+
+    this.scene.add(jose, jarrad, matt, phil, tsuyoshi, joe, fabio);
+    this.characters.push(jose, jarrad, matt, phil, tsuyoshi, joe, fabio);
   }
 
   // ── Jose ──────────────────────────────────────────────────────────────────
@@ -319,6 +323,60 @@ export class Characters {
     // Shoes
     this.addBox(g, 0x222222, 0.42, 0.15, 0.52, -0.17, 0.06, 0.08);
     this.addBox(g, 0x222222, 0.42, 0.15, 0.52,  0.17, 0.06, 0.08);
+
+    return g;
+  }
+
+  // ── Fabio ─────────────────────────────────────────────────────────────────
+  // The most beautiful man in the cosmos — Italian, shaved head,
+  // warm Mediterranean olive skin, stylish dark stubble, tattoo on right arm,
+  // athletic build, grey plaster-splattered work tee, megawatt smile
+  private buildFabio(): THREE.Group {
+    const g = new THREE.Group();
+    const skin  = 0xBE8E60;  // warm Mediterranean olive-tan
+    const shirt = 0x607080;  // grey-blue work tee
+    const pants = 0x282830;
+
+    // Legs (athletic stance)
+    this.addBox(g, pants, 0.44, 0.95, 0.36, -0.19, 0.475, 0);
+    this.addBox(g, pants, 0.44, 0.95, 0.36,  0.19, 0.475, 0);
+
+    // Body — athletic, grey work tee
+    this.addBox(g, shirt, 0.84, 1.0, 0.46, 0, 1.42, 0);
+
+    // Plaster splatter marks on shirt (white-grey)
+    this.addBox(g, 0xD8D4CC, 0.10, 0.10, 0.05,  0.18, 1.60, 0.24);
+    this.addBox(g, 0xD8D4CC, 0.16, 0.08, 0.05, -0.20, 1.30, 0.24);
+    this.addBox(g, 0xD8D4CC, 0.08, 0.14, 0.05,  0.05, 1.48, 0.24);
+
+    // Arms — athletic, slightly broader
+    this.addBox(g, skin, 0.25, 0.82, 0.24, -0.57, 1.24, 0);
+    this.addBox(g, skin, 0.25, 0.82, 0.24,  0.57, 1.24, 0);
+
+    // Tattoo on RIGHT upper arm (colourful, artistic)
+    this.addBox(g, 0x4A60A0, 0.27, 0.24, 0.26,  0.57, 1.52, 0);  // main tat blue
+    this.addBox(g, 0xC06840, 0.27, 0.14, 0.26,  0.57, 1.36, 0);  // tat detail orange
+
+    // Neck
+    this.addBox(g, skin, 0.26, 0.24, 0.24, 0, 2.07, 0);
+
+    // Head — shaved/bald, smooth and proud
+    this.addSphere(g, skin, 0.41, 0, 2.58, 0);
+
+    // Very subtle hair stubble (barely there — essentially bald)
+    this.addBox(g, 0x1A1008, 0.72, 0.06, 0.76, 0, 2.96, 0);
+
+    // Stylish dark beard stubble (not a full beard — trimmed, fashionable)
+    this.addBox(g, 0x2A1A08, 0.38, 0.20, 0.08, 0, 2.42, 0.37);  // chin/jaw
+    this.addBox(g, 0x2A1A08, 0.34, 0.12, 0.07, 0, 2.56, 0.38);  // moustache line
+
+    // ── The Smile — megawatt, slightly wider than the others ──
+    this.addBox(g, 0xE8B898, 0.26, 0.07, 0.05, 0, 2.48, 0.41);  // teeth hint
+    this.addBox(g, 0xFFFFFF, 0.18, 0.05, 0.04, 0, 2.49, 0.42);  // bright teeth
+
+    // Shoes — dark work boots
+    this.addBox(g, 0x1E1810, 0.46, 0.18, 0.56, -0.19, 0.06, 0.10);
+    this.addBox(g, 0x1E1810, 0.46, 0.18, 0.56,  0.19, 0.06, 0.10);
 
     return g;
   }
