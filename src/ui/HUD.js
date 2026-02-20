@@ -21,6 +21,7 @@ export class HUD {
     flashOverlay;
     timerFailOverlay;
     activeJob = null;
+    activePhase = 1;
     flashTimeout = null;
     spillPenaltyTimeout = null;
     currentMoney = 500_000;
@@ -80,7 +81,7 @@ export class HUD {
       pointer-events: none;
       font-family: system-ui, sans-serif;
       z-index: 1000;
-      max-width: 280px;
+      max-width: 300px;
     `;
         // Money counter
         this.moneyEl = document.createElement('div');
@@ -123,7 +124,7 @@ export class HUD {
     `;
         infoPanel.appendChild(this.travelTimerEl);
         document.body.appendChild(infoPanel);
-        // ── Job complete flash overlay ────────────────────────────────────────────
+        // ── Job complete / phase flash overlay ────────────────────────────────────
         this.flashOverlay = document.createElement('div');
         this.flashOverlay.style.cssText = `
       position: fixed;
@@ -184,9 +185,10 @@ export class HUD {
         const kmh = Math.abs(Math.round(speed * 3.6));
         this.speedText.textContent = `${kmh} km/h`;
     }
-    /** Set active job in the HUD strip */
-    setActiveJob(job) {
+    /** Set active job in the HUD strip, with phase number for appropriate display text. */
+    setActiveJob(job, phase = 2) {
         this.activeJob = job;
+        this.activePhase = phase;
         if (!job) {
             this.jobStripEl.style.display = 'none';
             return;
@@ -194,7 +196,7 @@ export class HUD {
         this.jobStripEl.style.display = 'flex';
         this._refreshJobStrip(job, null);
     }
-    /** Update displayed distance to waypoint */
+    /** Update displayed distance to the current waypoint target. */
     updateJobDistance(metres) {
         if (!this.activeJob)
             return;
@@ -202,29 +204,39 @@ export class HUD {
     }
     _refreshJobStrip(job, metres) {
         this.jobStripEl.innerHTML = '';
-        const titleEl = document.createElement('div');
-        titleEl.style.cssText = `
+        const lineEl = document.createElement('div');
+        lineEl.style.cssText = `
       color: #fff;
       font-size: 13px;
       font-weight: 700;
       text-shadow: 0 1px 4px rgba(0,0,0,0.9);
       text-align: right;
     `;
-        titleEl.textContent = `📍 ${job.title}`;
-        this.jobStripEl.appendChild(titleEl);
         if (metres !== null) {
-            const distEl = document.createElement('div');
-            distEl.style.cssText = `
-        color: #C1666B;
-        font-size: 12px;
-        font-weight: 600;
-        text-align: right;
-      `;
-            distEl.textContent = metres < 1000
-                ? `${Math.round(metres)} m away`
-                : `${(metres / 1000).toFixed(1)} km away`;
-            this.jobStripEl.appendChild(distEl);
+            const distStr = metres < 1000
+                ? `${Math.round(metres)}m`
+                : `${(metres / 1000).toFixed(1)}km`;
+            if (this.activePhase === 1) {
+                lineEl.textContent = `📦 To workshop: ${distStr} — ${job.title}`;
+                lineEl.style.color = '#FFD700';
+            }
+            else {
+                lineEl.textContent = `🧱 To job site: ${distStr} — ${job.title}`;
+                lineEl.style.color = '#C1666B';
+            }
         }
+        else {
+            // No distance yet — show basic label
+            if (this.activePhase === 1) {
+                lineEl.textContent = `📦 Workshop pickup — ${job.title}`;
+                lineEl.style.color = '#FFD700';
+            }
+            else {
+                lineEl.textContent = `🧱 ${job.title}`;
+                lineEl.style.color = '#fff';
+            }
+        }
+        this.jobStripEl.appendChild(lineEl);
     }
     /**
      * Update the travel timer countdown.
@@ -274,6 +286,26 @@ export class HUD {
         }, 3000);
     }
     /**
+     * Brief green flash for 2.5s: "📦 Materials loaded! Drive to the job."
+     * Shown when the player arrives at the workshop (Phase 1 → Phase 2 transition).
+     */
+    showPhase1Complete() {
+        const flashMsg = document.getElementById('hud-flash-msg');
+        if (flashMsg) {
+            flashMsg.innerHTML = `📦 Materials loaded!<br><span style="font-size:0.65em">Drive to the job site.</span>`;
+            flashMsg.style.color = '#FFD700';
+        }
+        this.flashOverlay.style.background = 'rgba(255, 210, 0, 0.10)';
+        this.flashOverlay.style.display = 'flex';
+        if (this.flashTimeout !== null)
+            clearTimeout(this.flashTimeout);
+        this.flashTimeout = setTimeout(() => {
+            this.flashOverlay.style.display = 'none';
+            this.flashOverlay.style.background = 'rgba(94, 219, 125, 0.15)';
+            this.flashTimeout = null;
+        }, 2500);
+    }
+    /**
      * Brief red flash on money display showing spill penalty for 1.5 seconds.
      */
     showSpillPenalty(penalty) {
@@ -291,34 +323,14 @@ export class HUD {
             this.spillPenaltyTimeout = null;
         }, 1500);
     }
-    /**
-     * Brief warm amber flash: "☕ COFFEE STOP! -5K sats — Hands steady." for 2s.
-     */
-    showCoffeeStop(_cost) {
-        const flashMsg = document.getElementById('hud-flash-msg');
-        if (flashMsg) {
-            flashMsg.style.color = '#C47A40';
-            flashMsg.innerHTML = `☕ COFFEE STOP!<br><span style="font-size:0.7em">-5K sats — Hands steady.</span>`;
-        }
-        this.flashOverlay.style.background = 'rgba(180, 100, 40, 0.2)';
-        this.flashOverlay.style.display = 'flex';
-        if (this.flashTimeout !== null)
-            clearTimeout(this.flashTimeout);
-        this.flashTimeout = setTimeout(() => {
-            this.flashOverlay.style.display = 'none';
-            // Restore defaults for next job-complete flash
-            this.flashOverlay.style.background = 'rgba(94, 219, 125, 0.15)';
-            if (flashMsg)
-                flashMsg.style.color = '#5EDB7D';
-            this.flashTimeout = null;
-        }, 2000);
-    }
     /** Show the job complete flash with title and earned sats */
     showJobComplete(jobTitle, earned) {
         const flashMsg = document.getElementById('hud-flash-msg');
         if (flashMsg) {
+            flashMsg.style.color = '#5EDB7D';
             flashMsg.innerHTML = `✅ JOB DONE!<br><span style="font-size:0.7em">+${formatSats(earned)} — ${jobTitle}</span>`;
         }
+        this.flashOverlay.style.background = 'rgba(94, 219, 125, 0.15)';
         this.flashOverlay.style.display = 'flex';
         if (this.flashTimeout !== null)
             clearTimeout(this.flashTimeout);

@@ -9,7 +9,6 @@ import { WaypointSystem } from './gameplay/WaypointSystem';
 import { JobBoard } from './ui/JobBoard';
 import { HUD } from './ui/HUD';
 import { MiniGameManager } from './minigames/MiniGameManager';
-import { CoffeeShop } from './entities/CoffeeShop';
 async function main() {
     const engine = new Engine();
     await engine.init();
@@ -20,9 +19,6 @@ async function main() {
     const van = new VanModel(engine.scene);
     const spillMeter = new SpillMeter();
     const hud = new HUD();
-    // ── Coffee shop pit-stop ────────────────────────────────────────────────────
-    const coffeeShop = new CoffeeShop(engine.scene);
-    let coffeeCooldown = 0; // prevent repeated triggers
     const physics = new VanPhysics(van, input, (intensity) => {
         spillMeter.triggerBump(intensity);
     });
@@ -30,10 +26,11 @@ async function main() {
     const jobManager = new JobManager();
     const waypointSystem = new WaypointSystem(engine.scene);
     const jobBoard = new JobBoard((job) => {
+        // Phase 1 starts: accept the job, point waypoint at the workshop
         jobManager.acceptJob(job);
-        waypointSystem.setJob(job);
+        waypointSystem.setTarget(JobManager.WORKSHOP_POS);
         jobBoard.hide();
-        hud.setActiveJob(job);
+        hud.setActiveJob(job, 1);
     });
     // ── Spill penalty callback ───────────────────────────────────────────────────
     spillMeter.onSpill = (penalty) => {
@@ -93,29 +90,15 @@ async function main() {
         const vanX = van.mesh.position.x;
         const vanZ = van.mesh.position.z;
         waypointSystem.update(dt, vanX, vanZ);
-        // ── Coffee shop pit-stop ──────────────────────────────────────────────────
-        coffeeShop.update(dt);
-        if (coffeeCooldown > 0)
-            coffeeCooldown -= dt;
-        if (coffeeShop.isNearby(vanX, vanZ) && coffeeCooldown <= 0) {
-            const COFFEE_COST = 5_000; // 5K sats for a coffee
-            if (jobManager.money >= COFFEE_COST) {
-                jobManager.money -= COFFEE_COST;
-                spillMeter.level = Math.max(0, spillMeter.level - 0.7); // calm the nerves significantly
-                hud.updateMoney(jobManager.money);
-                hud.showCoffeeStop(COFFEE_COST);
-                coffeeCooldown = 15; // 15 second cooldown before next coffee
-            }
-        }
-        // Travel timer
+        // ── Travel timer ──────────────────────────────────────────────────────────
         if (jobManager.activeJob) {
             const result = jobManager.tickTravel(dt);
             hud.updateTravelTimer(jobManager.travelTimer);
             if (result?.failed) {
-                waypointSystem.setJob(null);
+                waypointSystem.setTarget(null);
                 hud.updateTravelTimer(null);
                 hud.showTimerFail(150_000);
-                hud.setActiveJob(null);
+                hud.setActiveJob(null, 1);
                 hud.updateMoney(jobManager.money);
                 // Re-show job board after 3.5 seconds
                 setTimeout(() => jobBoard.show(jobManager.getAvailableJobs()), 3500);
@@ -124,19 +107,38 @@ async function main() {
         else {
             hud.updateTravelTimer(null);
         }
-        // Update job distance in HUD
+        // ── HUD distance update (phase-aware) ─────────────────────────────────────
         if (jobManager.activeJob !== null) {
-            const dist = jobManager.distanceTo(vanX, vanZ);
-            hud.updateJobDistance(dist);
+            if (jobManager.activePhase === 1) {
+                hud.updateJobDistance(jobManager.distanceToWorkshop(vanX, vanZ));
+            }
+            else {
+                hud.updateJobDistance(jobManager.distanceTo(vanX, vanZ));
+            }
         }
-        // Check job arrival — triggers the troweling mini-game
-        if (!jobCompleting && !miniGameManager.isActive()) {
+        // ── Phase 1: workshop arrival ─────────────────────────────────────────────
+        if (jobManager.activeJob && jobManager.activePhase === 1 && !jobCompleting) {
+            if (jobManager.checkPhase1Arrival(vanX, vanZ)) {
+                jobCompleting = true;
+                jobManager.advanceToPhase2();
+                // Redirect waypoint to the job site
+                waypointSystem.setTarget(jobManager.activeJob.position);
+                // Update HUD to Phase 2
+                hud.showPhase1Complete();
+                hud.setActiveJob(jobManager.activeJob, 2);
+                setTimeout(() => { jobCompleting = false; }, 2000);
+            }
+        }
+        // ── Phase 2: job site arrival → troweling mini-game ───────────────────────
+        if (jobManager.activeJob &&
+            jobManager.activePhase === 2 &&
+            !jobCompleting &&
+            !miniGameManager.isActive()) {
             const arrived = jobManager.checkArrival(vanX, vanZ);
             if (arrived !== null) {
                 jobCompleting = true;
-                // Clear HUD travel state immediately
-                waypointSystem.setJob(null);
-                hud.setActiveJob(null);
+                waypointSystem.setTarget(null);
+                hud.setActiveJob(null, 2);
                 // Launch the troweling mini-game
                 miniGameManager.startTroweling((result) => {
                     const earned = jobManager.completeJob(arrived, result.qualityPct);
