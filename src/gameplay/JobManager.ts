@@ -28,7 +28,7 @@ const ALL_JOBS: Job[] = [
     pay: 420_000,
     timeLimit: 0,
     travelTimeLimit: 120,   // cbd — close
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -42,7 +42,7 @@ const ALL_JOBS: Job[] = [
     pay: 680_000,
     timeLimit: 0,
     travelTimeLimit: 180,   // footscray far (x=-120)
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -56,7 +56,7 @@ const ALL_JOBS: Job[] = [
     pay: 550_000,
     timeLimit: 0,
     travelTimeLimit: 150,   // brunswick — mid
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -70,7 +70,7 @@ const ALL_JOBS: Job[] = [
     pay: 800_000,
     timeLimit: 0,
     travelTimeLimit: 180,   // richmond far (x=120)
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -84,7 +84,7 @@ const ALL_JOBS: Job[] = [
     pay: 610_000,
     timeLimit: 0,
     travelTimeLimit: 180,   // stkilda far (z=-120)
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -98,7 +98,7 @@ const ALL_JOBS: Job[] = [
     pay: 950_000,
     timeLimit: 240,
     travelTimeLimit: 240,   // emergency — use existing timeLimit
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -112,7 +112,7 @@ const ALL_JOBS: Job[] = [
     pay: 390_000,
     timeLimit: 0,
     travelTimeLimit: 150,   // brunswick — mid
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -126,7 +126,7 @@ const ALL_JOBS: Job[] = [
     pay: 470_000,
     timeLimit: 0,
     travelTimeLimit: 180,   // footscray far (x=-160)
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -140,7 +140,7 @@ const ALL_JOBS: Job[] = [
     pay: 720_000,
     timeLimit: 0,
     travelTimeLimit: 180,   // stkilda far (z=-160)
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -154,7 +154,7 @@ const ALL_JOBS: Job[] = [
     pay: 580_000,
     timeLimit: 0,
     travelTimeLimit: 180,   // richmond far (x=160)
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -168,7 +168,7 @@ const ALL_JOBS: Job[] = [
     pay: 880_000,
     timeLimit: 300,
     travelTimeLimit: 300,   // emergency — use existing timeLimit
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
   {
@@ -182,7 +182,7 @@ const ALL_JOBS: Job[] = [
     pay: 640_000,
     timeLimit: 0,
     travelTimeLimit: 180,   // stkilda far (z=-160)
-    triggerRadius: 12,
+    triggerRadius: 18,
     completed: false,
   },
 ];
@@ -226,7 +226,7 @@ export class JobManager {
   checkPhase1Arrival(vanX: number, vanZ: number): boolean {
     const dx = vanX - JobManager.WORKSHOP_POS.x;
     const dz = vanZ - JobManager.WORKSHOP_POS.z;
-    return Math.sqrt(dx * dx + dz * dz) < 14;
+    return Math.sqrt(dx * dx + dz * dz) < 18;
   }
 
   /**

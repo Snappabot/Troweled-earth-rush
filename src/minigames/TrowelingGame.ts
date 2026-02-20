@@ -96,6 +96,15 @@ export class TrowelingGame {
 
     this.resize();
 
+    // Safety: if overlay was just shown, clientWidth/Height may still be 0 — fall back to window size
+    if (this.canvas.width === 0 || this.canvas.height === 0) {
+      this.canvas.width = window.innerWidth;
+      this.canvas.height = window.innerHeight;
+      this.scratchCanvas.width = window.innerWidth;
+      this.scratchCanvas.height = window.innerHeight;
+      this.ctx = this.canvas.getContext('2d');
+    }
+
     // Load a random TEM photo
     const photoSrc = TEM_PHOTOS[Math.floor(Math.random() * TEM_PHOTOS.length)];
     this.photo = new Image();

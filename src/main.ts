@@ -16,7 +16,7 @@ async function main() {
 
   // ── Spawn the crew at the depot (Footscray, near start) ────────────────────
   const characters = new Characters(engine.scene);
-  characters.spawnCrew(8, 10);  // Standing near spawn point
+  characters.spawnCrew(10, -6);  // Standing on concrete apron in front of roller door
 
   const input = new InputManager();
   const van = new VanModel(engine.scene);

@@ -28,6 +28,8 @@ export class Engine {
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.1;
         document.body.appendChild(this.renderer.domElement);
+        this.renderer.domElement.style.position = 'relative';
+        this.renderer.domElement.style.zIndex = '1';
         // Scene
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x87CEEB);
