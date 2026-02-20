@@ -1,6 +1,15 @@
 import type { Job } from '../gameplay/JobManager';
 
+export const ONE_BTC = 100_000_000; // sats
+
+function formatSats(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M sats`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}K sats`;
+  return `${n} sats`;
+}
+
 export class HUD {
+  private btcAchieved = false;
   private speedText: HTMLDivElement;
   private moneyEl: HTMLDivElement;
   private jobStripEl: HTMLDivElement;
@@ -57,7 +66,7 @@ export class HUD {
       text-shadow: 0 1px 6px rgba(0,0,0,0.8);
       letter-spacing: 1px;
     `;
-    this.moneyEl.textContent = '$500';
+    this.moneyEl.textContent = '500K sats';
     infoPanel.appendChild(this.moneyEl);
 
     // Active job strip
@@ -161,26 +170,59 @@ export class HUD {
     }
   }
 
-  /** Show the job complete flash with title and earned amount */
+  /** Show the job complete flash with title and earned sats */
   showJobComplete(jobTitle: string, earned: number): void {
     const flashMsg = document.getElementById('hud-flash-msg');
     if (flashMsg) {
-      flashMsg.innerHTML = `✅ JOB DONE!<br><span style="font-size:0.7em">+$${earned} — ${jobTitle}</span>`;
+      flashMsg.innerHTML = `✅ JOB DONE!<br><span style="font-size:0.7em">+${formatSats(earned)} — ${jobTitle}</span>`;
     }
-
     this.flashOverlay.style.display = 'flex';
-
-    if (this.flashTimeout !== null) {
-      clearTimeout(this.flashTimeout);
-    }
+    if (this.flashTimeout !== null) clearTimeout(this.flashTimeout);
     this.flashTimeout = setTimeout(() => {
       this.flashOverlay.style.display = 'none';
       this.flashTimeout = null;
     }, 3000);
   }
 
-  /** Update the money display */
+  /** Update the money display and check for 1 BTC achievement */
   updateMoney(amount: number): void {
-    this.moneyEl.textContent = `$${amount.toLocaleString()}`;
+    this.moneyEl.textContent = formatSats(amount);
+    if (!this.btcAchieved && amount >= ONE_BTC) {
+      this.btcAchieved = true;
+      this._showBitcoinAchievement();
+    }
+  }
+
+  private _showBitcoinAchievement(): void {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.85);
+      font-family: system-ui, sans-serif;
+      animation: btcFadeIn 0.6s ease;
+    `;
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes btcFadeIn { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1); } }
+      @keyframes btcSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+    `;
+    document.head.appendChild(style);
+
+    modal.innerHTML = `
+      <div style="font-size:80px; animation: btcSpin 3s linear infinite; display:inline-block;">₿</div>
+      <div style="color:#F7931A; font-size:clamp(32px,8vw,64px); font-weight:900; margin:16px 0 8px; text-shadow:0 0 30px #F7931A;">1 BITCOIN</div>
+      <div style="color:#FFD700; font-size:clamp(16px,4vw,28px); font-weight:700; margin-bottom:8px;">ACHIEVED</div>
+      <div style="color:#aaa; font-size:14px; margin-bottom:32px;">100,000,000 sats earned plastering Melbourne</div>
+      <div style="color:#888; font-size:12px; font-style:italic;">Jarrad wants his cut. You pretend not to hear him.</div>
+      <button onclick="this.parentElement.remove()" style="
+        margin-top:40px; padding:14px 40px;
+        background:#F7931A; color:#000; border:none;
+        border-radius:50px; font-size:18px; font-weight:900;
+        cursor:pointer; letter-spacing:1px;
+      ">HODL 🚀</button>
+    `;
+    document.body.appendChild(modal);
   }
 }

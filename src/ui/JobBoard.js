@@ -1,3 +1,10 @@
+function formatSats(n) {
+    if (n >= 1_000_000)
+        return `${(n / 1_000_000).toFixed(2)}M sats`;
+    if (n >= 1_000)
+        return `${(n / 1_000).toFixed(0)}K sats`;
+    return `${n} sats`;
+}
 const ZONE_LABELS = {
     cbd: '🏙️ CBD',
     footscray: '🏭 Footscray',
@@ -222,7 +229,7 @@ export class JobBoard {
             cardHeader.appendChild(jobTitle);
             const pay = document.createElement('div');
             pay.className = 'jb-pay';
-            pay.textContent = `$${job.pay}`;
+            pay.textContent = `₿ ${formatSats(job.pay)}`;
             cardHeader.appendChild(pay);
             card.appendChild(cardHeader);
             // Badges: zone + type (+ emergency label)

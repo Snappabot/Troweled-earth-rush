@@ -1,5 +1,11 @@
 import type { Job } from '../gameplay/JobManager';
 
+function formatSats(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M sats`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(0)}K sats`;
+  return `${n} sats`;
+}
+
 const ZONE_LABELS: Record<string, string> = {
   cbd: '🏙️ CBD',
   footscray: '🏭 Footscray',
@@ -240,7 +246,7 @@ export class JobBoard {
 
       const pay = document.createElement('div');
       pay.className = 'jb-pay';
-      pay.textContent = `$${job.pay}`;
+      pay.textContent = `₿ ${formatSats(job.pay)}`;
       cardHeader.appendChild(pay);
 
       card.appendChild(cardHeader);
