@@ -22,14 +22,41 @@ export class MiniGameManager {
     startTroweling(onComplete) {
         this.active = true;
         this.overlay.style.display = 'block';
-        // Clear anything left in the overlay
         this.overlay.innerHTML = '';
-        // Mount the troweling game into the overlay
-        this.trowelingGame = new TrowelingGame();
-        this.trowelingGame.mount(this.overlay, (result) => {
-            this.stop();
-            onComplete(result);
-        });
+        // Brief delay so browser can paint the overlay and resolve dimensions
+        // before the canvas is created inside TrowelingGame
+        setTimeout(() => {
+            try {
+                this.trowelingGame = new TrowelingGame();
+                this.trowelingGame.mount(this.overlay, (result) => {
+                    this.stop();
+                    onComplete(result);
+                });
+            }
+            catch (err) {
+                console.error('TrowelingGame failed to init:', err);
+                // Fallback: show a simple "Job Done" button so the flow doesn't get stuck
+                this.overlay.innerHTML = `
+          <div style="
+            display:flex; flex-direction:column; align-items:center;
+            justify-content:center; height:100%; color:#fff;
+            font-family:system-ui,sans-serif; gap:24px;
+          ">
+            <div style="font-size:48px">🪣</div>
+            <div style="font-size:28px; font-weight:800;">PLASTERING DONE!</div>
+            <button id="mgFallbackBtn" style="
+              padding:18px 40px; font-size:20px; font-weight:800;
+              background:#C1666B; color:#fff; border:none;
+              border-radius:14px; cursor:pointer;
+            ">Collect Payment</button>
+          </div>
+        `;
+                document.getElementById('mgFallbackBtn')?.addEventListener('click', () => {
+                    this.stop();
+                    onComplete({ score: 80, qualityPct: 0.8, message: 'Solid work!' });
+                });
+            }
+        }, 100);
     }
     stop() {
         if (this.trowelingGame) {
