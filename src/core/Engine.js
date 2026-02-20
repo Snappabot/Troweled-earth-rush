@@ -776,30 +776,33 @@ export class Engine {
             }
         }
     }
-    // ── Curved Road Corners — filled circles to round intersection corners ──
+    // ── Curved Road Corners — proper quarter-circle fills with raised concrete curb ──
     createRoadCorners() {
-        const asphaltMat = new THREE.MeshLambertMaterial({ color: 0x2a2a2a });
         const sidewalkMat = new THREE.MeshLambertMaterial({ color: 0xc8c0b0 });
-        // dx/dz: circle centre offset from intersection; ox/oz: extra sidewalk offset away from centre
+        const curbMat = new THREE.MeshLambertMaterial({ color: 0xa8a098 }); // slightly darker concrete curb
+        // Each corner: road-edge position offset, and the theta angle for the outer quadrant fill
+        // theta=0→east, PI/2→north(-Z), PI→west, 3PI/2→south(+Z) when circle laid flat
         const corners = [
-            { dx: -4, dz: -4, ox: -0.5, oz: -0.5 }, // Top-left
-            { dx: 4, dz: -4, ox: 0.5, oz: -0.5 }, // Top-right
-            { dx: -4, dz: 4, ox: -0.5, oz: 0.5 }, // Bottom-left
-            { dx: 4, dz: 4, ox: 0.5, oz: 0.5 }, // Bottom-right
+            { dx: -4, dz: -4, theta: Math.PI / 2 }, // NW corner → fill NW quadrant
+            { dx: 4, dz: -4, theta: 0 }, // NE corner → fill NE quadrant
+            { dx: -4, dz: 4, theta: Math.PI }, // SW corner → fill SW quadrant
+            { dx: 4, dz: 4, theta: 3 * Math.PI / 2 }, // SE corner → fill SE quadrant
         ];
         for (let ix = -200; ix <= 200; ix += 40) {
             for (let iz = -200; iz <= 200; iz += 40) {
-                for (const { dx, dz, ox, oz } of corners) {
-                    // Sidewalk-coloured backing circle (radius 4.5, slightly lower)
-                    const swCircle = new THREE.Mesh(new THREE.CircleGeometry(4.5, 8), sidewalkMat);
-                    swCircle.rotation.x = -Math.PI / 2;
-                    swCircle.position.set(ix + dx + ox, 0.003, iz + dz + oz);
-                    this.scene.add(swCircle);
-                    // Asphalt circle (radius 4, just above sidewalk)
-                    const asCircle = new THREE.Mesh(new THREE.CircleGeometry(4, 8), asphaltMat);
-                    asCircle.rotation.x = -Math.PI / 2;
-                    asCircle.position.set(ix + dx, 0.005, iz + dz);
-                    this.scene.add(asCircle);
+                for (const { dx, dz, theta } of corners) {
+                    const cx = ix + dx;
+                    const cz = iz + dz;
+                    // Sidewalk fill: quarter-circle radius 2 (= sidewalk width) filling the outer corner gap
+                    const fill = new THREE.Mesh(new THREE.CircleGeometry(2, 10, theta, Math.PI / 2), sidewalkMat);
+                    fill.rotation.x = -Math.PI / 2;
+                    fill.position.set(cx, 0.008, cz);
+                    this.scene.add(fill);
+                    // Raised curb arc: thin ring at radius 1.8–2.0, slightly elevated (curb height)
+                    const curb = new THREE.Mesh(new THREE.RingGeometry(1.7, 2.1, 10, 1, theta, Math.PI / 2), curbMat);
+                    curb.rotation.x = -Math.PI / 2;
+                    curb.position.set(cx, 0.12, cz); // raised above road to simulate curb
+                    this.scene.add(curb);
                 }
             }
         }
