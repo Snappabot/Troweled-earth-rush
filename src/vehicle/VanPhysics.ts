@@ -13,10 +13,37 @@ const PHYSICS = {
   gripAtHighSpeed: 1.2,     // Very slidey at speed = big drift angles
 };
 
+const GRID = 40;
+const ROAD_HALF = 4;
+const MAX_BUMP_SPEED = 30;   // Speed at which bump intensity is capped at 1.0
+const MIN_BUMP_INTENSITY = 0.8;
+
 function normalizeAngle(a: number): number {
   while (a > Math.PI) a -= Math.PI * 2;
   while (a < -Math.PI) a += Math.PI * 2;
   return a;
+}
+
+/** Returns the nearest road grid line centre for a given coordinate */
+function nearestGridLine(v: number): number {
+  return Math.round(v / GRID) * GRID;
+}
+
+/**
+ * Check if the segment [prev, curr] crosses a curb boundary.
+ * Curbs sit at nearestGridLine(prev) ± ROAD_HALF.
+ * Returns the number of curb lines crossed (0, 1, or rarely 2).
+ */
+function countCurbCrossings(prev: number, curr: number): number {
+  let count = 0;
+  const gl = nearestGridLine((prev + curr) * 0.5);
+  for (const sign of [-1, 1]) {
+    const curbLine = gl + sign * ROAD_HALF;
+    if ((prev - curbLine) * (curr - curbLine) < 0) {
+      count++;
+    }
+  }
+  return count;
 }
 
 export class VanPhysics {
@@ -24,14 +51,21 @@ export class VanPhysics {
   private input: InputManager;
   private speed = 0;
   private velocityAngle = 0;
+  private prevPos = new THREE.Vector3();
+  private onBump?: (intensity: number) => void;
 
-  constructor(van: VanModel, input: InputManager) {
+  constructor(van: VanModel, input: InputManager, onBump?: (intensity: number) => void) {
     this.van = van;
     this.input = input;
+    this.onBump = onBump;
     this.velocityAngle = this.van.heading;
+    this.prevPos.copy(this.van.mesh.position);
   }
 
   update(dt: number) {
+    // Record previous position before moving
+    this.prevPos.copy(this.van.mesh.position);
+
     const absSpeed = Math.abs(this.speed);
 
     // --- THROTTLE ---
@@ -79,5 +113,35 @@ export class VanPhysics {
 
     // Van faces heading — shows drift angle visually
     this.van.mesh.rotation.y = -this.van.heading;
+
+    // --- CURB DETECTION ---
+    this._checkCurbCrossings();
+  }
+
+  private _checkCurbCrossings(): void {
+    const curr = this.van.mesh.position;
+    const prev = this.prevPos;
+
+    const xCrossings = countCurbCrossings(prev.x, curr.x);
+    const zCrossings = countCurbCrossings(prev.z, curr.z);
+
+    const totalCrossings = xCrossings + zCrossings;
+    if (totalCrossings === 0) return;
+
+    // Bump intensity ∝ crossing speed, clamped, minimum guaranteed
+    const crossingSpeed = Math.abs(this.speed);
+    const rawIntensity = crossingSpeed / MAX_BUMP_SPEED;
+    const intensity = Math.max(MIN_BUMP_INTENSITY, Math.min(1.0, rawIntensity));
+
+    // Apply bump to suspension
+    this.van.triggerBump(intensity);
+
+    // Speed penalty — rolling over a curb scrubs speed
+    this.speed *= 0.85;
+
+    // Notify external listeners (spill meter, etc.)
+    if (this.onBump) {
+      this.onBump(intensity);
+    }
   }
 }
