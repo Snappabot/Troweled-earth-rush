@@ -501,6 +501,7 @@ export class Engine {
         this.buildHouseLoggia(-60, -60); // House 4 — Brunswick/StKilda
         this.buildHouseRokka(60, -20); // House 5 — Richmond
         this.buildHouseTimberStone(100, 60); // House 6 — Richmond (Snappa's house)
+        this.buildHouseSculpturalPlaster(-100, -20); // House 7 — Brunswick sculptural olive
     }
     // ── House 1 — Marbellino Modern ──────────────────────────────────────────────
     buildHouseMarbellino(x, z) {
@@ -807,6 +808,84 @@ export class Engine {
         // ── Upper level right-side window (on bluestone wall) ──
         this.addBox(g, 0x1A1A1A, 3.5, 1.8, 0.2, 7.5, 6.5, -6.6);
         this.addBox(g, 0x334455, 3.0, 1.5, 0.15, 7.5, 6.5, -6.55);
+        g.position.set(x, 0, z);
+        this.scene.add(g);
+    }
+    // ── House 7 — Sculptural Olive Plaster, Brunswick ────────────────────────────
+    // Raw olive-khaki render, dramatic asymmetric peaked roof with zinc metal panel,
+    // deep-set window, stepped wall sections, curved front boundary wall
+    buildHouseSculpturalPlaster(x, z) {
+        const g = new THREE.Group();
+        const olive = 0x848C6A; // warm olive-khaki render — the hero colour
+        const oliveDrk = 0x6A7255; // shadow / recessed areas
+        const zinc = 0xB4B4AC; // zinc metal roof panel (left slope)
+        const black = 0x111111;
+        // ── Main tall body ──
+        this.addBox(g, olive, 14, 5.5, 12, -3, 2.75, 0);
+        // ── Right stepped-down section (lower wing) ──
+        this.addBox(g, olive, 7, 3.5, 12, 9, 1.75, 0);
+        // Step reveal shadow between the two levels
+        this.addBox(g, oliveDrk, 0.3, 5.6, 12, 2.85, 2.75, 0);
+        // ── Dramatic asymmetric peaked roof ──
+        // Right face: gentle forward-facing slope (olive plaster)
+        const rSlope = new THREE.Mesh(new THREE.BoxGeometry(11, 0.35, 12.4), new THREE.MeshLambertMaterial({ color: olive }));
+        rSlope.rotation.z = 22 * Math.PI / 180;
+        rSlope.position.set(0.5, 8.0, 0);
+        g.add(rSlope);
+        // Left face: steep slope — zinc/metal cladding
+        const lSlope = new THREE.Mesh(new THREE.BoxGeometry(7.5, 0.35, 12.4), new THREE.MeshLambertMaterial({ color: zinc }));
+        lSlope.rotation.z = -52 * Math.PI / 180;
+        lSlope.position.set(-6.2, 8.2, 0);
+        g.add(lSlope);
+        // Ridge cap at peak
+        this.addBox(g, oliveDrk, 0.6, 0.6, 12.4, -3.2, 10.0, 0);
+        // ── Large deeply recessed window/door — centre of main body ──
+        this.addBox(g, 0x1A1A1A, 2.3, 4.0, 0.5, -3, 2.0, -6.25); // recess shadow
+        this.addBox(g, black, 2.6, 4.3, 0.2, -3, 2.1, -6.05); // frame
+        // Glass (emissive blue-grey)
+        const winGlass = new THREE.Mesh(new THREE.BoxGeometry(2.0, 3.6, 0.12), new THREE.MeshLambertMaterial({
+            color: 0x2A3A44,
+            emissive: new THREE.Color(0x0A1822),
+            emissiveIntensity: 0.3,
+        }));
+        winGlass.position.set(-3, 2.1, -6.1);
+        g.add(winGlass);
+        // ── Small recessed opening in lower right section ──
+        this.addBox(g, 0x1A1A1A, 1.6, 1.6, 0.4, 8.5, 2.0, -6.2);
+        this.addBox(g, black, 1.8, 1.8, 0.18, 8.5, 2.0, -6.05);
+        // ── Black cube wall sconce lights (2 visible on front face) ──
+        this.addBox(g, black, 0.4, 0.4, 0.4, -6.5, 4.2, -6.05);
+        this.addBox(g, black, 0.4, 0.4, 0.4, 6.5, 3.4, -6.05);
+        // Light glow hint (tiny warm emissive beneath each fixture)
+        for (const lx of [-6.5, 6.5]) {
+            const glow = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.3), new THREE.MeshLambertMaterial({
+                color: 0xffeecc,
+                emissive: new THREE.Color(0xffcc88),
+                emissiveIntensity: 0.6,
+            }));
+            glow.position.set(lx, lx === -6.5 ? 3.95 : 3.15, -6.07);
+            g.add(glow);
+        }
+        // ── Curved front boundary wall ──
+        // Approximate arc with 9 rotated box segments
+        const wallR = 8.5;
+        const wallCz = -11;
+        for (let i = -4; i <= 4; i++) {
+            const ang = (i / 4) * 40 * Math.PI / 180; // spread ±40°
+            const wx = wallR * Math.sin(ang);
+            const wz = wallCz + wallR * (Math.cos(ang) - 1);
+            const seg = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.2, 0.35), new THREE.MeshLambertMaterial({ color: olive }));
+            seg.rotation.y = ang;
+            seg.position.set(wx, 0.6, wz);
+            g.add(seg);
+            // Pale capping strip on top of wall
+            const cap = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.12, 0.45), new THREE.MeshLambertMaterial({ color: 0xC0BEA8 }));
+            cap.rotation.y = ang;
+            cap.position.set(wx, 1.26, wz);
+            g.add(cap);
+        }
+        // ── Low step at entry ──
+        this.addBox(g, oliveDrk, 2.5, 0.2, 1.0, -3, 0.1, -7.5);
         g.position.set(x, 0, z);
         this.scene.add(g);
     }
