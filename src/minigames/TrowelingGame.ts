@@ -1,204 +1,593 @@
 import type { MiniGameResult } from './MiniGameManager';
 
-const TEM_PHOTOS = [
-  'images/270ae674-ae77-46c0-a931-d8b3890bb728.jpg',
-  'images/4d5ff18e-1129-4195-9108-a64f3c8e4d34.jpg',
-  'images/5c2eabb7-65ce-4f76-b14c-8eb37a3f9537.jpg',
-  'images/60007f2e-318f-412e-b2ad-4d77445ee417.jpg',
-  'images/787315c4-a661-4dca-8567-b7a18f104665.jpg',
-  'images/842fccc6-6bad-4509-81d8-ecb2dc14c80c.jpg',
-  'images/e3cbd2c9-7944-4074-a439-1033c9f2c166.jpg',
-  'images/f2ed55b5-ba78-4a78-8bad-e57a86b6bcef.jpg',
+// ─── Photo achievement data ────────────────────────────────────────────────────
+export const PHOTO_ACHIEVEMENTS = [
+  { id: 'timber-bluestone', file: 'images/270ae674-ae77-46c0-a931-d8b3890bb728.jpg', name: 'Timber & Bluestone' },
+  { id: 'angular-bay',      file: 'images/4d5ff18e-1129-4195-9108-a64f3c8e4d34.jpg', name: 'Angular Bay House' },
+  { id: 'haussmann',        file: 'images/5c2eabb7-65ce-4f76-b14c-8eb37a3f9537.jpg', name: 'Haussmann Mansion' },
+  { id: 'brutalist',        file: 'images/60007f2e-318f-412e-b2ad-4d77445ee417.jpg', name: 'Brutalist Compound' },
+  { id: 'sculptural-olive', file: 'images/787315c4-a661-4dca-8567-b7a18f104665.jpg', name: 'Sculptural Olive' },
+  { id: 'curved-balcony',   file: 'images/842fccc6-6bad-4509-81d8-ecb2dc14c80c.jpg', name: 'Curved Balcony' },
+  { id: 'corten-plaster',   file: 'images/e3cbd2c9-7944-4074-a439-1033c9f2c166.jpg', name: 'Corten & Plaster' },
+  { id: 'terracotta-mono',  file: 'images/f2ed55b5-ba78-4a78-8bad-e57a86b6bcef.jpg', name: 'Terracotta Monolith' },
 ];
 
-const TROWEL_MESSAGES = [
-  "Flawless. Matt's crying. He won't admit it.",
-  "Bloody beautiful. TEM material right there.",
-  "Good enough. Karen won't notice the patch.",
-  "Passable. Call it 'textured'. Send the invoice.",
-  "Jarrad could've done better. Probably.",
-  "That wall has seen better days. So have you.",
-];
+// ─── Achievement storage ───────────────────────────────────────────────────────
+const STORAGE_KEY = 'tem-rush-achievements';
 
+export function getCollected(): string[] {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+  catch { return []; }
+}
+
+export function markCollected(id: string): boolean {
+  const existing = getCollected();
+  if (existing.includes(id)) return false;
+  existing.push(id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+  return true;
+}
+
+export function isAllCollected(): boolean {
+  return getCollected().length >= PHOTO_ACHIEVEMENTS.length;
+}
+
+function pickPhoto(): typeof PHOTO_ACHIEVEMENTS[0] {
+  const collected = getCollected();
+  const uncollected = PHOTO_ACHIEVEMENTS.filter(p => !collected.includes(p.id));
+  if (uncollected.length > 0) {
+    return uncollected[Math.floor(Math.random() * uncollected.length)];
+  }
+  return PHOTO_ACHIEVEMENTS[Math.floor(Math.random() * PHOTO_ACHIEVEMENTS.length)];
+}
+
+// ─── Coating texture ───────────────────────────────────────────────────────────
+function buildCoating(sctx: CanvasRenderingContext2D, w: number, h: number): void {
+  sctx.fillStyle = '#C8B89A';
+  sctx.fillRect(0, 0, w, h);
+
+  for (let i = 0; i < 800; i++) {
+    const x = Math.random() * w;
+    const y = Math.random() * h;
+    const len = 20 + Math.random() * 60;
+    const angle = Math.random() * Math.PI;
+    const shade = Math.floor(180 + Math.random() * 40);
+    sctx.strokeStyle = `rgb(${shade},${shade - 10},${shade - 20})`;
+    sctx.lineWidth = 1 + Math.random() * 3;
+    sctx.globalAlpha = 0.3 + Math.random() * 0.4;
+    sctx.beginPath();
+    sctx.moveTo(x, y);
+    sctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
+    sctx.stroke();
+  }
+  sctx.globalAlpha = 1;
+
+  sctx.font = 'bold 48px system-ui';
+  sctx.textAlign = 'center';
+  sctx.fillStyle = 'rgba(180,160,130,0.4)';
+  sctx.fillText('TROWELED EARTH', w / 2, h / 2 - 20);
+  sctx.font = '22px system-ui';
+  sctx.fillStyle = 'rgba(180,160,130,0.3)';
+  sctx.fillText('Scratch to reveal', w / 2, h / 2 + 20);
+}
+
+// ─── Erase stroke on scratch canvas ───────────────────────────────────────────
+function eraseStroke(
+  sctx: CanvasRenderingContext2D,
+  x1: number, y1: number,
+  x2: number, y2: number,
+  radius = 45
+): void {
+  sctx.globalCompositeOperation = 'destination-out';
+  sctx.strokeStyle = 'rgba(0,0,0,1)';
+  sctx.lineCap = 'round';
+  sctx.lineJoin = 'round';
+  sctx.lineWidth = radius * 2;
+  sctx.beginPath();
+  sctx.moveTo(x1, y1);
+  sctx.lineTo(x2, y2);
+  sctx.stroke();
+  sctx.globalCompositeOperation = 'source-over';
+}
+
+// ─── Calculate % of coating removed ───────────────────────────────────────────
+function measureCoverage(sctx: CanvasRenderingContext2D, w: number, h: number): number {
+  const data = sctx.getImageData(0, 0, w, h).data;
+  let transparent = 0;
+  const total = w * h;
+  for (let i = 3; i < data.length; i += 4) {
+    if (data[i] < 128) transparent++;
+  }
+  return transparent / total;
+}
+
+// ─── Draw trowel cursor ────────────────────────────────────────────────────────
+function drawTrowelCursor(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(Math.PI / 4);
+
+  // Handle
+  ctx.strokeStyle = '#8B6914';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, 36);
+  ctx.stroke();
+
+  // Blade (trapezoid)
+  ctx.fillStyle = '#C0C0C0';
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-14, 0);
+  ctx.lineTo(14, 0);
+  ctx.lineTo(10, -28);
+  ctx.lineTo(-10, -28);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Shine
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.beginPath();
+  ctx.moveTo(-8, -4);
+  ctx.lineTo(4, -4);
+  ctx.lineTo(2, -22);
+  ctx.lineTo(-6, -22);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// ─── Draw cover-fit image ──────────────────────────────────────────────────────
+function drawImageCover(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  cw: number, ch: number
+): void {
+  const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
+  const dw = img.naturalWidth * scale;
+  const dh = img.naturalHeight * scale;
+  const dx = (cw - dw) / 2;
+  const dy = (ch - dh) / 2;
+  ctx.drawImage(img, dx, dy, dw, dh);
+}
+
+// ─── TrowelingGame ─────────────────────────────────────────────────────────────
 export class TrowelingGame {
-  private root: HTMLDivElement | null = null;
+  private container: HTMLDivElement | null = null;
+  private canvas: HTMLCanvasElement | null = null;
+  private ctx: CanvasRenderingContext2D | null = null;
+  private scratch: HTMLCanvasElement | null = null;
+  private sctx: CanvasRenderingContext2D | null = null;
   private onComplete: ((result: MiniGameResult) => void) | null = null;
-  private score = 0;
-  private strokes = 0;
-  private readonly STROKES_NEEDED = 8;
+  private photo: typeof PHOTO_ACHIEVEMENTS[0] | null = null;
+  private img: HTMLImageElement | null = null;
+  private imgLoaded = false;
+
+  // Pointer state
+  private lastX = 0;
+  private lastY = 0;
+  private pointerDown = false;
+  private cursorX = -999;
+  private cursorY = -999;
+
+  // Timer & game state
+  private readonly DURATION = 30;
   private timeLeft = 30;
   private timerInterval: ReturnType<typeof setInterval> | null = null;
+  private rafId = 0;
   private done = false;
-  private timerBar: HTMLDivElement | null = null;
-  private pctEl: HTMLDivElement | null = null;
+  private revealed = 0; // 0–1
+
+  // Coverage sample throttle
+  private lastSampleTime = 0;
+  private readonly SAMPLE_INTERVAL = 250; // ms
+
+  // Toast
+  private toastMsg = '';
+  private toastAlpha = 0;
+
+  // ─── Bound event handlers (for cleanup) ─────────────────────────────────────
+  private _onMouseMove: (e: MouseEvent) => void;
+  private _onMouseDown: (e: MouseEvent) => void;
+  private _onMouseUp: () => void;
+  private _onTouchStart: (e: TouchEvent) => void;
+  private _onTouchMove: (e: TouchEvent) => void;
+  private _onTouchEnd: () => void;
+
+  constructor() {
+    this._onMouseMove = this.handleMouseMove.bind(this);
+    this._onMouseDown = this.handleMouseDown.bind(this);
+    this._onMouseUp = () => { this.pointerDown = false; };
+    this._onTouchStart = this.handleTouchStart.bind(this);
+    this._onTouchMove = this.handleTouchMove.bind(this);
+    this._onTouchEnd = () => { this.pointerDown = false; };
+  }
 
   mount(container: HTMLDivElement, onComplete: (result: MiniGameResult) => void): void {
+    this.container = container;
     this.onComplete = onComplete;
     this.done = false;
-    this.strokes = 0;
-    this.score = 0;
+    this.revealed = 0;
+    this.timeLeft = this.DURATION;
+    this.toastMsg = '';
+    this.toastAlpha = 0;
 
-    const photo = TEM_PHOTOS[Math.floor(Math.random() * TEM_PHOTOS.length)];
+    this.photo = pickPhoto();
 
-    // Root wrapper
-    this.root = document.createElement('div');
-    this.root.style.cssText = `
-      position: absolute; inset: 0;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: flex-start;
-      font-family: system-ui, sans-serif;
-      user-select: none; touch-action: none;
-      overflow: hidden;
-    `;
+    // ── Canvas setup (dimensions BEFORE getContext) ───────────────────────────
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = container.clientWidth || window.innerWidth;
+    this.canvas.height = container.clientHeight || window.innerHeight;
+    this.canvas.style.cssText = 'position:absolute;inset:0;display:block;cursor:none;touch-action:none;';
+    this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+    if (!this.ctx) throw new Error('Canvas 2D not supported');
+    container.appendChild(this.canvas);
 
-    // Background photo
-    const bg = document.createElement('div');
-    bg.style.cssText = `
-      position: absolute; inset: 0;
-      background: url('${photo}') center/cover no-repeat;
-      filter: brightness(0.35);
-    `;
-    this.root.appendChild(bg);
+    // ── Scratch canvas (off-screen coating layer) ─────────────────────────────
+    this.scratch = document.createElement('canvas');
+    this.scratch.width = this.canvas.width;
+    this.scratch.height = this.canvas.height;
+    this.sctx = this.scratch.getContext('2d', { willReadFrequently: true });
+    if (!this.sctx) throw new Error('Scratch canvas 2D not supported');
 
-    // Timer bar
-    const timerTrack = document.createElement('div');
-    timerTrack.style.cssText = `
-      position: absolute; top: 60px; left: 10%; width: 80%; height: 12px;
-      background: rgba(0,0,0,0.5); border-radius: 8px; overflow: hidden;
-    `;
-    this.timerBar = document.createElement('div');
-    this.timerBar.style.cssText = `
-      width: 100%; height: 100%; background: #5EDB7D;
-      border-radius: 8px; transition: width 1s linear, background 0.5s;
-    `;
-    timerTrack.appendChild(this.timerBar);
-    this.root.appendChild(timerTrack);
+    // Build the plaster coating texture
+    buildCoating(this.sctx, this.scratch.width, this.scratch.height);
 
-    // Instruction
-    const instr = document.createElement('div');
-    instr.style.cssText = `
-      position: absolute; top: 90px;
-      width: 100%; text-align: center;
-      color: #fff; font-size: clamp(16px,4vw,22px);
-      font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,0.8);
-    `;
-    instr.textContent = '🧱 SWIPE TO TROWEL THE WALL!';
-    this.root.appendChild(instr);
+    // ── Load photo ────────────────────────────────────────────────────────────
+    this.img = new Image();
+    this.img.onload = () => { this.imgLoaded = true; };
+    this.img.onerror = () => { this.imgLoaded = true; }; // continue even if broken
+    this.img.src = this.photo.file;
 
-    // Progress %
-    this.pctEl = document.createElement('div');
-    this.pctEl.style.cssText = `
-      position: absolute; bottom: 100px;
-      width: 100%; text-align: center;
-      color: #fff; font-size: clamp(28px,8vw,48px);
-      font-weight: 900; text-shadow: 0 2px 12px rgba(0,0,0,0.9);
-    `;
-    this.pctEl.textContent = '0%';
-    this.root.appendChild(this.pctEl);
+    // ── Attach events ─────────────────────────────────────────────────────────
+    this.canvas.addEventListener('mousemove', this._onMouseMove);
+    this.canvas.addEventListener('mousedown', this._onMouseDown);
+    window.addEventListener('mouseup', this._onMouseUp);
+    this.canvas.addEventListener('touchstart', this._onTouchStart, { passive: false });
+    this.canvas.addEventListener('touchmove', this._onTouchMove, { passive: false });
+    this.canvas.addEventListener('touchend', this._onTouchEnd);
 
-    // Trowel swipe zone — the main interactive area
-    const zone = document.createElement('div');
-    zone.style.cssText = `
-      position: absolute; inset: 0;
-      cursor: crosshair;
-    `;
-
-    let lastY = 0;
-    const onSwipe = (y: number) => {
-      if (this.done) return;
-      const dy = Math.abs(y - lastY);
-      if (dy > 5) {
-        lastY = y;
-        this.addStroke(bg, zone);
-      }
-    };
-
-    zone.addEventListener('mousemove', (e) => {
-      if (e.buttons === 0) return;
-      onSwipe(e.clientY);
-    });
-    zone.addEventListener('touchmove', (e) => {
-      e.preventDefault();
-      onSwipe(e.touches[0].clientY);
-    }, { passive: false });
-    zone.addEventListener('touchstart', (e) => {
-      lastY = e.touches[0].clientY;
-    }, { passive: true });
-    zone.addEventListener('mousedown', (e) => {
-      lastY = e.clientY;
-    });
-
-    this.root.appendChild(zone);
-    container.appendChild(this.root);
-
-    // Timer
+    // ── Countdown timer ───────────────────────────────────────────────────────
     this.timerInterval = setInterval(() => {
       if (this.done) return;
       this.timeLeft--;
-      const frac = this.timeLeft / 30;
-      if (this.timerBar) {
-        this.timerBar.style.width = `${frac * 100}%`;
-        this.timerBar.style.background = frac < 0.33 ? '#F07070' : frac < 0.6 ? '#F7C948' : '#5EDB7D';
-      }
       if (this.timeLeft <= 0) this.finish();
     }, 1000);
+
+    // ── Draw loop ─────────────────────────────────────────────────────────────
+    this.loop();
   }
 
-  private addStroke(bg: HTMLDivElement, zone: HTMLDivElement): void {
-    this.strokes++;
-    const pct = Math.min(100, Math.round((this.strokes / this.STROKES_NEEDED) * 100));
-    if (this.pctEl) this.pctEl.textContent = `${pct}%`;
+  // ─── Event handlers ─────────────────────────────────────────────────────────
+  private handleMouseDown(e: MouseEvent): void {
+    this.pointerDown = true;
+    const r = this.canvas!.getBoundingClientRect();
+    this.lastX = e.clientX - r.left;
+    this.lastY = e.clientY - r.top;
+    this.cursorX = this.lastX;
+    this.cursorY = this.lastY;
+  }
 
-    // Gradually reveal photo by reducing brightness filter
-    const brightness = 0.35 + (0.65 * this.strokes / this.STROKES_NEEDED);
-    bg.style.filter = `brightness(${Math.min(1, brightness)})`;
-
-    // Flash effect on zone
-    zone.style.background = `rgba(255,255,255,${0.08})`;
-    setTimeout(() => { zone.style.background = ''; }, 80);
-
-    this.score = pct;
-
-    if (this.strokes >= this.STROKES_NEEDED) {
-      this.finish();
+  private handleMouseMove(e: MouseEvent): void {
+    const r = this.canvas!.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    this.cursorX = x;
+    this.cursorY = y;
+    if (this.pointerDown && !this.done) {
+      this.scrape(this.lastX, this.lastY, x, y);
+      this.lastX = x;
+      this.lastY = y;
     }
   }
 
+  private handleTouchStart(e: TouchEvent): void {
+    e.preventDefault();
+    this.pointerDown = true;
+    const t = e.touches[0];
+    const r = this.canvas!.getBoundingClientRect();
+    this.lastX = t.clientX - r.left;
+    this.lastY = t.clientY - r.top;
+    this.cursorX = this.lastX;
+    this.cursorY = this.lastY;
+  }
+
+  private handleTouchMove(e: TouchEvent): void {
+    e.preventDefault();
+    if (!this.pointerDown || this.done) return;
+    const t = e.touches[0];
+    const r = this.canvas!.getBoundingClientRect();
+    const x = t.clientX - r.left;
+    const y = t.clientY - r.top;
+    this.cursorX = x;
+    this.cursorY = y;
+    this.scrape(this.lastX, this.lastY, x, y);
+    this.lastX = x;
+    this.lastY = y;
+  }
+
+  // ─── Scrape action ───────────────────────────────────────────────────────────
+  private scrape(x1: number, y1: number, x2: number, y2: number): void {
+    if (!this.sctx || !this.scratch || this.done) return;
+    eraseStroke(this.sctx, x1, y1, x2, y2, 45);
+
+    // Sample coverage at intervals to avoid expensive getImageData every frame
+    const now = performance.now();
+    if (now - this.lastSampleTime > this.SAMPLE_INTERVAL) {
+      this.lastSampleTime = now;
+      this.revealed = measureCoverage(this.sctx, this.scratch.width, this.scratch.height);
+      if (this.revealed >= 0.85) this.finish();
+    }
+  }
+
+  // ─── Render loop ─────────────────────────────────────────────────────────────
+  private loop(): void {
+    if (this.done && this.toastAlpha <= 0) return;
+
+    const ctx = this.ctx;
+    const canvas = this.canvas;
+    if (!ctx || !canvas) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // 1. Draw photo background (cover-fit)
+    if (this.imgLoaded && this.img && this.img.naturalWidth > 0) {
+      drawImageCover(ctx, this.img, w, h);
+    } else {
+      // Placeholder while image loads
+      ctx.fillStyle = '#2a2a20';
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // 2. Draw scratch/coating layer on top
+    if (this.scratch) {
+      ctx.drawImage(this.scratch, 0, 0);
+    }
+
+    // 3. HUD — only while playing
+    if (!this.done) {
+      this.drawHUD(ctx, w, h);
+    }
+
+    // 4. Trowel cursor
+    if (this.cursorX > 0 && !this.done) {
+      drawTrowelCursor(ctx, this.cursorX, this.cursorY);
+    }
+
+    // 5. Toast message
+    if (this.toastAlpha > 0) {
+      this.drawToast(ctx, w, h);
+      this.toastAlpha -= 0.012;
+    }
+
+    this.rafId = requestAnimationFrame(() => this.loop());
+  }
+
+  // ─── HUD ─────────────────────────────────────────────────────────────────────
+  private drawHUD(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    const frac = this.timeLeft / this.DURATION;
+    const barW = w * 0.8;
+    const barX = w * 0.1;
+    const barY = 16;
+    const barH = 14;
+    const r = 7;
+
+    // Timer track
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    this.roundRect(ctx, barX, barY, barW, barH, r);
+    ctx.fill();
+
+    // Timer fill
+    const colour = frac < 0.33 ? '#F07070' : frac < 0.6 ? '#F7C948' : '#5EDB7D';
+    ctx.fillStyle = colour;
+    this.roundRect(ctx, barX, barY, barW * frac, barH, r);
+    ctx.fill();
+
+    // Timer label
+    ctx.fillStyle = '#fff';
+    ctx.font = `bold ${Math.round(h * 0.03)}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 6;
+    ctx.fillText(`${Math.ceil(this.timeLeft)}s`, w / 2, barY + barH + 22);
+
+    // Coverage %
+    const pct = Math.round(this.revealed * 100);
+    ctx.font = `900 ${Math.round(h * 0.09)}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 12;
+    ctx.fillText(`${pct}%`, w / 2, h - 32);
+
+    ctx.shadowBlur = 0;
+
+    // Instruction (only first 5 seconds)
+    if (this.timeLeft > 25) {
+      ctx.font = `bold ${Math.round(h * 0.03)}px system-ui`;
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.textAlign = 'center';
+      ctx.fillText('🪣  Scrape away the plaster!', w / 2, h / 2);
+    }
+  }
+
+  private roundRect(
+    ctx: CanvasRenderingContext2D,
+    x: number, y: number,
+    w: number, h: number,
+    r: number
+  ): void {
+    if (w < 0) return;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  // ─── Toast ────────────────────────────────────────────────────────────────────
+  private drawToast(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+    const alpha = Math.min(1, this.toastAlpha);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.font = `bold ${Math.round(h * 0.035)}px system-ui`;
+    ctx.textAlign = 'center';
+    const lines = this.toastMsg.split('\n');
+    const lineH = Math.round(h * 0.045);
+    const totalH = lines.length * lineH + 24;
+    const ty = h * 0.45 - totalH / 2;
+    const tw = w * 0.85;
+    const tx = (w - tw) / 2;
+    this.roundRect(ctx, tx, ty, tw, totalH, 16);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = 8;
+    lines.forEach((line, i) => {
+      ctx.fillText(line, w / 2, ty + 22 + i * lineH);
+    });
+    ctx.restore();
+  }
+
+  // ─── Game end ─────────────────────────────────────────────────────────────────
   private finish(): void {
     if (this.done) return;
     this.done = true;
     if (this.timerInterval) clearInterval(this.timerInterval);
 
-    const qualityPct = Math.min(1, this.score / 100);
-    const msgIndex = Math.floor((1 - qualityPct) * (TROWEL_MESSAGES.length - 1));
-    const message = TROWEL_MESSAGES[Math.max(0, msgIndex)];
-    const result: MiniGameResult = { score: this.score, qualityPct, message };
-
-    // Show result screen briefly
-    if (this.root) {
-      const colour = this.score >= 85 ? '#5EDB7D' : this.score >= 60 ? '#F7C948' : '#F07070';
-      const overlay = document.createElement('div');
-      overlay.style.cssText = `
-        position: absolute; inset: 0;
-        display: flex; flex-direction: column;
-        align-items: center; justify-content: center; gap: 16px;
-        background: rgba(0,0,0,0.7);
-      `;
-      overlay.innerHTML = `
-        <div style="font-size:clamp(48px,15vw,80px); font-weight:900; color:${colour}; text-shadow:0 4px 20px rgba(0,0,0,0.8);">${this.score}%</div>
-        <div style="font-size:clamp(14px,3.5vw,20px); color:#fff; text-align:center; padding:0 24px; text-shadow:0 2px 8px rgba(0,0,0,0.8);">${message}</div>
-      `;
-      this.root.appendChild(overlay);
+    // Final coverage sample
+    if (this.sctx && this.scratch) {
+      this.revealed = measureCoverage(this.sctx, this.scratch.width, this.scratch.height);
     }
 
-    setTimeout(() => this.onComplete?.(result), 2000);
+    const rawPct = Math.round(this.revealed * 100);
+    const scorePct = Math.max(20, rawPct); // minimum 20 so photo always awarded
+    const qualityPct = scorePct / 100;
+
+    // Achievement
+    const photo = this.photo!;
+    const isNew = markCollected(photo.id);
+    const collectedCount = getCollected().length;
+    const all = isAllCollected();
+
+    // Build result screen overlay on top of canvas
+    this.showResultScreen(scorePct, photo, isNew, collectedCount, all, qualityPct);
   }
 
+  private showResultScreen(
+    scorePct: number,
+    photo: typeof PHOTO_ACHIEVEMENTS[0],
+    isNew: boolean,
+    collectedCount: number,
+    all: boolean,
+    qualityPct: number
+  ): void {
+    const ctx = this.ctx;
+    const canvas = this.canvas;
+    if (!ctx || !canvas) return;
+
+    const w = canvas.width;
+    const h = canvas.height;
+
+    // Draw final state one more time
+    ctx.clearRect(0, 0, w, h);
+    if (this.imgLoaded && this.img && this.img.naturalWidth > 0) {
+      drawImageCover(ctx, this.img, w, h);
+    } else {
+      ctx.fillStyle = '#2a2a20';
+      ctx.fillRect(0, 0, w, h);
+    }
+    if (this.scratch) ctx.drawImage(this.scratch, 0, 0);
+
+    // Dim overlay
+    ctx.fillStyle = 'rgba(0,0,0,0.65)';
+    ctx.fillRect(0, 0, w, h);
+
+    // Score
+    const colour = scorePct >= 85 ? '#5EDB7D' : scorePct >= 60 ? '#F7C948' : '#F07070';
+    ctx.font = `900 ${Math.round(h * 0.15)}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = colour;
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 20;
+    ctx.fillText(`${scorePct}%`, w / 2, h * 0.35);
+
+    // Photo name
+    ctx.font = `bold ${Math.round(h * 0.04)}px system-ui`;
+    ctx.fillStyle = '#fff';
+    ctx.shadowBlur = 10;
+    ctx.fillText(`📸 ${photo.name}`, w / 2, h * 0.47);
+
+    // Achievement line
+    let achLine: string;
+    if (all) {
+      achLine = '🏆 FULL TEM COLLECTION!';
+    } else if (isNew) {
+      achLine = `✨ NEW PHOTO UNLOCKED!`;
+    } else {
+      achLine = 'Already in your collection';
+    }
+    ctx.font = `bold ${Math.round(h * 0.032)}px system-ui`;
+    ctx.fillStyle = all ? '#FFD700' : isNew ? '#5EDB7D' : '#aaa';
+    ctx.shadowBlur = 8;
+    ctx.fillText(achLine, w / 2, h * 0.56);
+
+    // Collection count
+    ctx.font = `${Math.round(h * 0.026)}px system-ui`;
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(`Collection: ${collectedCount} / ${PHOTO_ACHIEVEMENTS.length}`, w / 2, h * 0.64);
+
+    ctx.shadowBlur = 0;
+
+    // Build message for MiniGameResult
+    const message = all
+      ? '🏆 Full TEM Collection complete!'
+      : isNew
+      ? `📸 New photo unlocked: ${photo.name}`
+      : `${photo.name} — already in collection`;
+
+    const result: MiniGameResult = { score: scorePct, qualityPct, message };
+    setTimeout(() => this.onComplete?.(result), 2800);
+  }
+
+  // ─── Cleanup ──────────────────────────────────────────────────────────────────
   unmount(): void {
     this.done = true;
     if (this.timerInterval) clearInterval(this.timerInterval);
-    this.root?.remove();
-    this.root = null;
+    if (this.rafId) cancelAnimationFrame(this.rafId);
+
+    if (this.canvas) {
+      this.canvas.removeEventListener('mousemove', this._onMouseMove);
+      this.canvas.removeEventListener('mousedown', this._onMouseDown);
+      this.canvas.removeEventListener('touchstart', this._onTouchStart);
+      this.canvas.removeEventListener('touchmove', this._onTouchMove);
+      this.canvas.removeEventListener('touchend', this._onTouchEnd);
+      this.canvas.remove();
+    }
+    window.removeEventListener('mouseup', this._onMouseUp);
+
+    this.canvas = null;
+    this.ctx = null;
+    this.scratch = null;
+    this.sctx = null;
+    this.container = null;
     this.onComplete = null;
+    this.img = null;
   }
 }

@@ -9,6 +9,7 @@ import { WaypointSystem } from './gameplay/WaypointSystem';
 import { JobBoard } from './ui/JobBoard';
 import { HUD } from './ui/HUD';
 import { MiniGameManager } from './minigames/MiniGameManager';
+import { AchievementGallery } from './ui/AchievementGallery';
 
 async function main() {
   const engine = new Engine();
@@ -89,6 +90,32 @@ async function main() {
 
   // Mini-game manager — overlays the world for plastering mini-games
   const miniGameManager = new MiniGameManager();
+
+  // ── 📸 Photos button + Achievement Gallery ───────────────────────────────────
+  const achievementGallery = new AchievementGallery();
+
+  const photosBtn = document.createElement('button');
+  photosBtn.textContent = '📸';
+  photosBtn.title = 'Photo Collection';
+  photosBtn.style.cssText = `
+    position: fixed; bottom: 20px; left: 20px;
+    z-index: 1000; background: rgba(70,70,70,0.9);
+    color: #fff; border: none; border-radius: 50%;
+    width: 52px; height: 52px; font-size: 22px;
+    cursor: pointer; touch-action: manipulation;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    transition: background 0.15s, transform 0.1s;
+  `;
+  photosBtn.addEventListener('pointerenter', () => {
+    photosBtn.style.background = 'rgba(100,100,100,0.95)';
+    photosBtn.style.transform = 'scale(1.1)';
+  });
+  photosBtn.addEventListener('pointerleave', () => {
+    photosBtn.style.background = 'rgba(70,70,70,0.9)';
+    photosBtn.style.transform = '';
+  });
+  photosBtn.addEventListener('click', () => achievementGallery.show());
+  document.body.appendChild(photosBtn);
 
   // Guard to prevent job completion firing more than once per arrival
   let jobCompleting = false;
