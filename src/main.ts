@@ -235,7 +235,7 @@ async function main() {
         hud.updateCrewStatus([], [], false);
 
         // Launch the troweling mini-game
-        miniGameManager.startTroweling((result) => {
+        miniGameManager.startRandom((result) => {
           const earned = jobManager.completeJob(arrived, result.qualityPct);
           hud.showJobComplete(arrived.title, earned);
           hud.updateMoney(jobManager.money);
