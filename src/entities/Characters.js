@@ -93,42 +93,55 @@ export class Characters {
         return g;
     }
     // ── Matt ──────────────────────────────────────────────────────────────────
-    // Tall, stocky, fair skin, full dark beard, black glasses, dark charcoal hoodie
+    // Medium build, dark brown hair, full reddish-brown beard, no glasses,
+    // BLACK EAR MUFFS (signature), dark grey splattered TEM t-shirt
     buildMatt() {
         const g = new THREE.Group();
-        const skin = 0xD4A888; // fair/pink-undertone
-        const hoodie = 0x2E2E2E; // dark charcoal
+        const skin = 0xC8956A; // medium fair, slightly tanned
+        const shirt = 0x333330; // dark grey TEM tee (paint splattered)
         const pants = 0x282828;
-        const beard = 0x2A1A10; // very dark brown beard
-        // Legs (tall + stocky — slightly longer)
-        this.addBox(g, pants, 0.46, 1.0, 0.36, -0.2, 0.5, 0);
-        this.addBox(g, pants, 0.46, 1.0, 0.36, 0.2, 0.5, 0);
-        // Body — hoodie (wider/stockier build)
-        this.addBox(g, hoodie, 0.96, 1.1, 0.50, 0, 1.55, 0);
-        // Hoodie pocket/pouch at front
-        this.addBox(g, 0x282828, 0.50, 0.25, 0.06, 0, 1.2, 0.26);
-        // Arms (stocky)
-        this.addBox(g, hoodie, 0.28, 0.85, 0.26, -0.64, 1.35, 0);
-        this.addBox(g, hoodie, 0.28, 0.85, 0.26, 0.64, 1.35, 0);
+        const beard = 0x3A2010; // reddish-dark brown beard
+        const hair = 0x2E1E0E; // dark brown hair
+        // Legs
+        this.addBox(g, pants, 0.44, 0.95, 0.34, -0.19, 0.475, 0);
+        this.addBox(g, pants, 0.44, 0.95, 0.34, 0.19, 0.475, 0);
+        // Body — medium build, dark grey TEM shirt
+        this.addBox(g, shirt, 0.88, 1.05, 0.46, 0, 1.475, 0);
+        // Paint splatter hints on shirt
+        this.addBox(g, 0xE8E4DC, 0.08, 0.08, 0.05, 0.2, 1.6, 0.24);
+        this.addBox(g, 0xE8E4DC, 0.12, 0.06, 0.05, -0.15, 1.3, 0.24);
+        // Arms (medium)
+        this.addBox(g, skin, 0.23, 0.82, 0.22, -0.58, 1.26, 0);
+        this.addBox(g, skin, 0.23, 0.82, 0.22, 0.58, 1.26, 0);
         // Neck
-        this.addBox(g, skin, 0.26, 0.22, 0.24, 0, 2.21, 0);
-        // Head (tall — proportionally slightly taller total height)
-        this.addSphere(g, skin, 0.42, 0, 2.72, 0);
-        // Hair — mostly bald top, slight grey fringe on sides
-        this.addBox(g, 0x888888, 0.36, 0.08, 0.36, 0, 3.05, 0); // very thin remnant on top
-        // Full beard — covers lower half of face
-        this.addBox(g, beard, 0.42, 0.28, 0.08, 0, 2.56, 0.38); // main beard block
-        this.addBox(g, beard, 0.38, 0.18, 0.08, 0, 2.72, 0.38); // moustache area
-        // Black rectangular glasses
-        this.addBox(g, 0x111111, 0.22, 0.12, 0.04, -0.15, 2.78, 0.42);
-        this.addBox(g, 0x111111, 0.22, 0.12, 0.04, 0.15, 2.78, 0.42);
-        this.addBox(g, 0x111111, 0.08, 0.06, 0.03, 0, 2.78, 0.43); // bridge
-        // Arms of glasses — wrap around sides
-        this.addBox(g, 0x111111, 0.04, 0.07, 0.28, -0.35, 2.78, 0.29);
-        this.addBox(g, 0x111111, 0.04, 0.07, 0.28, 0.35, 2.78, 0.29);
+        this.addBox(g, skin, 0.24, 0.22, 0.23, 0, 2.08, 0);
+        // Head
+        this.addSphere(g, skin, 0.40, 0, 2.58, 0);
+        // Dark brown hair — short, proper coverage on top
+        this.addBox(g, hair, 0.76, 0.16, 0.78, 0, 2.94, -0.02); // main top hair
+        this.addBox(g, hair, 0.72, 0.22, 0.30, 0, 2.88, -0.28); // back hair
+        this.addBox(g, hair, 0.25, 0.30, 0.22, -0.38, 2.72, -0.05); // side hair L
+        this.addBox(g, hair, 0.25, 0.30, 0.22, 0.38, 2.72, -0.05); // side hair R
+        // Full reddish-brown beard
+        this.addBox(g, beard, 0.44, 0.32, 0.10, 0, 2.42, 0.36); // main beard
+        this.addBox(g, beard, 0.40, 0.20, 0.09, 0, 2.58, 0.38); // moustache
+        this.addBox(g, beard, 0.20, 0.40, 0.10, -0.34, 2.46, 0.28); // sideburn L
+        this.addBox(g, beard, 0.20, 0.40, 0.10, 0.34, 2.46, 0.28); // sideburn R
+        // ── Black ear muffs — signature detail ──
+        // Headband arc over top
+        this.addBox(g, 0x111111, 0.06, 0.06, 0.88, 0, 3.05, 0); // arc cross piece
+        // Left ear cup
+        this.addSphere(g, 0x111111, 0.18, -0.54, 2.72, 0);
+        this.addBox(g, 0x222222, 0.28, 0.28, 0.10, -0.54, 2.72, 0);
+        // Right ear cup
+        this.addSphere(g, 0x111111, 0.18, 0.54, 2.72, 0);
+        this.addBox(g, 0x222222, 0.28, 0.28, 0.10, 0.54, 2.72, 0);
+        // Arms connecting band to cups
+        this.addBox(g, 0x111111, 0.06, 0.38, 0.06, -0.50, 2.89, 0);
+        this.addBox(g, 0x111111, 0.06, 0.38, 0.06, 0.50, 2.89, 0);
         // Shoes
-        this.addBox(g, 0x111111, 0.48, 0.16, 0.56, -0.2, 0.06, 0.09);
-        this.addBox(g, 0x111111, 0.48, 0.16, 0.56, 0.2, 0.06, 0.09);
+        this.addBox(g, 0x222222, 0.46, 0.15, 0.54, -0.19, 0.06, 0.08);
+        this.addBox(g, 0x222222, 0.46, 0.15, 0.54, 0.19, 0.06, 0.08);
         return g;
     }
     // ── Helpers ───────────────────────────────────────────────────────────────
