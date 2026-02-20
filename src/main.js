@@ -7,6 +7,7 @@ import { JobManager } from './gameplay/JobManager';
 import { WaypointSystem } from './gameplay/WaypointSystem';
 import { JobBoard } from './ui/JobBoard';
 import { HUD } from './ui/HUD';
+import { MiniGameManager } from './minigames/MiniGameManager';
 async function main() {
     const engine = new Engine();
     await engine.init();
@@ -72,6 +73,8 @@ async function main() {
         }
     });
     document.body.appendChild(jobsBtn);
+    // Mini-game manager — overlays the world for plastering mini-games
+    const miniGameManager = new MiniGameManager();
     // Guard to prevent job completion firing more than once per arrival
     let jobCompleting = false;
     // ── Update loop ─────────────────────────────────────────────────────────────
@@ -104,24 +107,28 @@ async function main() {
             const dist = jobManager.distanceTo(vanX, vanZ);
             hud.updateJobDistance(dist);
         }
-        // Check job arrival
-        if (!jobCompleting) {
+        // Check job arrival — triggers the troweling mini-game
+        if (!jobCompleting && !miniGameManager.isActive()) {
             const arrived = jobManager.checkArrival(vanX, vanZ);
             if (arrived !== null) {
                 jobCompleting = true;
-                const earned = jobManager.completeJob(arrived, 1.0);
+                // Clear HUD travel state immediately
                 waypointSystem.setJob(null);
-                hud.showJobComplete(arrived.title, earned);
                 hud.setActiveJob(null);
-                hud.updateMoney(jobManager.money);
-                // Show job board 3 seconds after completing
-                setTimeout(() => {
+                // Launch the troweling mini-game
+                miniGameManager.startTroweling((result) => {
+                    const earned = jobManager.completeJob(arrived, result.qualityPct);
+                    hud.showJobComplete(arrived.title, earned);
+                    hud.updateMoney(jobManager.money);
                     jobCompleting = false;
-                    const available = jobManager.getAvailableJobs();
-                    if (available.length > 0) {
-                        jobBoard.show(available);
-                    }
-                }, 3000);
+                    // Show job board 3.5 seconds after result (gives flash overlay time to clear)
+                    setTimeout(() => {
+                        const available = jobManager.getAvailableJobs();
+                        if (available.length > 0) {
+                            jobBoard.show(available);
+                        }
+                    }, 3500);
+                });
             }
         }
         engine.camera.follow(van.mesh.position, van.velocity, van.heading);
