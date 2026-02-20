@@ -315,6 +315,27 @@ export class HUD {
     }, 1500);
   }
 
+  /**
+   * Brief warm amber flash: "☕ COFFEE STOP! -5K sats — Hands steady." for 2s.
+   */
+  showCoffeeStop(_cost: number): void {
+    const flashMsg = document.getElementById('hud-flash-msg');
+    if (flashMsg) {
+      flashMsg.style.color = '#C47A40';
+      flashMsg.innerHTML = `☕ COFFEE STOP!<br><span style="font-size:0.7em">-5K sats — Hands steady.</span>`;
+    }
+    this.flashOverlay.style.background = 'rgba(180, 100, 40, 0.2)';
+    this.flashOverlay.style.display = 'flex';
+    if (this.flashTimeout !== null) clearTimeout(this.flashTimeout);
+    this.flashTimeout = setTimeout(() => {
+      this.flashOverlay.style.display = 'none';
+      // Restore defaults for next job-complete flash
+      this.flashOverlay.style.background = 'rgba(94, 219, 125, 0.15)';
+      if (flashMsg) flashMsg.style.color = '#5EDB7D';
+      this.flashTimeout = null;
+    }, 2000);
+  }
+
   /** Show the job complete flash with title and earned sats */
   showJobComplete(jobTitle: string, earned: number): void {
     const flashMsg = document.getElementById('hud-flash-msg');

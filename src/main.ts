@@ -9,6 +9,7 @@ import { WaypointSystem } from './gameplay/WaypointSystem';
 import { JobBoard } from './ui/JobBoard';
 import { HUD } from './ui/HUD';
 import { MiniGameManager } from './minigames/MiniGameManager';
+import { CoffeeShop } from './entities/CoffeeShop';
 
 async function main() {
   const engine = new Engine();
@@ -22,6 +23,10 @@ async function main() {
   const van = new VanModel(engine.scene);
   const spillMeter = new SpillMeter();
   const hud = new HUD();
+
+  // ── Coffee shop pit-stop ────────────────────────────────────────────────────
+  const coffeeShop = new CoffeeShop(engine.scene);
+  let coffeeCooldown = 0; // prevent repeated triggers
 
   const physics = new VanPhysics(van, input, (intensity: number) => {
     spillMeter.triggerBump(intensity);
@@ -101,6 +106,21 @@ async function main() {
     const vanZ = van.mesh.position.z;
 
     waypointSystem.update(dt, vanX, vanZ);
+
+    // ── Coffee shop pit-stop ──────────────────────────────────────────────────
+    coffeeShop.update(dt);
+    if (coffeeCooldown > 0) coffeeCooldown -= dt;
+
+    if (coffeeShop.isNearby(vanX, vanZ) && coffeeCooldown <= 0) {
+      const COFFEE_COST = 5_000; // 5K sats for a coffee
+      if (jobManager.money >= COFFEE_COST) {
+        jobManager.money -= COFFEE_COST;
+        spillMeter.level = Math.max(0, spillMeter.level - 0.7); // calm the nerves significantly
+        hud.updateMoney(jobManager.money);
+        hud.showCoffeeStop(COFFEE_COST);
+        coffeeCooldown = 15; // 15 second cooldown before next coffee
+      }
+    }
 
     // Travel timer
     if (jobManager.activeJob) {

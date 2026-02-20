@@ -169,8 +169,11 @@ const ALL_JOBS = [
     },
 ];
 export class JobManager {
+    /** Fixed workshop location — near spawn, TEM depot */
+    static WORKSHOP_POS = { x: 10, z: 15 };
     jobs = ALL_JOBS.map(j => ({ ...j }));
     activeJob = null;
+    activePhase = 1;
     completedJobIds = new Set();
     money = 500_000; // sats
     travelTimer = 0; // counts down while job is active
@@ -180,6 +183,7 @@ export class JobManager {
     }
     acceptJob(job) {
         this.activeJob = job;
+        this.activePhase = 1;
         this.startTravelTimer();
     }
     startTravelTimer() {
@@ -187,6 +191,23 @@ export class JobManager {
             this.travelTimer = this.activeJob.travelTimeLimit ?? 120;
             this.travelFailed = false;
         }
+    }
+    /**
+     * Check if the van has arrived at the workshop (Phase 1 target).
+     * Uses a generous radius since the workshop is a large building.
+     */
+    checkPhase1Arrival(vanX, vanZ) {
+        const dx = vanX - JobManager.WORKSHOP_POS.x;
+        const dz = vanZ - JobManager.WORKSHOP_POS.z;
+        return Math.sqrt(dx * dx + dz * dz) < 14;
+    }
+    /**
+     * Transition from Phase 1 (workshop pickup) to Phase 2 (job site).
+     * Resets the travel timer for the second leg.
+     */
+    advanceToPhase2() {
+        this.activePhase = 2;
+        this.startTravelTimer();
     }
     tickTravel(dt) {
         if (!this.activeJob || this.travelFailed)
@@ -201,8 +222,12 @@ export class JobManager {
         }
         return null;
     }
+    /**
+     * Check if the van has arrived at the job site.
+     * Only triggers in Phase 2 — Phase 1 uses checkPhase1Arrival() instead.
+     */
     checkArrival(vanX, vanZ) {
-        if (!this.activeJob)
+        if (!this.activeJob || this.activePhase !== 2)
             return null;
         const dx = vanX - this.activeJob.position.x;
         const dz = vanZ - this.activeJob.position.z;
@@ -218,11 +243,18 @@ export class JobManager {
         this.activeJob = null;
         return earned;
     }
+    /** Distance from van to the active job site (for Phase 2 HUD display). */
     distanceTo(vanX, vanZ) {
         if (!this.activeJob)
             return 0;
         const dx = vanX - this.activeJob.position.x;
         const dz = vanZ - this.activeJob.position.z;
+        return Math.sqrt(dx * dx + dz * dz);
+    }
+    /** Distance from van to the workshop (for Phase 1 HUD display). */
+    distanceToWorkshop(vanX, vanZ) {
+        const dx = vanX - JobManager.WORKSHOP_POS.x;
+        const dz = vanZ - JobManager.WORKSHOP_POS.z;
         return Math.sqrt(dx * dx + dz * dz);
     }
 }

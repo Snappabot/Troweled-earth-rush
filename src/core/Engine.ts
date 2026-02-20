@@ -642,6 +642,7 @@ export class Engine {
     this.buildHouseTerracottaMonolith(140, 20);   // House 11 — Richmond
     this.buildHouseCurvedBalcony(-20, -140);      // House 12 — St Kilda
     this.buildHouseCortenPlaster(-140, -60);      // House 13 — Footscray
+    this.buildCoffeeShop(-60, -80);              // Coffee shop — St Kilda pitstop
   }
 
   // ── House 1 — Marbellino Modern ──────────────────────────────────────────────
@@ -1540,6 +1541,115 @@ export class Engine {
     );
     palmFan.position.set(-15, 8.75, -3);
     g.add(palmFan);
+
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // COFFEE SHOP — St Kilda boutique café / pit-stop (x=-60, z=-80)
+  // Small, warm, inviting — cream render, terracotta awning, amber windows
+  // ────────────────────────────────────────────────────────────────────────────
+  private buildCoffeeShop(x: number, z: number) {
+    const g = new THREE.Group();
+
+    // ── Main body — warm cream/white render ──
+    this.addBox(g, 0xF0E8D8, 14, 4, 10, 0, 2, 0);
+
+    // ── Flat roof slab ──
+    this.addBox(g, 0xE8E0D0, 14.2, 0.18, 10.2, 0, 4.09, 0);
+    // Black edge parapet trim
+    this.addBox(g, 0x111111, 14.6, 0.38, 10.6, 0, 4.19, 0);
+
+    // ── Large front windows — floor to ceiling, warm amber emissive glow ──
+    // Front face of body is at z = -5 in group space
+    // Two big windows, black frames, amber glass
+    for (const wx of [-3.8, 3.8]) {
+      // Black frame surround
+      this.addBox(g, 0x111111, 4.0, 3.8, 0.14, wx, 2.1, -5.08);
+      // Amber glass — emissive warm interior glow
+      const glass = new THREE.Mesh(
+        new THREE.BoxGeometry(3.5, 3.4, 0.10),
+        new THREE.MeshLambertMaterial({
+          color: 0xC88040,
+          emissive: new THREE.Color(0x9A5A20),
+          emissiveIntensity: 0.7,
+        })
+      );
+      glass.position.set(wx, 2.1, -5.06);
+      g.add(glass);
+    }
+
+    // ── Door — warm timber brown, slightly recessed (centre) ──
+    // Frame first
+    this.addBox(g, 0x111111, 2.0, 3.0, 0.14, 0, 1.5, -5.08);
+    // Timber door
+    this.addBox(g, 0x7A4A20, 1.6, 2.8, 0.20, 0, 1.4, -5.10);
+    // Handle
+    this.addBox(g, 0xCCA060, 0.1, 0.1, 0.12, 0.5, 1.4, -5.10);
+
+    // ── Awning — terracotta/burnt orange fabric canopy ──
+    // Extends from z=-5 (building front) to z=-7 (2 units forward), centre at z=-6
+    // Full building width, slight slope hint via thin leading-edge drop
+    this.addBox(g, 0xC47A40, 13.5, 0.28, 4.0, 0, 3.22, -7.0);
+    // Leading edge drop (darker strip for depth)
+    this.addBox(g, 0xA45A28, 13.5, 0.60, 0.18, 0, 2.95, -9.05);
+    // 3 slim support posts under awning leading edge
+    for (const ax of [-4.5, 0, 4.5]) {
+      this.addCyl(g, 0x888878, 0.07, 0.07, 3.0, 5, ax, 1.5, -9.1);
+    }
+
+    // ── COFFEE sign — white box on the awning fascia ──
+    // Sits on the underside/front face of the awning at the front
+    this.addBox(g, 0xFFFFFF, 5.0, 0.36, 0.12, 0, 3.06, -8.96);
+
+    // ── Outdoor tables: 3 small round tables with stools (warm wood) ──
+    // Placed out in front of the awning (z = -11 to -12 in group space)
+    for (const [tx, tz] of [[-5, -11.5], [0, -11.5], [5, -11.5]] as [number, number][]) {
+      // Table top (flat cylinder)
+      this.addCyl(g, 0x8A6040, 0.75, 0.75, 0.10, 12, tx, 1.12, tz);
+      // Table leg
+      this.addCyl(g, 0x6A4020, 0.07, 0.07, 1.12, 6, tx, 0.56, tz);
+      // 2 stools per table (cylinder seat + small leg)
+      for (const sOff of [-1.0, 1.0]) {
+        this.addCyl(g, 0x8A6040, 0.32, 0.32, 0.09, 8, tx + sOff * 0.85, 0.82, tz);
+        this.addCyl(g, 0x6A4020, 0.05, 0.05, 0.82, 5, tx + sOff * 0.85, 0.41, tz);
+      }
+    }
+
+    // ── Takeaway cup holder — small stack of white cylinders on right wall ──
+    // Mounted near front face, right side of building exterior
+    for (let ci = 0; ci < 5; ci++) {
+      this.addCyl(
+        g, 0xFFFFFF,
+        0.22 - ci * 0.008, 0.24 - ci * 0.008, 0.30,
+        8, 7.1, 0.22 + ci * 0.28, -3.5
+      );
+    }
+
+    // ── Chalkboard sign — dark slate with white line details ──
+    // Leans slightly outside on left of door
+    this.addBox(g, 0x333335, 1.10, 1.70, 0.12, -3.5, 1.1, -5.10);
+    // White 'text' lines on chalkboard
+    this.addBox(g, 0xEEEEEE, 0.72, 0.08, 0.05, -3.5, 1.60, -5.04);
+    this.addBox(g, 0xEEEEEE, 0.55, 0.08, 0.05, -3.5, 1.42, -5.04);
+    this.addBox(g, 0xEEEEEE, 0.63, 0.08, 0.05, -3.5, 1.24, -5.04);
+    this.addBox(g, 0xEEEEEE, 0.48, 0.08, 0.05, -3.5, 1.06, -5.04);
+
+    // ── Small warm point light inside — subtle emissive ceiling ──
+    // Tiny warm box on ceiling to hint at pendant lighting
+    for (const lx of [-4, 0, 4]) {
+      const pendant = new THREE.Mesh(
+        new THREE.BoxGeometry(0.25, 0.25, 0.25),
+        new THREE.MeshLambertMaterial({
+          color: 0xFFCC88,
+          emissive: new THREE.Color(0xFFAA44),
+          emissiveIntensity: 0.8,
+        })
+      );
+      pendant.position.set(lx, 3.7, -2.0);
+      g.add(pendant);
+    }
 
     g.position.set(x, 0, z);
     this.scene.add(g);

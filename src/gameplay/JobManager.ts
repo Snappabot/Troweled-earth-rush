@@ -188,8 +188,12 @@ const ALL_JOBS: Job[] = [
 ];
 
 export class JobManager {
+  /** Fixed workshop location — near spawn, TEM depot */
+  static readonly WORKSHOP_POS = { x: 10, z: 15 };
+
   private jobs: Job[] = ALL_JOBS.map(j => ({ ...j }));
   activeJob: Job | null = null;
+  activePhase: 1 | 2 = 1;
   completedJobIds: Set<string> = new Set();
   money: number = 500_000;  // sats
 
@@ -204,6 +208,7 @@ export class JobManager {
 
   acceptJob(job: Job): void {
     this.activeJob = job;
+    this.activePhase = 1;
     this.startTravelTimer();
   }
 
@@ -212,6 +217,25 @@ export class JobManager {
       this.travelTimer = this.activeJob.travelTimeLimit ?? 120;
       this.travelFailed = false;
     }
+  }
+
+  /**
+   * Check if the van has arrived at the workshop (Phase 1 target).
+   * Uses a generous radius since the workshop is a large building.
+   */
+  checkPhase1Arrival(vanX: number, vanZ: number): boolean {
+    const dx = vanX - JobManager.WORKSHOP_POS.x;
+    const dz = vanZ - JobManager.WORKSHOP_POS.z;
+    return Math.sqrt(dx * dx + dz * dz) < 14;
+  }
+
+  /**
+   * Transition from Phase 1 (workshop pickup) to Phase 2 (job site).
+   * Resets the travel timer for the second leg.
+   */
+  advanceToPhase2(): void {
+    this.activePhase = 2;
+    this.startTravelTimer();
   }
 
   tickTravel(dt: number): { failed: boolean; penalty: number } | null {
@@ -227,8 +251,12 @@ export class JobManager {
     return null;
   }
 
+  /**
+   * Check if the van has arrived at the job site.
+   * Only triggers in Phase 2 — Phase 1 uses checkPhase1Arrival() instead.
+   */
   checkArrival(vanX: number, vanZ: number): Job | null {
-    if (!this.activeJob) return null;
+    if (!this.activeJob || this.activePhase !== 2) return null;
     const dx = vanX - this.activeJob.position.x;
     const dz = vanZ - this.activeJob.position.z;
     if (Math.sqrt(dx * dx + dz * dz) < this.activeJob.triggerRadius) {
@@ -245,10 +273,18 @@ export class JobManager {
     return earned;
   }
 
+  /** Distance from van to the active job site (for Phase 2 HUD display). */
   distanceTo(vanX: number, vanZ: number): number {
     if (!this.activeJob) return 0;
     const dx = vanX - this.activeJob.position.x;
     const dz = vanZ - this.activeJob.position.z;
+    return Math.sqrt(dx * dx + dz * dz);
+  }
+
+  /** Distance from van to the workshop (for Phase 1 HUD display). */
+  distanceToWorkshop(vanX: number, vanZ: number): number {
+    const dx = vanX - JobManager.WORKSHOP_POS.x;
+    const dz = vanZ - JobManager.WORKSHOP_POS.z;
     return Math.sqrt(dx * dx + dz * dz);
   }
 }

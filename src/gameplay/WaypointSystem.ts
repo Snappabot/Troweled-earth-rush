@@ -9,7 +9,7 @@ export class WaypointSystem {
   private routeGeom: THREE.BufferGeometry | null = null;
   private scene: THREE.Scene;
   private time = 0;
-  private activeJob: Job | null = null;
+  private targetPos: { x: number; z: number } | null = null;
 
   // Brand red
   private static readonly MARKER_COLOR = 0xC1666B;
@@ -50,13 +50,17 @@ export class WaypointSystem {
     this.ring.position.y = -WaypointSystem.BASE_HEIGHT + 0.3; // Near ground
     this.marker.add(this.ring);
 
-    // Hide until a job is active
+    // Hide until a target is set
     this.marker.visible = false;
     this.scene.add(this.marker);
   }
 
-  setJob(job: Job | null): void {
-    this.activeJob = job;
+  /**
+   * Point the waypoint at a raw map position.
+   * Pass null to hide the marker and clear the route line.
+   */
+  setTarget(pos: { x: number; z: number } | null): void {
+    this.targetPos = pos;
 
     // Remove old route line
     if (this.routeLine) {
@@ -67,25 +71,25 @@ export class WaypointSystem {
       this.routeGeom = null;
     }
 
-    if (job === null) {
+    if (pos === null) {
       this.marker.visible = false;
       return;
     }
 
-    // Position marker at job site
-    this.marker.position.set(job.position.x, WaypointSystem.BASE_HEIGHT, job.position.z);
+    // Position marker at target
+    this.marker.position.set(pos.x, WaypointSystem.BASE_HEIGHT, pos.z);
     this.marker.visible = true;
 
-    // Create route line — two points: van (updated each frame) → job
+    // Create route line — two points: van (updated each frame) → target
     this.routeGeom = new THREE.BufferGeometry();
     const positions = new Float32Array(6); // 2 points × 3 coords
-    // Start and end both at job for now; updated in update()
-    positions[0] = job.position.x;
+    // Both start at target; van end updated in update()
+    positions[0] = pos.x;
     positions[1] = 0.05;
-    positions[2] = job.position.z;
-    positions[3] = job.position.x;
+    positions[2] = pos.z;
+    positions[3] = pos.x;
     positions[4] = 0.05;
-    positions[5] = job.position.z;
+    positions[5] = pos.z;
     this.routeGeom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
     const lineMat = new THREE.LineBasicMaterial({
@@ -99,10 +103,18 @@ export class WaypointSystem {
     this.scene.add(this.routeLine);
   }
 
+  /**
+   * Backwards-compatible helper: set the waypoint to a job's position.
+   * Calls setTarget(job.position) or setTarget(null).
+   */
+  setJob(job: Job | null): void {
+    this.setTarget(job?.position ?? null);
+  }
+
   update(dt: number, vanX: number, vanZ: number): void {
     this.time += dt;
 
-    if (!this.activeJob || !this.marker.visible) return;
+    if (!this.targetPos || !this.marker.visible) return;
 
     // ── Animate diamond: bob + slow Y-rotation ──────────────────────────────
     const bob = Math.sin(this.time * 2.2) * WaypointSystem.BOB_AMP;
@@ -116,13 +128,13 @@ export class WaypointSystem {
     const ringMat = this.ring.material as THREE.MeshBasicMaterial;
     ringMat.opacity = (1.0 - pulse) * 0.6;
 
-    // ── Update route line from van position to job ──────────────────────────
+    // ── Update route line from van position to target ──────────────────────
     if (this.routeGeom) {
       const positions = this.routeGeom.attributes['position'] as THREE.BufferAttribute;
       // Van end (index 0)
       positions.setXYZ(0, vanX, 0.05, vanZ);
-      // Job end (index 1)
-      positions.setXYZ(1, this.activeJob.position.x, 0.05, this.activeJob.position.z);
+      // Target end (index 1)
+      positions.setXYZ(1, this.targetPos.x, 0.05, this.targetPos.z);
       positions.needsUpdate = true;
       this.routeGeom.computeBoundingSphere();
     }
