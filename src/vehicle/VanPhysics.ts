@@ -66,10 +66,7 @@ export class VanPhysics {
     this.prevPos.copy(this.van.mesh.position);
   }
 
-  /** Current speed — positive = forward, negative = reverse */
-  get speed(): number { return this._speed; }
-
-  /** Current speed in m/s (can be negative for reverse) */
+  /** Current speed in m/s — positive = forward, negative = reverse */
   get speed(): number {
     return this._speed;
   }
