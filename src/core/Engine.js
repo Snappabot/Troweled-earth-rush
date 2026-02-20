@@ -486,36 +486,44 @@ export class Engine {
     }
     // ────────────────────────────────────────────────
     // TYPE E — Low Warehouse/Workshop (Footscray/St Kilda industrial)
-    // Wide low shed, pitched roof
+    // Wide low shed, pitched roof — concretum grey with black patina
     // ────────────────────────────────────────────────
     buildTypeE(x, z, sx, sz) {
         const C = this.C;
         const group = new THREE.Group();
         const DEG12 = 12 * Math.PI / 180; // 12° in radians
-        // Main body — front face at z = -9
-        this.addBox(group, 0x778877, 22, 4, 18, 0, 2, 0);
-        // Pitched roof — two panels meeting at ridge
-        // Left panel (negative z side): slopes up toward centre
-        const roofL = new THREE.Mesh(new THREE.BoxGeometry(22.5, 0.3, 10), new THREE.MeshLambertMaterial({ color: C.deepClay }));
+        // Concretum grey base with subtle patina shadow layer
+        this.addBox(group, 0x6A6A62, 22, 4, 18, 0, 2, 0);
+        // Black patina shadow — slightly oversized dark layer on base
+        this.addBox(group, 0x1A1A16, 22.1, 0.3, 18.1, 0, 0.15, 0);
+        // Pitched roof — near-black (dark steel/patina)
+        const roofL = new THREE.Mesh(new THREE.BoxGeometry(22.5, 0.3, 10), new THREE.MeshLambertMaterial({ color: 0x1E1E1A }));
+        roofL.castShadow = true;
+        roofL.receiveShadow = true;
         roofL.rotation.x = DEG12;
         roofL.position.set(0, 4.5, -4.5);
         group.add(roofL);
-        // Right panel (positive z side)
-        const roofR = new THREE.Mesh(new THREE.BoxGeometry(22.5, 0.3, 10), new THREE.MeshLambertMaterial({ color: C.deepClay }));
+        const roofR = new THREE.Mesh(new THREE.BoxGeometry(22.5, 0.3, 10), new THREE.MeshLambertMaterial({ color: 0x1E1E1A }));
+        roofR.castShadow = true;
+        roofR.receiveShadow = true;
         roofR.rotation.x = -DEG12;
         roofR.position.set(0, 4.5, 4.5);
         group.add(roofR);
-        // Ridge cap
-        this.addBox(group, C.charcoal, 22.5, 0.5, 0.6, 0, 5.2, 0);
-        // Large roller door on front face
-        this.addBox(group, C.charcoal, 4.5, 3.5, 0.2, 0, 1.75, -9.1);
+        // Ridge cap — near-black patina
+        this.addBox(group, 0x111110, 22.5, 0.5, 0.6, 0, 5.2, 0);
+        // Horizontal patina bands across wall face (weathering lines)
+        for (const bz of [-2.0, 0.5, 3.0]) {
+            this.addBox(group, 0x111110, 22.2, 0.08, 0.1, 0, 3.5, bz);
+        }
+        // Large roller door on front face — very dark
+        this.addBox(group, 0x111110, 4.5, 3.5, 0.2, 0, 1.75, -9.1);
         // Door tracks either side
-        this.addBox(group, 0x555555, 0.15, 3.5, 0.2, -2.4, 1.75, -9.1);
-        this.addBox(group, 0x555555, 0.15, 3.5, 0.2, 2.4, 1.75, -9.1);
+        this.addBox(group, 0x222220, 0.15, 3.5, 0.2, -2.4, 1.75, -9.1);
+        this.addBox(group, 0x222220, 0.15, 3.5, 0.2, 2.4, 1.75, -9.1);
         // Side windows strip — near top of left side wall
         this.addBox(group, 0x334455, 8, 0.8, 0.15, -11.075, 3.5, 0);
         // Downpipe at front-left corner
-        this.addCyl(group, C.charcoal, 0.1, 0.1, 4, 5, -11, 2, -9);
+        this.addCyl(group, 0x111110, 0.1, 0.1, 4, 5, -11, 2, -9);
         group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
         group.position.set(x, 0, z);
         this.scene.add(group);
