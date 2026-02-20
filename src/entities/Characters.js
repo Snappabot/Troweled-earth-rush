@@ -16,15 +16,20 @@ export class Characters {
         const jose = this.buildJose();
         const jarrad = this.buildJarrad();
         const matt = this.buildMatt();
-        jose.position.set(x - 2.5, 0, z);
-        jarrad.position.set(x, 0, z);
-        matt.position.set(x + 2.8, 0, z);
-        // Slight random Y rotations so they're not all facing the same way
+        const phil = this.buildPhil();
+        const tsuyoshi = this.buildTsuyoshi();
+        jose.position.set(x - 5, 0, z);
+        jarrad.position.set(x - 2, 0, z + 1);
+        matt.position.set(x + 1, 0, z);
+        phil.position.set(x + 4, 0, z + 0.5);
+        tsuyoshi.position.set(x - 3.5, 0, z + 3); // Slightly back, "watching" the crew
         jose.rotation.y = 0.3;
         jarrad.rotation.y = -0.1;
-        matt.rotation.y = -0.4;
-        this.scene.add(jose, jarrad, matt);
-        this.characters.push(jose, jarrad, matt);
+        matt.rotation.y = -0.3;
+        phil.rotation.y = -0.5;
+        tsuyoshi.rotation.y = 0.8;
+        this.scene.add(jose, jarrad, matt, phil, tsuyoshi);
+        this.characters.push(jose, jarrad, matt, phil, tsuyoshi);
     }
     // ── Jose ──────────────────────────────────────────────────────────────────
     // Slim, near-BLACK thick dreadlocks, olive skin, NO glasses,
@@ -59,6 +64,10 @@ export class Characters {
         this.addBox(g, locs, 0.22, 0.50, 0.22, 0.28, 2.18, -0.04); // right side
         this.addBox(g, locs, 0.16, 0.40, 0.16, 0.10, 2.10, 0.10); // front drads
         this.addBox(g, locs, 0.14, 0.30, 0.14, -0.10, 2.05, 0.08);
+        // Teal rectangular glasses (visible in group shot through dreads)
+        this.addBox(g, 0x2A9A90, 0.22, 0.11, 0.04, -0.13, 2.52, 0.37);
+        this.addBox(g, 0x2A9A90, 0.22, 0.11, 0.04, 0.13, 2.52, 0.37);
+        this.addBox(g, 0x2A9A90, 0.07, 0.06, 0.03, 0, 2.52, 0.38);
         // Headphones AROUND NECK (not on head) — white/silver cord
         this.addBox(g, 0x888888, 0.06, 0.06, 0.55, 0, 2.10, 0); // band behind neck
         this.addBox(g, 0x555555, 0.1, 0.1, 0.1, -0.22, 2.04, 0.25); // left bud
@@ -159,6 +168,90 @@ export class Characters {
         // Shoes
         this.addBox(g, 0x222222, 0.46, 0.15, 0.54, -0.19, 0.06, 0.08);
         this.addBox(g, 0x222222, 0.46, 0.15, 0.54, 0.19, 0.06, 0.08);
+        return g;
+    }
+    // ── Phil ──────────────────────────────────────────────────────────────────
+    // Old Man Phil — stocky/broad, silver-grey short hair, silver rectangular
+    // glasses, white TEM shirt, blue work jeans, big friendly smile
+    buildPhil() {
+        const g = new THREE.Group();
+        const skin = 0xD4A880; // fair, slightly weathered
+        const shirt = 0xF0EDE8; // white TEM shirt
+        const jeans = 0x3A5080; // blue work jeans
+        const hair = 0xC0C0B8; // silver-grey hair
+        // Legs — blue jeans (broader stance, older bloke)
+        this.addBox(g, jeans, 0.50, 1.0, 0.38, -0.22, 0.5, 0);
+        this.addBox(g, jeans, 0.50, 1.0, 0.38, 0.22, 0.5, 0);
+        // Body — white TEM shirt, broader/stockier torso
+        this.addBox(g, shirt, 1.0, 1.1, 0.52, 0, 1.55, 0);
+        // TEM logo on white shirt (dark text visible)
+        this.addBox(g, 0x333333, 0.24, 0.22, 0.05, -0.05, 1.58, 0.27);
+        // Arms (broader)
+        this.addBox(g, skin, 0.26, 0.82, 0.24, -0.66, 1.36, 0);
+        this.addBox(g, skin, 0.26, 0.82, 0.24, 0.66, 1.36, 0);
+        // Neck
+        this.addBox(g, skin, 0.28, 0.24, 0.26, 0, 2.21, 0);
+        // Head (rounder, older)
+        this.addSphere(g, skin, 0.44, 0, 2.72, 0);
+        // Silver-grey short hair
+        this.addBox(g, hair, 0.80, 0.18, 0.80, 0, 3.08, -0.02); // top
+        this.addBox(g, hair, 0.28, 0.30, 0.26, -0.42, 2.88, -0.02); // side L
+        this.addBox(g, hair, 0.28, 0.30, 0.26, 0.42, 2.88, -0.02); // side R
+        this.addBox(g, hair, 0.70, 0.18, 0.30, 0, 2.82, -0.28); // back
+        // Silver/light rectangular glasses
+        this.addBox(g, 0xA8A8A0, 0.26, 0.13, 0.04, -0.14, 2.74, 0.42);
+        this.addBox(g, 0xA8A8A0, 0.26, 0.13, 0.04, 0.14, 2.74, 0.42);
+        this.addBox(g, 0xA8A8A0, 0.08, 0.07, 0.03, 0, 2.74, 0.43);
+        this.addBox(g, 0xA8A8A0, 0.04, 0.08, 0.30, -0.36, 2.74, 0.28);
+        this.addBox(g, 0xA8A8A0, 0.04, 0.08, 0.30, 0.36, 2.74, 0.28);
+        // Big friendly smile hint (slightly lighter area)
+        this.addBox(g, 0xC08060, 0.28, 0.08, 0.05, 0, 2.56, 0.43);
+        // Shoes (white sneakers — visible in photo)
+        this.addBox(g, 0xEEEEE8, 0.52, 0.16, 0.58, -0.22, 0.06, 0.09);
+        this.addBox(g, 0xEEEEE8, 0.52, 0.16, 0.58, 0.22, 0.06, 0.09);
+        return g;
+    }
+    // ── Tsuyoshi — The Samurai Master ─────────────────────────────────────────
+    // Medium-tan, DRAMATIC MOHAWK (tall black spikes, shaved sides),
+    // dark charcoal TEM long-sleeve shirt, lean athletic, big smile
+    buildTsuyoshi() {
+        const g = new THREE.Group();
+        const skin = 0xB88858; // medium tan/olive
+        const shirt = 0x1A1A18; // dark charcoal TEM shirt
+        const pants = 0x222220;
+        const hawk = 0x0A0A08; // near-black mohawk
+        // Legs
+        this.addBox(g, pants, 0.40, 0.92, 0.34, -0.17, 0.46, 0);
+        this.addBox(g, pants, 0.40, 0.92, 0.34, 0.17, 0.46, 0);
+        // Body — lean, long-sleeve charcoal shirt
+        this.addBox(g, shirt, 0.78, 1.0, 0.44, 0, 1.42, 0);
+        // TEM logo
+        this.addBox(g, 0xDDDDDD, 0.22, 0.22, 0.05, -0.05, 1.52, 0.23);
+        // Arms — long-sleeve
+        this.addBox(g, shirt, 0.21, 0.82, 0.21, -0.52, 1.24, 0);
+        this.addBox(g, shirt, 0.21, 0.82, 0.21, 0.52, 1.24, 0);
+        this.addBox(g, skin, 0.19, 0.18, 0.19, -0.52, 0.80, 0);
+        this.addBox(g, skin, 0.19, 0.18, 0.19, 0.52, 0.80, 0);
+        // Neck
+        this.addBox(g, skin, 0.22, 0.22, 0.22, 0, 2.03, 0);
+        // Head
+        this.addSphere(g, skin, 0.38, 0, 2.52, 0);
+        // Shaved sides (very close to head colour — just slightly darker)
+        this.addBox(g, 0x1A1A18, 0.06, 0.35, 0.72, -0.38, 2.60, 0);
+        this.addBox(g, 0x1A1A18, 0.06, 0.35, 0.72, 0.38, 2.60, 0);
+        // ── MOHAWK — the hero feature, unmissable silhouette ──
+        // Base strip
+        this.addBox(g, hawk, 0.22, 0.18, 0.72, 0, 2.88, 0);
+        // Central spike cluster — tall and dramatic
+        this.addBox(g, hawk, 0.16, 0.60, 0.18, 0, 3.18, 0); // main centre spike
+        this.addBox(g, hawk, 0.12, 0.50, 0.14, -0.08, 3.12, -0.14); // spike left-back
+        this.addBox(g, hawk, 0.12, 0.50, 0.14, 0.08, 3.12, -0.14); // spike right-back
+        this.addBox(g, hawk, 0.14, 0.42, 0.14, 0, 3.08, 0.18); // spike front
+        this.addBox(g, hawk, 0.10, 0.35, 0.12, -0.06, 3.00, 0.22); // side spike L
+        this.addBox(g, hawk, 0.10, 0.35, 0.12, 0.06, 3.00, 0.22); // side spike R
+        // Shoes
+        this.addBox(g, 0x222222, 0.42, 0.15, 0.52, -0.17, 0.06, 0.08);
+        this.addBox(g, 0x222222, 0.42, 0.15, 0.52, 0.17, 0.06, 0.08);
         return g;
     }
     // ── Helpers ───────────────────────────────────────────────────────────────
