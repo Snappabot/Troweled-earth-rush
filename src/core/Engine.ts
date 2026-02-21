@@ -4,11 +4,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { CameraController } from '../world/CameraController';
+import { CollisionWorld } from './CollisionWorld';
 
 export class Engine {
   renderer!: THREE.WebGLRenderer;
   scene!: THREE.Scene;
   camera!: CameraController;
+  collisionWorld = new CollisionWorld();
   private composer!: EffectComposer;
   private clouds: { mesh: THREE.Group; speed: number }[] = [];
   private updateCallbacks: Array<(dt: number) => void> = [];
@@ -93,6 +95,7 @@ export class Engine {
     this.buildWorkshop(10, 15);   // TEM Workshop — near spawn depot
     this.createZebraCrossings();
     this.createRoadCorners();
+    this.createStreetFurniture();
 
     // ── PS3-level graphics additions ──────────────────────────────────────
     this.createSkyDome();
@@ -318,30 +321,72 @@ export class Engine {
     }
   }
 
-  // ── Tree ──
+  // ── Tree (rich multi-type: palm / 3-tier layered cone / multi-sphere round) ──
   private addTree(x: number, z: number, sx: number, sz: number) {
     const r = this.seed(sx, sz, 99);
+    const treeType = r < 0.15 ? 'palm' : r < 0.5 ? 'round' : 'layered';
 
+    const trunkH = 2 + r * 1.5;
     const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2, 8), trunkMat);
-    trunk.position.set(x, 1, z);
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, trunkH, 7), trunkMat);
+    trunk.position.set(x, trunkH / 2, z);
     trunk.castShadow = true;
-    trunk.receiveShadow = true;
     this.scene.add(trunk);
 
-    const green = r > 0.5 ? 0x3d6e3d : 0x2d5e2d;
-    const canopyMat = new THREE.MeshLambertMaterial({ color: green });
-    let canopy: THREE.Mesh;
-    if (r > 0.5) {
-      canopy = new THREE.Mesh(new THREE.SphereGeometry(2.5, 8, 7), canopyMat);
-      canopy.position.set(x, 3.5, z);
+    if (treeType === 'palm') {
+      // Tall thin palm — St Kilda coastal
+      const palmTrunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.22, 6, 6),
+        new THREE.MeshLambertMaterial({ color: 0x8B7355 })
+      );
+      palmTrunk.position.set(x, 3, z);
+      this.scene.add(palmTrunk);
+      // Fan of 6 fronds drooping outward
+      for (let f = 0; f < 6; f++) {
+        const angle = (f / 6) * Math.PI * 2;
+        const frond = new THREE.Mesh(
+          new THREE.BoxGeometry(0.15, 0.08, 2.5),
+          new THREE.MeshLambertMaterial({ color: 0x2A5A1A })
+        );
+        frond.position.set(x + Math.cos(angle) * 1.2, 6.5, z + Math.sin(angle) * 1.2);
+        frond.rotation.y = angle;
+        frond.rotation.z = 0.4;
+        this.scene.add(frond);
+      }
+
+    } else if (treeType === 'layered') {
+      // 3-tier layered cone tree — proper street tree
+      const greens = [0x2D5E2D, 0x3A6E3A, 0x4A7E4A];
+      for (let layer = 0; layer < 3; layer++) {
+        const radius = 2.2 - layer * 0.5;
+        const layerMesh = new THREE.Mesh(
+          new THREE.ConeGeometry(radius, 2, 8),
+          new THREE.MeshLambertMaterial({ color: greens[layer] })
+        );
+        layerMesh.position.set(x, trunkH + 1 + layer * 1.5, z);
+        layerMesh.castShadow = true;
+        this.scene.add(layerMesh);
+      }
+
     } else {
-      canopy = new THREE.Mesh(new THREE.ConeGeometry(2, 4, 8), canopyMat);
-      canopy.position.set(x, 4, z);
+      // Multi-sphere round canopy — 5 overlapping spheres
+      const baseGreen = r > 0.7 ? 0x3d6e3d : 0x2d5e2d;
+      const offsets: [number, number, number][] = [
+        [0, 0, 0], [0.8, -0.3, 0.5], [-0.7, -0.2, 0.3],
+        [0.3, 0.4, -0.6], [-0.4, 0.3, -0.5],
+      ];
+      for (let i = 0; i < offsets.length; i++) {
+        const [ox, oy, oz] = offsets[i];
+        const radius = 1.8 + this.seed(sx + i * 17, sz + i * 13, 103) * 0.8;
+        const sphere = new THREE.Mesh(
+          new THREE.SphereGeometry(radius, 7, 6),
+          new THREE.MeshLambertMaterial({ color: baseGreen })
+        );
+        sphere.position.set(x + ox, trunkH + 2.5 + oy, z + oz);
+        sphere.castShadow = true;
+        this.scene.add(sphere);
+      }
     }
-    canopy.castShadow = true;
-    canopy.receiveShadow = true;
-    this.scene.add(canopy);
   }
 
   // ── Parked car ──
@@ -437,6 +482,13 @@ export class Engine {
     group.add(mesh);
   }
 
+  // ── Building AABB registration helper ──────────────────────────────────────
+  private registerBuildingCollider(x: number, z: number, hw: number, hd: number, sx: number, sz: number): void {
+    const rotIdx = Math.floor(this.seed(sx, sz, 101) * 4) % 4;
+    const swapped = rotIdx === 1 || rotIdx === 3;
+    this.collisionWorld.addBox(x, z, swapped ? hd : hw, swapped ? hw : hd);
+  }
+
   // ────────────────────────────────────────────────
   // TYPE A — Modern TE Commercial (CBD)
   // Minimalist flat-roof, pearl grey plaster, colonnaded ground floor
@@ -468,10 +520,28 @@ export class Engine {
     this.addBox(group, C.deepClay,   14, 0.5, 1.2, 0, 0.25, -7.6);
     this.addBox(group, C.oliveGreen, 13, 0.4, 1.0, 0, 0.70, -7.6);
 
+    // Colonnade awning — canvas canopy above colonnade beam
+    const awRA = this.seed(sx, sz, 400);
+    const awMatA = new THREE.MeshLambertMaterial({ color: awRA > 0.5 ? 0xC47A40 : 0x4A6A8A });
+    const awA = new THREE.Mesh(new THREE.BoxGeometry(14, 0.1, 1.5), awMatA);
+    awA.position.set(0, 3.8, -7.75);
+    awA.rotation.x = 0.15;
+    group.add(awA);
+    const valA = new THREE.Mesh(new THREE.BoxGeometry(14, 0.3, 0.08), awMatA);
+    valA.position.set(0, 3.45, -8.45);
+    group.add(valA);
+
+    // Building number plaque
+    this.addBox(group, 0xD8D4CC, 0.8, 0.5, 0.08, -6.5, 1.0, -7.05);
+
+    // Rooftop details
+    this.addRooftopDetails(group, 16, 14, 10, sx, sz);
+
     // Random rotation 0/90/180/270°
     group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
+    this.registerBuildingCollider(x, z, 8.5, 7.5, sx, sz);
   }
 
   // ────────────────────────────────────────────────
@@ -515,9 +585,16 @@ export class Engine {
     this.addBox(group, C.deepClay,   2.0, 0.4, 0.6, 0, 0.20, -6.6);
     this.addBox(group, C.oliveGreen, 1.8, 0.1, 0.5, 0, 0.45, -6.6);
 
+    // Building number plaque
+    this.addBox(group, 0xD4B08A, 0.8, 0.5, 0.08, -5.0, 1.0, -6.05);
+
+    // Rooftop details
+    this.addRooftopDetails(group, 14, 12, 8, sx, sz);
+
     group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
+    this.registerBuildingCollider(x, z, 7.5, 6.5, sx, sz);
   }
 
   // ────────────────────────────────────────────────
@@ -550,6 +627,7 @@ export class Engine {
     group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
+    this.registerBuildingCollider(x, z, 4.5, 4.5, sx, sz);
   }
 
   // ────────────────────────────────────────────────
@@ -593,9 +671,16 @@ export class Engine {
     // Low fence/wall — 1 unit in front of building
     this.addBox(group, C.deepClay, 11, 1.0, 0.3, 0, 0.5, -6.65);
 
+    // Building number plaque
+    this.addBox(group, 0xE4D9C8, 0.8, 0.5, 0.08, -5.0, 1.0, -5.55);
+
+    // Rooftop details
+    this.addRooftopDetails(group, 13, 11, 7, sx, sz);
+
     group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
+    this.registerBuildingCollider(x, z, 7.0, 6.0, sx, sz);
   }
 
   // ────────────────────────────────────────────────
@@ -654,9 +739,33 @@ export class Engine {
     // Downpipe at front-left corner
     this.addCyl(group, 0x111110, 0.1, 0.1, 4, 5, -11, 2, -9);
 
+    // Awning above roller door (industrial fabric canopy)
+    const awRE = this.seed(sx, sz, 401);
+    const awMatE = new THREE.MeshLambertMaterial({ color: awRE > 0.5 ? 0xC47A40 : 0x4A6A8A });
+    const awE = new THREE.Mesh(new THREE.BoxGeometry(8, 0.1, 1.5), awMatE);
+    awE.position.set(0, 4.2, -9.85);
+    awE.rotation.x = 0.15;
+    group.add(awE);
+    const valE = new THREE.Mesh(new THREE.BoxGeometry(8, 0.3, 0.08), awMatE);
+    valE.position.set(0, 3.85, -10.6);
+    group.add(valE);
+    // Two slim support posts under awning
+    for (const ax of [-3.5, 3.5]) {
+      const supPost = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06, 0.06, 4.0, 5),
+        new THREE.MeshLambertMaterial({ color: 0x555550 })
+      );
+      supPost.position.set(ax, 2.0, -10.55);
+      group.add(supPost);
+    }
+
+    // Rooftop details (on shed — limited to small items)
+    this.addRooftopDetails(group, 22, 18, 5.2, sx, sz);
+
     group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
+    this.registerBuildingCollider(x, z, 11.5, 9.5, sx, sz);
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -664,19 +773,33 @@ export class Engine {
   // ────────────────────────────────────────────────────────────────────────────
   private createTEHouses() {
     this.buildHouseMarbellino(20, 20);       // House 1 — CBD edge
+    this.collisionWorld.addBox(20, 20, 10.0, 7.5);
     this.buildHousePorthole(-60, 20);        // House 2 — Brunswick
+    this.collisionWorld.addBox(-60, 20, 8.0, 6.5);
     this.buildHouseTerracotta(20, -60);      // House 3 — St Kilda edge
+    this.collisionWorld.addBox(20, -60, 9.0, 7.0);
     this.buildHouseLoggia(-60, -60);         // House 4 — Brunswick/StKilda
+    this.collisionWorld.addBox(-60, -60, 10.0, 7.5);
     this.buildHouseRokka(60, -20);           // House 5 — Richmond
+    this.collisionWorld.addBox(60, -20, 11.0, 8.0);
     this.buildHouseTimberStone(100, 60);     // House 6 — Richmond (Snappa's house)
+    this.collisionWorld.addBox(100, 60, 11.0, 7.0);
     this.buildHouseSculpturalPlaster(-100, -20); // House 7 — Brunswick sculptural olive
+    this.collisionWorld.addBox(-100, -20, 8.0, 6.0);
     this.buildHouseHaussmann(60, -100);           // House 8 — St Kilda Parisian mansion
+    this.collisionWorld.addBox(60, -100, 11.0, 7.0);
     this.buildHouseAngularBay(-140, 60);          // House 9  — Footscray
+    this.collisionWorld.addBox(-140, 60, 9.0, 6.5);
     this.buildHouseBrutalistCompound(20, 100);    // House 10 — Brunswick
+    this.collisionWorld.addBox(20, 100, 12.0, 5.0);
     this.buildHouseTerracottaMonolith(140, 20);   // House 11 — Richmond
+    this.collisionWorld.addBox(140, 20, 10.0, 5.0);
     this.buildHouseCurvedBalcony(-20, -140);      // House 12 — St Kilda
+    this.collisionWorld.addBox(-20, -140, 8.0, 6.0);
     this.buildHouseCortenPlaster(-140, -60);      // House 13 — Footscray
+    this.collisionWorld.addBox(-140, -60, 10.0, 5.5);
     this.buildCoffeeShop(-60, -100);              // Coffee shop — St Kilda pitstop
+    this.collisionWorld.addBox(-60, -100, 7.0, 5.0);
   }
 
   // ── House 1 — Marbellino Modern ──────────────────────────────────────────────
@@ -1834,6 +1957,8 @@ export class Engine {
 
     group.position.set(x, 0, z);
     this.scene.add(group);
+    // Workshop is 30W × 20D — register a solid AABB collider
+    this.collisionWorld.addBox(x, z, 15.5, 10.5);
   }
 
   // ── Zebra Crossings (crosswalks) at every road intersection ──
@@ -2038,6 +2163,347 @@ export class Engine {
       );
       this.scene.add(puddle);
     }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // ROOFTOP DETAILS — AC units, tanks, antennas, dishes, HVAC ducts
+  // ────────────────────────────────────────────────────────────────────────
+  private addRooftopDetails(g: THREE.Group, w: number, d: number, h: number, sx: number, sz: number): void {
+    const r = this.seed(sx, sz, 200);
+
+    // AC unit (rooftop box with vent strip)
+    if (r > 0.3) {
+      const acUnit = new THREE.Group();
+      this.addBox(acUnit, 0x888880, 1.5, 0.6, 1.0, 0, 0, 0);
+      this.addBox(acUnit, 0x666660, 1.5, 0.1, 0.8, 0, 0.35, 0.05);
+      acUnit.position.set(w / 2 - 2, h + 0.3, d / 2 - 2);
+      g.add(acUnit);
+    }
+
+    // Water tank — cylindrical wood, only on taller buildings
+    if (r > 0.7 && h > 8) {
+      const tank = new THREE.Mesh(
+        new THREE.CylinderGeometry(1.0, 1.0, 1.8, 10),
+        new THREE.MeshLambertMaterial({ color: 0x8B7355 })
+      );
+      tank.position.set(-w / 2 + 2, h + 0.9, 0);
+      g.add(tank);
+      // 4 support legs
+      for (const [lx, lz] of [[-0.7, -0.7], [0.7, -0.7], [-0.7, 0.7], [0.7, 0.7]] as [number, number][]) {
+        const leg = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.06, 0.06, 1.5, 4),
+          new THREE.MeshLambertMaterial({ color: 0x555550 })
+        );
+        leg.position.set(-w / 2 + 2 + lx, h + 0.1, lz);
+        g.add(leg);
+      }
+    }
+
+    // Satellite dish
+    if (r > 0.5 && r < 0.8) {
+      const dish = new THREE.Mesh(
+        new THREE.SphereGeometry(0.4, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2),
+        new THREE.MeshLambertMaterial({ color: 0xCCCCCC })
+      );
+      dish.position.set(w / 2 - 1, h + 0.2, -d / 2 + 1);
+      dish.rotation.x = -Math.PI / 4;
+      g.add(dish);
+    }
+
+    // Rooftop antenna / mast with crossbar
+    if (r < 0.4) {
+      const mast = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.04, 0.04, 3, 4),
+        new THREE.MeshLambertMaterial({ color: 0x444444 })
+      );
+      mast.position.set(0, h + 1.5, 0);
+      g.add(mast);
+      this.addBox(g, 0x444444, 2, 0.05, 0.05, 0, h + 2.5, 0);
+    }
+
+    // Rooftop HVAC duct
+    if (r > 0.4 && r < 0.6) {
+      this.addBox(g, 0x777770, 2, 0.4, 0.4, w / 4, h + 0.2, -d / 4);
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // STREET FURNITURE PRIMITIVES
+  // ────────────────────────────────────────────────────────────────────────
+
+  private addHydrant(x: number, z: number): void {
+    const g = new THREE.Group();
+    const mat    = new THREE.MeshLambertMaterial({ color: 0xCC2222 });
+    const topMat = new THREE.MeshLambertMaterial({ color: 0xAA1111 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.28, 0.6, 8), mat);
+    body.position.set(0, 0.3, 0);
+    g.add(body);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.12, 8), topMat);
+    top.position.set(0, 0.66, 0);
+    g.add(top);
+    // Side nubs
+    for (const side of [-1, 1]) {
+      const nub = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.2, 6), mat);
+      nub.rotation.z = Math.PI / 2;
+      nub.position.set(side * 0.3, 0.3, 0);
+      g.add(nub);
+    }
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  private addBin(x: number, z: number): void {
+    const g = new THREE.Group();
+    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x444444 });
+    const lidMat  = new THREE.MeshLambertMaterial({ color: 0x555555 });
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.7, 8), bodyMat);
+    body.position.set(0, 0.35, 0);
+    g.add(body);
+    const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.08, 8), lidMat);
+    lid.position.set(0, 0.74, 0);
+    g.add(lid);
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  private addBollard(x: number, z: number): void {
+    const g = new THREE.Group();
+    const mat  = new THREE.MeshLambertMaterial({ color: 0x999999 });
+    const base = new THREE.MeshLambertMaterial({ color: 0x777777 });
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.6, 8), mat);
+    post.position.set(0, 0.3, 0);
+    g.add(post);
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.08, 8), base);
+    b.position.set(0, 0.04, 0);
+    g.add(b);
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  private addBench(x: number, z: number, ry = 0): void {
+    const g = new THREE.Group();
+    const wood  = new THREE.MeshLambertMaterial({ color: 0x8B6040 });
+    const metal = new THREE.MeshLambertMaterial({ color: 0x555555 });
+    // Seat
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.4), wood);
+    seat.position.set(0, 0.45, 0);
+    g.add(seat);
+    // Leg supports
+    for (const lx of [-0.5, 0.5]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.4, 0.4), metal);
+      leg.position.set(lx, 0.2, 0);
+      g.add(leg);
+    }
+    // Back rest
+    const back = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 0.08), wood);
+    back.position.set(0, 0.75, -0.16);
+    g.add(back);
+    g.rotation.y = ry;
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  private addBusStop(x: number, z: number, ry = 0): void {
+    const g = new THREE.Group();
+    const silverMat = new THREE.MeshLambertMaterial({ color: 0xCCCCCC });
+    const blueMat   = new THREE.MeshLambertMaterial({ color: 0x4466AA, transparent: true, opacity: 0.7 });
+    // Vertical post
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.5, 6), silverMat);
+    post.position.set(0, 1.75, 0);
+    g.add(post);
+    // Lean-to roof panel
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(2, 0.05, 0.8), blueMat);
+    roof.position.set(0, 3.3, 0.4);
+    g.add(roof);
+    // Back wall panel
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.5, 0.8), blueMat);
+    wall.position.set(0, 2.0, 0);
+    g.add(wall);
+    g.rotation.y = ry;
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  private addStreetLight(x: number, z: number, ry = 0, addPointLight = false): void {
+    const g = new THREE.Group();
+    const blackMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    const coneMat  = new THREE.MeshLambertMaterial({
+      color: 0xFFE8A0, transparent: true, opacity: 0.06,
+    });
+    // Pole
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 6, 6), blackMat);
+    pole.position.set(0, 3, 0);
+    g.add(pole);
+    // Curved arm (angled box)
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, 1.5), blackMat);
+    arm.position.set(0, 6.0, -0.75);
+    arm.rotation.x = -0.2;
+    g.add(arm);
+    // Light housing
+    const housing = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.3), blackMat);
+    housing.position.set(0, 5.9, -1.4);
+    g.add(housing);
+    // Faint light cone
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(1.5, 3, 8, 1, true), coneMat);
+    cone.rotation.x = Math.PI;
+    cone.position.set(0, 4.4, -1.4);
+    g.add(cone);
+    g.rotation.y = ry;
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+    if (addPointLight) {
+      const pt = new THREE.PointLight(0xFFE8A0, 0.8, 15);
+      pt.position.set(
+        x + Math.sin(ry + Math.PI) * 1.4,
+        5.9,
+        z + Math.cos(ry + Math.PI) * 1.4
+      );
+      this.scene.add(pt);
+    }
+  }
+
+  private addTrafficLight(x: number, z: number, ry = 0): void {
+    const g = new THREE.Group();
+    const blackMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    // Pole
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 4.5, 6), blackMat);
+    pole.position.set(0, 2.25, 0);
+    g.add(pole);
+    // Signal head box
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.4, 0.4), blackMat);
+    head.position.set(0, 4.7, 0);
+    g.add(head);
+    // Red / Amber / Green discs
+    const sigColours = [0xFF2200, 0xFF9900, 0x00CC44];
+    for (let i = 0; i < 3; i++) {
+      const disc = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.15, 0.08, 8),
+        new THREE.MeshLambertMaterial({ color: sigColours[i] })
+      );
+      disc.rotation.x = Math.PI / 2;
+      disc.position.set(0, 5.25 - i * 0.45, -0.21);
+      g.add(disc);
+    }
+    g.rotation.y = ry;
+    g.position.set(x, 0, z);
+    this.scene.add(g);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // STREET LIGHTS along all road corridors
+  // ────────────────────────────────────────────────────────────────────────
+  private createStreetLights(): void {
+    const RANGE = 160;
+    const GRID  = 40;
+    let lightCount = 0;
+    const MAX_LIGHTS = 20;
+
+    for (let road = -RANGE; road <= RANGE; road += GRID) {
+      for (let pos = -RANGE; pos <= RANGE; pos += 20) {
+        const distFromOrigin = Math.sqrt(road * road + pos * pos);
+        const nearSpawn = distFromOrigin < 80;
+        const addPL = nearSpawn && lightCount < MAX_LIGHTS;
+
+        // Horizontal road lights (z = road, varying x = pos)
+        const remX = ((pos % GRID) + GRID) % GRID;
+        if (Math.min(remX, GRID - remX) > 6) {
+          this.addStreetLight(pos, road - 5.2, 0, addPL);
+          this.addStreetLight(pos, road + 5.2, Math.PI, addPL);
+          if (addPL) lightCount += 2;
+        }
+
+        // Vertical road lights (x = road, varying z = pos)
+        const remZ = ((pos % GRID) + GRID) % GRID;
+        if (Math.min(remZ, GRID - remZ) > 6) {
+          this.addStreetLight(road + 5.2, pos, Math.PI / 2, addPL);
+          this.addStreetLight(road - 5.2, pos, -Math.PI / 2, addPL);
+          if (addPL) lightCount += 2;
+        }
+
+        if (lightCount >= MAX_LIGHTS) return;
+      }
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // TRAFFIC LIGHTS at every road intersection
+  // ────────────────────────────────────────────────────────────────────────
+  private createTrafficLights(): void {
+    const RANGE = 160;
+    const GRID  = 40;
+    const OFF   = 5.2;  // corner offset from intersection centre
+
+    for (let ix = -RANGE; ix <= RANGE; ix += GRID) {
+      for (let iz = -RANGE; iz <= RANGE; iz += GRID) {
+        this.addTrafficLight(ix - OFF, iz - OFF,  Math.PI / 4);
+        this.addTrafficLight(ix + OFF, iz - OFF, -Math.PI / 4);
+        this.addTrafficLight(ix - OFF, iz + OFF,  3 * Math.PI / 4);
+        this.addTrafficLight(ix + OFF, iz + OFF, -3 * Math.PI / 4);
+      }
+    }
+  }
+
+  // ────────────────────────────────────────────────────────────────────────
+  // CREATE ALL STREET FURNITURE — hydrants, bins, bollards, benches, bus stops
+  // ────────────────────────────────────────────────────────────────────────
+  private createStreetFurniture(): void {
+    const RANGE = 160;
+    const GRID  = 40;
+
+    for (let road = -RANGE; road <= RANGE; road += GRID) {
+      for (let pos = -RANGE; pos <= RANGE; pos += 20) {
+        const r1 = this.seed(road, pos, 300);
+        const r2 = this.seed(road, pos, 301);
+
+        // Horizontal road furniture (z = road, x = pos)
+        if (r1 > 0.4) {
+          const side = r1 > 0.7 ? 1 : -1;
+          const xOff = (this.seed(pos, road, 302) - 0.5) * 4;
+          const remX = ((pos % GRID) + GRID) % GRID;
+          if (Math.min(remX, GRID - remX) > 8) {
+            if      (r2 < 0.30) this.addHydrant(pos + xOff, road + side * 5.2);
+            else if (r2 < 0.50) this.addBin    (pos + xOff, road + side * 5.2);
+            else if (r2 < 0.65) this.addBollard(pos + xOff, road + side * 5.2);
+            else if (r2 < 0.75) this.addBench  (pos + xOff, road + side * 5.2);
+          }
+        }
+
+        // Vertical road furniture (x = road, z = pos)
+        const r3 = this.seed(pos, road, 303);
+        const r4 = this.seed(pos, road, 304);
+        if (r3 > 0.4) {
+          const side = r3 > 0.7 ? 1 : -1;
+          const zOff = (this.seed(road, pos, 305) - 0.5) * 4;
+          const remZ = ((pos % GRID) + GRID) % GRID;
+          if (Math.min(remZ, GRID - remZ) > 8) {
+            if      (r4 < 0.30) this.addHydrant(road + side * 5.2, pos + zOff);
+            else if (r4 < 0.50) this.addBin    (road + side * 5.2, pos + zOff);
+            else if (r4 < 0.65) this.addBollard(road + side * 5.2, pos + zOff);
+            else if (r4 < 0.75) this.addBench  (road + side * 5.2, pos + zOff, Math.PI / 2);
+          }
+        }
+      }
+    }
+
+    // Bus stops — every ~4 blocks along main roads
+    for (let road = -RANGE; road <= RANGE; road += GRID) {
+      for (let pos = -RANGE; pos <= RANGE; pos += GRID * 4) {
+        const remX = ((pos % GRID) + GRID) % GRID;
+        if (Math.min(remX, GRID - remX) > 8) {
+          this.addBusStop(pos, road + 5.5, 0);
+        }
+        const remZ = ((pos % GRID) + GRID) % GRID;
+        if (Math.min(remZ, GRID - remZ) > 8) {
+          this.addBusStop(road + 5.5, pos, Math.PI / 2);
+        }
+      }
+    }
+
+    // Street lights along all roads
+    this.createStreetLights();
+
+    // Traffic lights at every intersection
+    this.createTrafficLights();
   }
 
   // ── Helper: add a glass box with emissive window glow ───────────────────

@@ -26,7 +26,7 @@ async function main() {
 
   const physics = new VanPhysics(van, input, (intensity: number) => {
     spillMeter.triggerBump(intensity);
-  });
+  }, engine.collisionWorld);
 
   // ── Job system ──────────────────────────────────────────────────────────────
   const jobManager = new JobManager();

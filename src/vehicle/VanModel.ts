@@ -91,6 +91,104 @@ export class VanModel {
       this.bodyGroup.add(divider);
     }
 
+    // ── Cab-to-cargo seam line ──────────────────────────────────────────────
+    // At z = -0.8 (junction between cab and cargo bodies)
+    const seamMat = new THREE.MeshLambertMaterial({ color: 0x080808 });
+    const seamL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.6, 0.05), seamMat);
+    seamL.position.set(-1.22, 0.8, -0.8);
+    this.bodyGroup.add(seamL);
+    const seamR = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.6, 0.05), seamMat);
+    seamR.position.set(1.22, 0.8, -0.8);
+    this.bodyGroup.add(seamR);
+    const seamT = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.04, 0.05), seamMat);
+    seamT.position.set(0, 1.58, -0.8);
+    this.bodyGroup.add(seamT);
+
+    // ── Side mirror housings ─────────────────────────────────────────────────
+    const mirrorBodyMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    const mirrorGlassMat = new THREE.MeshLambertMaterial({ color: 0x334455 });
+    for (const side of [-1, 1]) {
+      const mxBase = side * 1.3;
+      // Housing box
+      const mHouse = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.22), mirrorBodyMat);
+      mHouse.position.set(mxBase, 1.1, -1.7);
+      this.bodyGroup.add(mHouse);
+      // Glass face
+      const mGlass = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.1, 0.18), mirrorGlassMat);
+      mGlass.position.set(mxBase + side * 0.05, 1.1, -1.7);
+      this.bodyGroup.add(mGlass);
+    }
+
+    // ── Roof rack bars (2 thin cross bars on van roof) ──────────────────────
+    const rackBarMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+    for (const rz of [-0.15, -0.85]) {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.07, 0.07), rackBarMat);
+      bar.position.set(0, 1.78, rz);
+      this.bodyGroup.add(bar);
+    }
+    // Side rails connecting the bars
+    for (const rx of [-0.95, 0.95]) {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.7), rackBarMat);
+      rail.position.set(rx, 1.78, -0.5);
+      this.bodyGroup.add(rail);
+    }
+
+    // ── Rear door handles ────────────────────────────────────────────────────
+    const handleMat = new THREE.MeshLambertMaterial({ color: 0x888888 });
+    for (const hx of [-0.6, 0.6]) {
+      const handle = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.14), handleMat);
+      handle.position.set(hx, 0.85, 2.52);
+      this.bodyGroup.add(handle);
+    }
+
+    // ── Rear horizontal door seam (splits doors top/bottom) ─────────────────
+    const rearSeam = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.04, 0.06), seamMat);
+    rearSeam.position.set(0, 1.2, 2.47);
+    this.bodyGroup.add(rearSeam);
+
+    // ── TEM logo on cargo left panel: orange stripe + T E M letter blocks ────
+    const temOrange = new THREE.MeshLambertMaterial({ color: 0xFF5500 });
+    const temDark   = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    // Bright orange stripe background behind letters
+    const temStripe = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.82), temOrange);
+    temStripe.position.set(-1.255, 0.86, 0.36);
+    this.bodyGroup.add(temStripe);
+    // T — horizontal top + vertical stem
+    const tTop  = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.16), temDark);
+    tTop.position.set(-1.262, 0.96, 0.12);
+    this.bodyGroup.add(tTop);
+    const tStem = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.15, 0.05), temDark);
+    tStem.position.set(-1.262, 0.86, 0.12);
+    this.bodyGroup.add(tStem);
+    // E — vertical + 3 horizontal bars
+    const eVert = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.05), temDark);
+    eVert.position.set(-1.262, 0.86, 0.38);
+    this.bodyGroup.add(eVert);
+    const eTop = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.13), temDark);
+    eTop.position.set(-1.262, 0.95, 0.445);
+    this.bodyGroup.add(eTop);
+    const eMid = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.10), temDark);
+    eMid.position.set(-1.262, 0.86, 0.43);
+    this.bodyGroup.add(eMid);
+    const eBot = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.04, 0.13), temDark);
+    eBot.position.set(-1.262, 0.77, 0.445);
+    this.bodyGroup.add(eBot);
+    // M — left vert + right vert + two diagonal peaks
+    const mLeft  = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.05), temDark);
+    mLeft.position.set(-1.262, 0.86, 0.61);
+    this.bodyGroup.add(mLeft);
+    const mRight = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.05), temDark);
+    mRight.position.set(-1.262, 0.86, 0.73);
+    this.bodyGroup.add(mRight);
+    const mPeak  = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.08, 0.13), temDark);
+    mPeak.position.set(-1.262, 0.92, 0.67);
+    this.bodyGroup.add(mPeak);
+
+    // Mirror TEM on right side (mirrored along X)
+    const temStripeR = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.82), temOrange);
+    temStripeR.position.set(1.255, 0.86, 0.36);
+    this.bodyGroup.add(temStripeR);
+
     // ── Wheels (4×) with hubcaps — stay on mesh root (no suspension) ─────────
 
     const wheelGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 10);
@@ -121,6 +219,25 @@ export class VanModel {
       hub.castShadow = true;
       hub.receiveShadow = true;
       this.mesh.add(hub);
+
+      // Tyre sidewall ring — light grey ring on outer face of wheel
+      const sidewallMat = new THREE.MeshLambertMaterial({ color: 0x333333 });
+      const sidewall = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.36, 0.38, 0.06, 10),
+        sidewallMat
+      );
+      sidewall.rotation.z = Math.PI / 2;
+      sidewall.position.set(wx + outerSide * 0.2, wy, wz);
+      this.mesh.add(sidewall);
+
+      // Wheel arch flare — slightly wider than tyre, sits over the wheel
+      const flareMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+      const flare = new THREE.Mesh(
+        new THREE.BoxGeometry(0.14, 0.1, 0.82),
+        flareMat
+      );
+      flare.position.set(wx + outerSide * 0.07, wy + 0.3, wz);
+      this.bodyGroup.add(flare);
     }
 
     // ── Lights ───────────────────────────────────────────────────────────────

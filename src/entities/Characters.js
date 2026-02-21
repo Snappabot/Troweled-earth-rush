@@ -37,12 +37,33 @@ export class Characters {
             const wrapper = new THREE.Group();
             // Build and add character mesh
             const character = builders[name]();
+            character.scale.set(2, 2, 2);
             wrapper.add(character);
             // Yellow/gold ground circle pickup indicator
             const indicator = this._buildPickupIndicator();
             indicator.position.set(0, 0.05, 0);
             wrapper.add(indicator);
+            // Floating name billboard above character
+            const nameCanvas = document.createElement('canvas');
+            nameCanvas.width = 256;
+            nameCanvas.height = 64;
+            const nCtx = nameCanvas.getContext('2d');
+            nCtx.fillStyle = 'rgba(0,0,0,0.7)';
+            nCtx.roundRect(4, 4, 248, 56, 10);
+            nCtx.fill();
+            nCtx.fillStyle = '#FFE566';
+            nCtx.font = 'bold 36px Arial, sans-serif';
+            nCtx.textAlign = 'center';
+            nCtx.textBaseline = 'middle';
+            nCtx.fillText(name, 128, 32);
+            const nameTexture = new THREE.CanvasTexture(nameCanvas);
+            const nameMat = new THREE.SpriteMaterial({ map: nameTexture, transparent: true, depthTest: false });
+            const nameSprite = new THREE.Sprite(nameMat);
+            nameSprite.scale.set(4, 1, 1); // wide enough to read
+            nameSprite.position.set(0, 8, 0); // floats above character (after 2x scale, head is at ~6)
+            wrapper.add(nameSprite);
             wrapper.position.set(pos.x, 0, pos.z);
+            wrapper.rotation.y = 0; // all characters face +Z (toward workshop/spawn)
             this.scene.add(wrapper);
             this.crewGroups.set(name, wrapper);
         }
@@ -72,6 +93,64 @@ export class Characters {
             opacity: 0.85,
         });
         return new THREE.Mesh(geo, mat);
+    }
+    /**
+     * Generate a canvas texture with the TEM tree logo, "TROWELED EARTH" text,
+     * and the crew member's name — used as a shirt front panel.
+     */
+    createShirtTexture(name, shirtColor) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
+        // Background — shirt colour
+        ctx.fillStyle = `#${shirtColor.toString(16).padStart(6, '0')}`;
+        ctx.fillRect(0, 0, 512, 512);
+        // TEM Tree logo (top half of canvas)
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = 8;
+        // Trunk — vertical line, bottom-centre
+        ctx.beginPath();
+        ctx.moveTo(256, 380);
+        ctx.lineTo(256, 220);
+        ctx.stroke();
+        // Main branches — spreading outward from trunk
+        const branches = [
+            [256, 320, 160, 240], // left-mid
+            [256, 320, 352, 240], // right-mid
+            [256, 270, 180, 200], // left-upper
+            [256, 270, 332, 200], // right-upper
+            [256, 240, 200, 170], // left-top
+            [256, 240, 312, 170], // right-top
+            [256, 215, 230, 155], // left-crown
+            [256, 215, 282, 155], // right-crown
+        ];
+        for (const [x1, y1, x2, y2] of branches) {
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        }
+        // Small leaf dots at branch tips
+        ctx.fillStyle = '#FFFFFF';
+        const leafTips = [[160, 240], [352, 240], [180, 200], [332, 200], [200, 170], [312, 170], [230, 155], [282, 155], [256, 145]];
+        for (const [lx, ly] of leafTips) {
+            ctx.beginPath();
+            ctx.arc(lx, ly, 10, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        // "TROWELED EARTH" text — bottom of canvas
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 44px Arial, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('TROWELED', 256, 430);
+        ctx.fillText('EARTH', 256, 480);
+        // Character name tag — small, above "TROWELED EARTH"
+        ctx.font = '28px Arial, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillText(name.toUpperCase(), 256, 395);
+        return new THREE.CanvasTexture(canvas);
     }
     // ── Jose ──────────────────────────────────────────────────────────────────
     // Slim, near-BLACK thick dreadlocks, olive skin, teal glasses,
@@ -106,6 +185,19 @@ export class Characters {
         this.addBox(g, 0x555555, 0.1, 0.1, 0.1, 0.22, 2.04, 0.25);
         this.addBox(g, 0x222222, 0.42, 0.15, 0.52, -0.16, 0.06, 0.08);
         this.addBox(g, 0x222222, 0.42, 0.15, 0.52, 0.16, 0.06, 0.08);
+        // Name badge (left chest)
+        this.addBox(g, 0xFFFFFF, 0.12, 0.08, 0.02, 0.2, 1.7, 0.22);
+        // Plaster splat marks on shirt
+        this.addSphere(g, 0xF5F5F5, 0.04, -0.15, 1.55, 0.215);
+        this.addSphere(g, 0xF5F5F5, 0.04, 0.10, 1.30, 0.215);
+        this.addSphere(g, 0xF5F5F5, 0.04, 0.20, 1.65, 0.215);
+        // Shirt logo panel (front face of shirt)
+        // shirt box: 0.72 wide, 1.0 tall, 0.42 deep, centre y=1.4 → front z = 0.21 + 0.005 = 0.215
+        const shirtTex = this.createShirtTexture('Jose', shirt);
+        const logoPanelMat = new THREE.MeshBasicMaterial({ map: shirtTex, transparent: false });
+        const logoPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.68, 0.92), logoPanelMat);
+        logoPanel.position.set(0, 1.4, 0.215);
+        g.add(logoPanel);
         return g;
     }
     // ── Jarrad ────────────────────────────────────────────────────────────────
@@ -135,6 +227,19 @@ export class Characters {
         this.addBox(g, 0x1A1A1A, 0.04, 0.08, 0.26, 0.32, 2.52, 0.25);
         this.addBox(g, 0x222222, 0.42, 0.15, 0.52, -0.17, 0.06, 0.08);
         this.addBox(g, 0x222222, 0.42, 0.15, 0.52, 0.17, 0.06, 0.08);
+        // Name badge (left chest)
+        this.addBox(g, 0xFFFFFF, 0.12, 0.08, 0.02, 0.2, 1.7, 0.23);
+        // Plaster splat marks on shirt
+        this.addSphere(g, 0xF5F5F5, 0.04, -0.18, 1.58, 0.22);
+        this.addSphere(g, 0xF5F5F5, 0.04, 0.12, 1.32, 0.22);
+        this.addSphere(g, 0xF5F5F5, 0.04, 0.22, 1.68, 0.22);
+        // Shirt logo panel (front face of shirt)
+        // shirt box: 0.76 wide, 1.0 tall, 0.43 deep, centre y=1.4 → front z = 0.215 + 0.005 = 0.22
+        const shirtTex = this.createShirtTexture('Jarrad', shirt);
+        const logoPanelMat = new THREE.MeshBasicMaterial({ map: shirtTex, transparent: false });
+        const logoPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.72, 0.92), logoPanelMat);
+        logoPanel.position.set(0, 1.4, 0.22);
+        g.add(logoPanel);
         return g;
     }
     // ── Matt ──────────────────────────────────────────────────────────────────
@@ -171,6 +276,19 @@ export class Characters {
         this.addBox(g, 0x111111, 0.06, 0.38, 0.06, 0.50, 2.89, 0);
         this.addBox(g, 0x222222, 0.46, 0.15, 0.54, -0.19, 0.06, 0.08);
         this.addBox(g, 0x222222, 0.46, 0.15, 0.54, 0.19, 0.06, 0.08);
+        // Name badge (left chest)
+        this.addBox(g, 0xFFFFFF, 0.12, 0.08, 0.02, 0.2, 1.7, 0.235);
+        // Plaster splat marks on shirt
+        this.addSphere(g, 0xF5F5F5, 0.04, -0.20, 1.60, 0.235);
+        this.addSphere(g, 0xF5F5F5, 0.04, 0.15, 1.35, 0.235);
+        this.addSphere(g, 0xF5F5F5, 0.04, 0.25, 1.70, 0.235);
+        // Shirt logo panel (front face of shirt)
+        // shirt box: 0.88 wide, 1.05 tall, 0.46 deep, centre y=1.475 → front z = 0.23 + 0.005 = 0.235
+        const shirtTex = this.createShirtTexture('Matt', shirt);
+        const logoPanelMat = new THREE.MeshBasicMaterial({ map: shirtTex, transparent: false });
+        const logoPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.84, 0.97), logoPanelMat);
+        logoPanel.position.set(0, 1.475, 0.235);
+        g.add(logoPanel);
         return g;
     }
     // ── Phil ──────────────────────────────────────────────────────────────────
@@ -200,6 +318,19 @@ export class Characters {
         this.addBox(g, 0xC08060, 0.28, 0.08, 0.05, 0, 2.56, 0.43);
         this.addBox(g, 0xEEEEE8, 0.52, 0.16, 0.58, -0.22, 0.06, 0.09);
         this.addBox(g, 0xEEEEE8, 0.52, 0.16, 0.58, 0.22, 0.06, 0.09);
+        // Name badge (left chest)
+        this.addBox(g, 0x333333, 0.12, 0.08, 0.02, 0.2, 1.75, 0.265);
+        // Plaster splat marks on shirt (darker marks for light shirt)
+        this.addSphere(g, 0xCCC8C0, 0.04, -0.22, 1.65, 0.265);
+        this.addSphere(g, 0xCCC8C0, 0.04, 0.18, 1.40, 0.265);
+        this.addSphere(g, 0xCCC8C0, 0.04, 0.28, 1.75, 0.265);
+        // Shirt logo panel (front face of shirt)
+        // shirt box: 1.0 wide, 1.1 tall, 0.52 deep, centre y=1.55 → front z = 0.26 + 0.005 = 0.265
+        const shirtTex = this.createShirtTexture('Phil', shirt);
+        const logoPanelMat = new THREE.MeshBasicMaterial({ map: shirtTex, transparent: false });
+        const logoPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 1.02), logoPanelMat);
+        logoPanel.position.set(0, 1.55, 0.265);
+        g.add(logoPanel);
         return g;
     }
     // ── Tsuyoshi ──────────────────────────────────────────────────────────────
@@ -230,6 +361,19 @@ export class Characters {
         this.addBox(g, hawk, 0.10, 0.35, 0.12, 0.06, 3.00, 0.22);
         this.addBox(g, 0x222222, 0.42, 0.15, 0.52, -0.17, 0.06, 0.08);
         this.addBox(g, 0x222222, 0.42, 0.15, 0.52, 0.17, 0.06, 0.08);
+        // Name badge (left chest)
+        this.addBox(g, 0xFFFFFF, 0.12, 0.08, 0.02, 0.2, 1.7, 0.225);
+        // Plaster splat marks on shirt
+        this.addSphere(g, 0xF5F5F5, 0.04, -0.16, 1.56, 0.225);
+        this.addSphere(g, 0xF5F5F5, 0.04, 0.10, 1.32, 0.225);
+        this.addSphere(g, 0xF5F5F5, 0.04, 0.20, 1.65, 0.225);
+        // Shirt logo panel (front face of shirt)
+        // shirt box: 0.78 wide, 1.0 tall, 0.44 deep, centre y=1.42 → front z = 0.22 + 0.005 = 0.225
+        const shirtTex = this.createShirtTexture('Tsuyoshi', shirt);
+        const logoPanelMat = new THREE.MeshBasicMaterial({ map: shirtTex, transparent: false });
+        const logoPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.74, 0.92), logoPanelMat);
+        logoPanel.position.set(0, 1.42, 0.225);
+        g.add(logoPanel);
         return g;
     }
     // ── Fabio ─────────────────────────────────────────────────────────────────
@@ -257,6 +401,19 @@ export class Characters {
         this.addBox(g, 0xFFFFFF, 0.18, 0.05, 0.04, 0, 2.49, 0.42);
         this.addBox(g, 0x1E1810, 0.46, 0.18, 0.56, -0.19, 0.06, 0.10);
         this.addBox(g, 0x1E1810, 0.46, 0.18, 0.56, 0.19, 0.06, 0.10);
+        // Name badge (left chest)
+        this.addBox(g, 0xFFFFFF, 0.12, 0.08, 0.02, 0.2, 1.7, 0.235);
+        // Plaster splat marks on shirt
+        this.addSphere(g, 0xF5F5F5, 0.04, -0.18, 1.58, 0.235);
+        this.addSphere(g, 0xF5F5F5, 0.04, 0.12, 1.33, 0.235);
+        this.addSphere(g, 0xF5F5F5, 0.04, 0.22, 1.68, 0.235);
+        // Shirt logo panel (front face of shirt)
+        // shirt box: 0.84 wide, 1.0 tall, 0.46 deep, centre y=1.42 → front z = 0.23 + 0.005 = 0.235
+        const shirtTex = this.createShirtTexture('Fabio', shirt);
+        const logoPanelMat = new THREE.MeshBasicMaterial({ map: shirtTex, transparent: false });
+        const logoPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.80, 0.92), logoPanelMat);
+        logoPanel.position.set(0, 1.42, 0.235);
+        g.add(logoPanel);
         return g;
     }
     // ── Helpers ───────────────────────────────────────────────────────────────

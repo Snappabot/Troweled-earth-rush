@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { VanModel } from './VanModel';
 import { InputManager } from '../core/InputManager';
+import { CollisionWorld } from '../core/CollisionWorld';
 
 const PHYSICS = {
   maxSpeed: 80,
@@ -53,15 +54,17 @@ export class VanPhysics {
   private velocityAngle = 0;
   private prevPos = new THREE.Vector3();
   private onBump?: (intensity: number) => void;
+  private collisionWorld?: CollisionWorld;
 
   // Grid collision constants — road(4) + sidewalk(2) + tiny buffer(0.5)
   private readonly COLL_GRID = 40;
   private readonly COLL_ROAD_HALF = 6.5;
 
-  constructor(van: VanModel, input: InputManager, onBump?: (intensity: number) => void) {
+  constructor(van: VanModel, input: InputManager, onBump?: (intensity: number) => void, collisionWorld?: CollisionWorld) {
     this.van = van;
     this.input = input;
     this.onBump = onBump;
+    this.collisionWorld = collisionWorld;
     this.velocityAngle = this.van.heading;
     this.prevPos.copy(this.van.mesh.position);
   }
@@ -120,7 +123,7 @@ export class VanPhysics {
     // Van faces heading — shows drift angle visually
     this.van.mesh.rotation.y = -this.van.heading;
 
-    // --- BUILDING COLLISION ---
+    // --- ROAD GRID COLLISION ---
     const resolved = this.resolveCollision(
       this.prevPos.x, this.prevPos.z,
       this.van.mesh.position.x, this.van.mesh.position.z
@@ -130,6 +133,20 @@ export class VanPhysics {
       this._speed *= 0.6;
       this.van.mesh.position.x = resolved.x;
       this.van.mesh.position.z = resolved.z;
+    }
+
+    // --- BUILDING AABB COLLISION ---
+    if (this.collisionWorld) {
+      const aabbResolved = this.collisionWorld.resolveCircle(
+        this.van.mesh.position.x,
+        this.van.mesh.position.z,
+        1.8  // van radius ~1.8 units
+      );
+      if (aabbResolved.x !== this.van.mesh.position.x || aabbResolved.z !== this.van.mesh.position.z) {
+        this._speed *= 0.65;  // scrub speed on building hit
+        this.van.mesh.position.x = aabbResolved.x;
+        this.van.mesh.position.z = aabbResolved.z;
+      }
     }
 
     // --- CURB DETECTION ---

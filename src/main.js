@@ -22,7 +22,7 @@ async function main() {
     const hud = new HUD();
     const physics = new VanPhysics(van, input, (intensity) => {
         spillMeter.triggerBump(intensity);
-    });
+    }, engine.collisionWorld);
     // ── Job system ──────────────────────────────────────────────────────────────
     const jobManager = new JobManager();
     const waypointSystem = new WaypointSystem(engine.scene);
