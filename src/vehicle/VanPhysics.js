@@ -97,14 +97,10 @@ export class VanPhysics {
         this.van.mesh.position.add(this.van.velocity.clone().multiplyScalar(dt));
         // Van faces heading — shows drift angle visually
         this.van.mesh.rotation.y = -this.van.heading;
-        // --- ROAD GRID COLLISION ---
-        const resolved = this.resolveCollision(this.prevPos.x, this.prevPos.z, this.van.mesh.position.x, this.van.mesh.position.z);
-        if (resolved.x !== this.van.mesh.position.x || resolved.z !== this.van.mesh.position.z) {
-            // Wall hit — scrub 40% of speed (feels like sliding, not a brick wall)
-            this._speed *= 0.6;
-            this.van.mesh.position.x = resolved.x;
-            this.van.mesh.position.z = resolved.z;
-        }
+        // --- WORLD BOUNDARY ---
+        const WORLD_LIMIT = 245;
+        this.van.mesh.position.x = Math.max(-WORLD_LIMIT, Math.min(WORLD_LIMIT, this.van.mesh.position.x));
+        this.van.mesh.position.z = Math.max(-WORLD_LIMIT, Math.min(WORLD_LIMIT, this.van.mesh.position.z));
         // --- BUILDING AABB COLLISION ---
         if (this.collisionWorld) {
             const aabbResolved = this.collisionWorld.resolveCircle(this.van.mesh.position.x, this.van.mesh.position.z, 1.8 // van radius ~1.8 units
