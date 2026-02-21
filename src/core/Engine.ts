@@ -349,11 +349,19 @@ export class Engine {
       const typeRoll = this.seed(bx + i * 3, bz + i * 7, 3);
       const bType   = this.pickBuildingType(zone, typeRoll);
 
+      // Type E warehouses (22 wide) are too large to offset — always centre them
+      // and only place one per block to avoid clipping roads
+      if (bType === 'E') {
+        if (i === 0) this.buildTypeE(cx, cz, bx, bz);
+        break; // skip second building if E selected
+      }
+
       // Spread two buildings apart, jitter slightly
-      const halfU      = usable * 0.22;
+      // Cap halfU so buildings never clip road edges (road edge = 16 units from block centre)
+      const halfU      = usable * 0.18;  // reduced from 0.22 to keep safe margin
       const baseOffset = numBuildings > 1 ? (i === 0 ? -halfU : halfU) : 0;
-      const ox = baseOffset + (this.seed(bx + i * 5, bz, 4) - 0.5) * halfU * 0.4;
-      const oz = baseOffset + (this.seed(bx, bz + i * 5, 5) - 0.5) * halfU * 0.4;
+      const ox = baseOffset + (this.seed(bx + i * 5, bz, 4) - 0.5) * halfU * 0.3;
+      const oz = baseOffset + (this.seed(bx, bz + i * 5, 5) - 0.5) * halfU * 0.3;
 
       const sx = bx + i * 11;
       const sz = bz + i * 13;
@@ -363,7 +371,6 @@ export class Engine {
         case 'B': this.buildTypeB(cx + ox, cz + oz, sx, sz); break;
         case 'C': this.buildTypeC(cx + ox, cz + oz, sx, sz); break;
         case 'D': this.buildTypeD(cx + ox, cz + oz, sx, sz); break;
-        case 'E': this.buildTypeE(cx + ox, cz + oz, sx, sz); break;
       }
     }
   }
@@ -640,12 +647,12 @@ export class Engine {
     this.buildHouseTimberStone(100, 60);     // House 6 — Richmond (Snappa's house)
     this.buildHouseSculpturalPlaster(-100, -20); // House 7 — Brunswick sculptural olive
     this.buildHouseHaussmann(60, -100);           // House 8 — St Kilda Parisian mansion
-    this.buildHouseAngularBay(-140, 40);          // House 9  — Footscray
+    this.buildHouseAngularBay(-140, 60);          // House 9  — Footscray
     this.buildHouseBrutalistCompound(20, 100);    // House 10 — Brunswick
     this.buildHouseTerracottaMonolith(140, 20);   // House 11 — Richmond
     this.buildHouseCurvedBalcony(-20, -140);      // House 12 — St Kilda
     this.buildHouseCortenPlaster(-140, -60);      // House 13 — Footscray
-    this.buildCoffeeShop(-60, -80);              // Coffee shop — St Kilda pitstop
+    this.buildCoffeeShop(-60, -100);              // Coffee shop — St Kilda pitstop
   }
 
   // ── House 1 — Marbellino Modern ──────────────────────────────────────────────
