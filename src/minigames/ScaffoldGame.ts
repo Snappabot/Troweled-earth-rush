@@ -14,6 +14,19 @@ const INVINCIBLE_DURATION = 0.5;   // seconds
 const NORMAL_H            = 44;    // Jarrad full height
 const CROUCH_H            = 22;    // Jarrad crouch height
 
+// ─── PoP mechanics constants ──────────────────────────────────────────────────
+const WALL_RUN_DURATION   = 0.6;   // seconds
+const WALL_RUN_UP_SPEED   = 120;   // px/s upward during wall run
+const WALL_RUN_PUSH_VX    = 180;   // horizontal push away from wall after run
+const WALL_RUN_PUSH_VY    = -200;  // upward boost after wall run
+const SHIMMY_SPEED        = 60;    // px/s lateral while hanging
+const VAULT_MIN_SPEED     = 80;    // px/s horizontal speed needed to vault
+const REWIND_INVINCIBLE   = 0.8;   // seconds invincibility after rewind
+const MOMENTUM_THRESHOLD  = 100;   // px/s — if faster, jump gets boost
+const MOMENTUM_BOOST      = 1.15;  // multiplier on JUMP_VY
+const COMBO_WINDOW        = 3.0;   // seconds to complete full combo chain
+const HIGH_FALL_THRESHOLD = 100;   // px — triggers splat particles on landing
+
 // ─── Rope constants ───────────────────────────────────────────────────────────
 const ROPE_ANCHOR_X = 200;
 const ROPE_ANCHOR_Y = 80;
@@ -48,7 +61,13 @@ const PLATFORM_DEFS: Platform[] = [
 const DROP_SHEET = { x: 190, y: 420, w: 40, h: 30 };
 
 // ─── Jarrad state ─────────────────────────────────────────────────────────────
-type JarradState = 'standing' | 'jumping' | 'falling' | 'hanging' | 'climbing' | 'swinging' | 'dead';
+type JarradState = 'standing' | 'jumping' | 'falling' | 'hanging' | 'climbing' | 'swinging' | 'dead' | 'wall-running';
+
+interface SplatParticle {
+  x: number; y: number;
+  vx: number; vy: number;
+  alpha: number; radius: number;
+}
 
 interface Jarrad {
   x: number;
@@ -64,6 +83,13 @@ interface Jarrad {
   deathTimer: number;
   currentLevel: number;
   bucketAngle: number;
+  // PoP additions
+  wallRunTimer: number;     // >0 = wall running
+  wallRunDir: number;       // 1 = right wall, -1 = left wall
+  wallRunUsed: boolean;     // reset on platform landing
+  rewindX: number;          // last safe platform position
+  rewindY: number;
+  rewindAvailable: boolean; // one-use per life
 }
 
 interface Pigeon {
@@ -123,6 +149,31 @@ export class ScaffoldGame {
   // HUD wobble (for crumble visual)
   private shakeNoise = 0;
 
+  // ─── PoP / Polish state ───────────────────────────────────────────────────
+  // Combo chain: 0=none, 1=jumped, 2=grabbed/hung, 3=shimmied, 4=pulled-up (complete)
+  private comboPhase  = 0;
+  private comboTimer  = 0;
+  private comboFlashTimer = 0;
+
+  // Flash text timers
+  private vaultFlashTimer  = 0;
+  private rewindFlashTimer = 0;  // white screen flash on rewind
+
+  // Plaster splat particles (land from high fall)
+  private splatParticles: SplatParticle[] = [];
+
+  // Frame counter for leg animation
+  private frameCount = 0;
+
+  // Track Y before landing for fall-height detection
+  private prevJarradY = 0;
+
+  // Wall run dust particles (simple positional list)
+  private wallDustParticles: Array<{x: number; y: number; alpha: number; r: number}> = [];
+
+  // Shimmy tracking for combo
+  private hasShimmied = false;
+
   // Input
   private keys: Record<string, boolean> = {};
   private prevKeys: Record<string, boolean> = {};
@@ -130,10 +181,12 @@ export class ScaffoldGame {
   private keyUpHandler!: (e: KeyboardEvent) => void;
 
   // Mobile
-  private mobileLeft  = false;
-  private mobileRight = false;
-  private mobileJump  = false;
-  private mobileDrop  = false;
+  private mobileLeft   = false;
+  private mobileRight  = false;
+  private mobileJump   = false;
+  private mobileDrop   = false;
+  private mobileRewind = false;
+  private mobileRewindFired = false; // edge-detect latch
   private mobileContainer: HTMLDivElement | null = null;
 
   // Timestamp
@@ -169,7 +222,7 @@ export class ScaffoldGame {
     this.prevKeys = {};
     this.keyHandler = (e: KeyboardEvent) => {
       this.keys[e.code] = true;
-      if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+      if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','ShiftLeft','ShiftRight'].includes(e.code)) e.preventDefault();
     };
     this.keyUpHandler = (e: KeyboardEvent) => { this.keys[e.code] = false; };
     window.addEventListener('keydown', this.keyHandler);
@@ -218,13 +271,31 @@ export class ScaffoldGame {
     };
 
     const leftCluster = document.createElement('div');
-    leftCluster.style.cssText = 'display:flex; gap:4px; pointer-events:none;';
+    leftCluster.style.cssText = 'display:flex; flex-direction:column; gap:4px; pointer-events:none; align-items:flex-start;';
+
+    // ⏪ rewind button (smaller, top of left cluster)
+    const rewindBtn = makeBtn('⏪', () => {
+      if (!this.mobileRewindFired) {
+        this.mobileRewind = true;
+        this.mobileRewindFired = true;
+      }
+    }, () => {
+      this.mobileRewind = false;
+      this.mobileRewindFired = false;
+    });
+    rewindBtn.style.cssText += '; width:48px; height:40px; font-size:16px;';
+
+    const dirRow = document.createElement('div');
+    dirRow.style.cssText = 'display:flex; gap:4px; pointer-events:none;';
     const lBtn = makeBtn('◀', () => { this.mobileLeft = true; }, () => { this.mobileLeft = false; });
     lBtn.style.width = '64px'; lBtn.style.height = '64px';
     const rBtn = makeBtn('▶', () => { this.mobileRight = true; }, () => { this.mobileRight = false; });
     rBtn.style.width = '64px'; rBtn.style.height = '64px';
-    leftCluster.appendChild(lBtn);
-    leftCluster.appendChild(rBtn);
+    dirRow.appendChild(lBtn);
+    dirRow.appendChild(rBtn);
+
+    leftCluster.appendChild(rewindBtn);
+    leftCluster.appendChild(dirRow);
 
     const jumpBtn = makeBtn('▲', () => { this.mobileJump = true; }, () => { this.mobileJump = false; });
     jumpBtn.style.width = '80px'; jumpBtn.style.height = '64px';
@@ -261,6 +332,17 @@ export class ScaffoldGame {
     this.showGapHint = true;
     this.gapHintTimer = 8;
 
+    // PoP reset
+    this.comboPhase  = 0;
+    this.comboTimer  = 0;
+    this.comboFlashTimer = 0;
+    this.vaultFlashTimer  = 0;
+    this.rewindFlashTimer = 0;
+    this.splatParticles   = [];
+    this.wallDustParticles = [];
+    this.frameCount  = 0;
+    this.hasShimmied = false;
+
     this.pigeon = {
       x: 240, y: 0, vx: 60,
       platformIdx: 3,   // start on lv3b
@@ -276,6 +358,7 @@ export class ScaffoldGame {
 
   private spawnAtLevel1(): void {
     const plat = this.platforms[0]; // lv1
+    const existingLives = this.jarrad?.lives ?? 3;
     this.jarrad = {
       x: plat.baseX + 10,
       y: plat.y - NORMAL_H,
@@ -283,13 +366,23 @@ export class ScaffoldGame {
       w: 18, h: NORMAL_H,
       state: 'standing',
       isCrouching: false,
-      lives: this.jarrad?.lives ?? 3,
+      lives: existingLives,
       invincTimer: 0,
       deathTimer: 0,
       currentLevel: 1,
       bucketAngle: 0,
+      // PoP
+      wallRunTimer: 0,
+      wallRunDir: 0,
+      wallRunUsed: false,
+      rewindX: plat.baseX + 10,
+      rewindY: plat.y - NORMAL_H,
+      rewindAvailable: true,
     };
     this.ropeGrabbed = false;
+    this.prevJarradY = this.jarrad.y;
+    this.splatParticles = [];
+    this.wallDustParticles = [];
   }
 
   // ─── Game loop ─────────────────────────────────────────────────────────────
@@ -308,7 +401,8 @@ export class ScaffoldGame {
   // ─── Update ───────────────────────────────────────────────────────────────
 
   private update(dt: number): void {
-    this.gameTime += dt;
+    this.gameTime  += dt;
+    this.frameCount++;
 
     // Tsuyoshi speech
     this.tsuyoshiTimer += dt;
@@ -337,6 +431,27 @@ export class ScaffoldGame {
     // Pigeon
     this.updatePigeon(dt);
 
+    // Flash timers
+    if (this.vaultFlashTimer > 0)  this.vaultFlashTimer  -= dt;
+    if (this.rewindFlashTimer > 0) this.rewindFlashTimer -= dt;
+    if (this.comboFlashTimer > 0)  this.comboFlashTimer  -= dt;
+
+    // Combo timer decay
+    if (this.comboPhase > 0) {
+      this.comboTimer -= dt;
+      if (this.comboTimer <= 0) {
+        // Chain expired
+        this.comboPhase  = 0;
+        this.comboTimer  = 0;
+      }
+    }
+
+    // Update splat particles
+    this.updateSplatParticles(dt);
+
+    // Update wall dust
+    this.updateWallDust(dt);
+
     // Jarrad
     if (this.jarrad.state === 'dead') {
       this.jarrad.deathTimer -= dt;
@@ -345,6 +460,9 @@ export class ScaffoldGame {
     }
 
     if (this.jarrad.invincTimer > 0) this.jarrad.invincTimer -= dt;
+
+    // Track Y before physics for fall detection
+    this.prevJarradY = this.jarrad.y;
 
     this.handleInput(dt);
     this.applyPhysics(dt, prevMovX);
@@ -361,6 +479,54 @@ export class ScaffoldGame {
     this.jarrad.currentLevel = this.getCurrentLevel();
   }
 
+  // ─── Splat particles ──────────────────────────────────────────────────────
+
+  private spawnSplatParticles(x: number, y: number): void {
+    const count = 5 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+      const speed = 60 + Math.random() * 80;
+      this.splatParticles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 30,
+        alpha: 1,
+        radius: 3 + Math.random() * 4,
+      });
+    }
+  }
+
+  private updateSplatParticles(dt: number): void {
+    for (const p of this.splatParticles) {
+      p.x    += p.vx * dt;
+      p.y    += p.vy * dt;
+      p.vy   += 200 * dt; // light gravity
+      p.alpha -= dt / 0.4;
+    }
+    this.splatParticles = this.splatParticles.filter(p => p.alpha > 0);
+  }
+
+  // ─── Wall dust ────────────────────────────────────────────────────────────
+
+  private spawnWallDust(x: number, y: number): void {
+    for (let i = 0; i < 3; i++) {
+      this.wallDustParticles.push({
+        x: x + (Math.random() - 0.5) * 10,
+        y: y + Math.random() * 20,
+        alpha: 0.8,
+        r: 3 + Math.random() * 4,
+      });
+    }
+  }
+
+  private updateWallDust(dt: number): void {
+    for (const p of this.wallDustParticles) {
+      p.alpha -= dt / 0.4;
+      p.y     -= 20 * dt;
+    }
+    this.wallDustParticles = this.wallDustParticles.filter(p => p.alpha > 0);
+  }
+
   // ─── Wind ─────────────────────────────────────────────────────────────────
 
   private updateWind(dt: number): void {
@@ -371,7 +537,6 @@ export class ScaffoldGame {
 
     if (t < gustDuration) {
       this.windActive = true;
-      // Fade in/out
       if (t < 0.3) this.windAlpha = t / 0.3;
       else if (t > gustDuration - 0.3) this.windAlpha = (gustDuration - t) / 0.3;
       else this.windAlpha = 1;
@@ -406,7 +571,6 @@ export class ScaffoldGame {
     if (onCrumble) {
       this.crumble5ATimer += dt;
       if (this.crumble5ATimer > 1.5) {
-        // Break!
         this.crumble5AState   = 'broken';
         this.crumble5ARespawn = 8;
         this.crumble5ATimer   = 0;
@@ -419,7 +583,6 @@ export class ScaffoldGame {
         this.shakeNoise = (Math.random() - 0.5) * 4;
       }
     } else {
-      // Slowly reset timer if not standing on it
       this.crumble5ATimer = Math.max(0, this.crumble5ATimer - dt * 2);
       if (this.crumble5ATimer < 1.2) this.crumble5AState = 'solid';
     }
@@ -435,10 +598,40 @@ export class ScaffoldGame {
     const upHeld    = this.keys['ArrowUp']    || this.keys['KeyW'] || this.keys['Space'] || this.mobileJump;
     const downHeld  = this.keys['ArrowDown']  || this.keys['KeyS'] || this.mobileDrop;
 
+    // ── Time Rewind (Dagger of Time) ─────────────────────────────────────────
+    const rewindPress = (this.isJustPressed('ShiftLeft') || this.isJustPressed('ShiftRight') || this.mobileRewind)
+      && !this.mobileRewindFired;
+    if (rewindPress && j.rewindAvailable && j.state !== 'dead') {
+      // Consume the mobile latch
+      if (this.mobileRewind) this.mobileRewindFired = true;
+
+      j.rewindAvailable = false;
+      j.x = j.rewindX;
+      j.y = j.rewindY;
+      j.vx = 0; j.vy = 0;
+      j.state = 'falling';
+      j.invincTimer = REWIND_INVINCIBLE;
+      j.wallRunTimer = 0;
+      j.wallRunUsed  = false;
+      this.rewindFlashTimer = 0.3;
+      this.ropeGrabbed = false;
+    }
+
+    // ── Wall Run ─────────────────────────────────────────────────────────────
+    if (j.state === 'wall-running') {
+      j.wallRunTimer -= dt;
+      if (j.wallRunTimer <= 0) {
+        // End wall run — push away
+        j.vx    = -j.wallRunDir * WALL_RUN_PUSH_VX;
+        j.vy    = WALL_RUN_PUSH_VY;
+        j.state = 'jumping';
+      }
+      return; // wall-run handles all physics in applyPhysics
+    }
+
     // ── Rope swing ──────────────────────────────────────────────────────────
     if (j.state === 'swinging') {
       if (jumpPress) {
-        // Release rope — apply velocity from pendulum
         const ω = this.ropeAngVel;
         const θ = this.ropeAngle;
         j.vx = ROPE_LENGTH * ω * Math.cos(θ);
@@ -446,7 +639,7 @@ export class ScaffoldGame {
         j.state = 'jumping';
         this.ropeGrabbed = false;
       }
-      return; // no other input while swinging
+      return;
     }
 
     // ── Grab rope (while airborne) ──────────────────────────────────────────
@@ -454,58 +647,63 @@ export class ScaffoldGame {
       const centreX = j.x + j.w / 2;
       const centreY = j.y + j.h / 2;
       const ropeEndY = ROPE_ANCHOR_Y + ROPE_LENGTH * Math.cos(this.ropeAngle);
-      // Grab zone: within 15px of rope anchor X and vertically near rope
       if (
         Math.abs(centreX - ROPE_ANCHOR_X) < 15 &&
         centreY > ROPE_ANCHOR_Y &&
         centreY < ropeEndY + 30
       ) {
-        // Work out starting angle from Jarrad's current position
         const dx = centreX - ROPE_ANCHOR_X;
         const dy = centreY - ROPE_ANCHOR_Y;
-        this.ropeAngle   = Math.atan2(dx, dy); // angle from vertical
-        this.ropeAngVel  = j.vx / ROPE_LENGTH; // convert vx to angular velocity
+        this.ropeAngle   = Math.atan2(dx, dy);
+        this.ropeAngVel  = j.vx / ROPE_LENGTH;
         j.state = 'swinging';
         this.ropeGrabbed = true;
+        // Combo: phase 2 — grabbed
+        if (this.comboPhase === 1) { this.comboPhase = 2; this.comboTimer = COMBO_WINDOW; }
         return;
+      }
+    }
+
+    // ── Wall run trigger (airborne near wall) ────────────────────────────────
+    if ((j.state === 'jumping' || j.state === 'falling') && !j.wallRunUsed) {
+      const nearLeftWall  = j.x < 30 && leftHeld;
+      const nearRightWall = j.x + j.w > 370 && rightHeld;
+      if (nearLeftWall || nearRightWall) {
+        j.state = 'wall-running';
+        j.wallRunDir   = nearRightWall ? 1 : -1;
+        j.wallRunTimer = WALL_RUN_DURATION;
+        j.wallRunUsed  = true;
+        j.vx = 0; j.vy = -WALL_RUN_UP_SPEED;
       }
     }
 
     // ── Climbing ─────────────────────────────────────────────────────────────
     const cx = j.x + j.w / 2;
-    const onLadderA = cx > 120 && cx < 145 && j.y > 180 && j.y + j.h < 555; // Tower A ladder
-    const onLadderB = cx > 260 && cx < 285 && j.y > 180 && j.y + j.h < 370; // Tower B ladder
+    const onLadderA = cx > 120 && cx < 145 && j.y > 180 && j.y + j.h < 555;
+    const onLadderB = cx > 260 && cx < 285 && j.y > 180 && j.y + j.h < 370;
     const onLadder  = onLadderA || onLadderB;
 
     if ((j.state === 'standing' || j.state === 'climbing' || j.state === 'falling') && onLadder) {
       if (upHeld) {
-        j.isCrouching = false;
-        j.h = NORMAL_H;
-        j.state = 'climbing';
-        j.vy    = -CLIMB_SPEED;
-        j.vx    = 0;
+        j.isCrouching = false; j.h = NORMAL_H;
+        j.state = 'climbing'; j.vy = -CLIMB_SPEED; j.vx = 0;
         return;
       }
       if (downHeld) {
-        j.isCrouching = false;
-        j.h = NORMAL_H;
-        j.state = 'climbing';
-        j.vy    = CLIMB_SPEED;
-        j.vx    = 0;
+        j.isCrouching = false; j.h = NORMAL_H;
+        j.state = 'climbing'; j.vy = CLIMB_SPEED; j.vx = 0;
         return;
       }
     }
 
     if (j.state === 'climbing') {
       if (!onLadder || (!upHeld && !downHeld)) {
-        j.vy    = 0;
-        j.state = 'falling';
+        j.vy = 0; j.state = 'falling';
       }
     }
 
     // ── Standing ─────────────────────────────────────────────────────────────
     if (j.state === 'standing') {
-      // Crouch
       if (downHeld && !onLadder) {
         if (!j.isCrouching) {
           j.isCrouching = true;
@@ -515,7 +713,6 @@ export class ScaffoldGame {
         j.vx = 0;
         return;
       } else if (j.isCrouching) {
-        // Stand back up — check there's room
         j.isCrouching = false;
         j.y -= NORMAL_H - CROUCH_H;
         j.h  = NORMAL_H;
@@ -526,10 +723,17 @@ export class ScaffoldGame {
       if (rightHeld) j.vx =  MOVE_SPEED;
 
       if (jumpPress) {
-        j.vy = JUMP_VY;
+        // Momentum-based jump boost
+        const boost = Math.abs(j.vx) > MOMENTUM_THRESHOLD ? MOMENTUM_BOOST : 1.0;
+        j.vy = JUMP_VY * boost;
         j.state = 'jumping';
         j.isCrouching = false;
         j.h = NORMAL_H;
+
+        // Combo: phase 1 — jumped
+        this.comboPhase = 1;
+        this.comboTimer = COMBO_WINDOW;
+        this.hasShimmied = false;
       }
     } else if (j.state === 'jumping' || j.state === 'falling') {
       // Air control
@@ -538,16 +742,73 @@ export class ScaffoldGame {
       if (rightHeld) j.vx =  MOVE_SPEED * 0.85;
     } else if (j.state === 'hanging') {
       j.vx = 0;
+
+      // ── Ledge Shimmy ───────────────────────────────────────────────────────
+      // Find the platform Jarrad is hanging from
+      const hangingPlat = this.getHangingPlatform();
+      if (hangingPlat) {
+        const px = (hangingPlat.type === 'moving') ? this.movingPlatX : hangingPlat.baseX;
+        const pr = px + hangingPlat.width;
+
+        if (leftHeld) {
+          j.x -= SHIMMY_SPEED * dt;
+          // Clamp: drop off left edge
+          if (j.x + j.w < px + 4) {
+            // Drop off
+            j.state = 'falling'; j.vy = 0;
+            return;
+          }
+          if (!this.hasShimmied && this.comboPhase === 2) {
+            this.hasShimmied = true;
+            this.comboPhase  = 3;
+            this.comboTimer  = COMBO_WINDOW;
+          }
+        }
+        if (rightHeld) {
+          j.x += SHIMMY_SPEED * dt;
+          // Clamp: drop off right edge
+          if (j.x > pr - 4) {
+            j.state = 'falling'; j.vy = 0;
+            return;
+          }
+          if (!this.hasShimmied && this.comboPhase === 2) {
+            this.hasShimmied = true;
+            this.comboPhase  = 3;
+            this.comboTimer  = COMBO_WINDOW;
+          }
+        }
+      }
+
       if (upHeld) {
-        j.y -= 18;
-        j.vy    = 0;
-        j.state = 'falling';
+        // Pull-up
+        j.y -= 18; j.vy = 0; j.state = 'falling';
+        // Combo: phase 4 — pulled up
+        if (this.comboPhase === 3) {
+          this.comboPhase = 4;
+          // COMBO COMPLETE!
+          this.comboFlashTimer = 2.0;
+          this.gameTime = Math.max(0, this.gameTime - 3); // +3s bonus (subtract 3 from elapsed)
+        }
       }
       if (downHeld) {
-        j.y += 5;
-        j.state = 'falling';
+        j.y += 5; j.state = 'falling';
       }
     }
+  }
+
+  private getHangingPlatform(): Platform | null {
+    const j = this.jarrad;
+    const jHead = j.y;
+    for (let i = 0; i < this.platforms.length; i++) {
+      const plat = this.platforms[i];
+      if (plat.type === 'crumbling' && this.crumble5AState === 'broken') continue;
+      const px = (plat.type === 'moving') ? this.movingPlatX : plat.baseX;
+      const pb = plat.y + plat.height;
+      if (Math.abs(jHead - pb) < 12 && j.x + j.w > px + 2 && j.x < px + plat.width - 2) {
+        return plat;
+      }
+    }
+    return null;
   }
 
   private isJustPressed(code: string): boolean {
@@ -559,26 +820,37 @@ export class ScaffoldGame {
   private applyPhysics(dt: number, prevMovX: number): void {
     const j = this.jarrad;
 
+    // ── Wall run ─────────────────────────────────────────────────────────────
+    if (j.state === 'wall-running') {
+      j.vy = -WALL_RUN_UP_SPEED; // cancel gravity, move up
+      j.y += j.vy * dt;
+      // Keep pressed against wall
+      if (j.wallRunDir === 1) j.x = Math.min(VW - j.w - 5, Math.max(VW - j.w - 30, j.x));
+      else                    j.x = Math.max(5, Math.min(30, j.x));
+      // Emit dust
+      if (this.frameCount % 4 === 0) {
+        this.spawnWallDust(
+          j.wallRunDir === 1 ? j.x + j.w : j.x,
+          j.y + j.h / 2
+        );
+      }
+      return;
+    }
+
     // ── Rope pendulum ─────────────────────────────────────────────────────────
     if (j.state === 'swinging') {
       const gOverL = GRAVITY / ROPE_LENGTH;
       this.ropeAngVel += -gOverL * Math.sin(this.ropeAngle) * dt;
-      this.ropeAngVel *= 0.995; // light damping
+      this.ropeAngVel *= 0.995;
       this.ropeAngle  += this.ropeAngVel * dt;
-      // Clamp angle to prevent full revolution
       this.ropeAngle = Math.max(-Math.PI * 0.6, Math.min(Math.PI * 0.6, this.ropeAngle));
-
-      // Position Jarrad at rope end
       j.x = ROPE_ANCHOR_X + ROPE_LENGTH * Math.sin(this.ropeAngle) - j.w / 2;
       j.y = ROPE_ANCHOR_Y + ROPE_LENGTH * Math.cos(this.ropeAngle) - j.h;
       return;
     }
 
-    if (j.state === 'climbing') {
-      j.y += j.vy * dt;
-      return;
-    }
-    if (j.state === 'hanging') return;
+    if (j.state === 'climbing') { j.y += j.vy * dt; return; }
+    if (j.state === 'hanging')  return;
 
     // Gravity
     if (j.state !== 'standing') {
@@ -589,7 +861,7 @@ export class ScaffoldGame {
     if (this.windActive && j.y < 270 && j.state !== 'standing') {
       j.vx -= 30 * dt;
     } else if (this.windActive && j.y < 270 && j.state === 'standing') {
-      j.vx -= 15 * dt; // lighter push when on platform
+      j.vx -= 15 * dt;
     }
 
     j.x += j.vx * dt;
@@ -618,12 +890,15 @@ export class ScaffoldGame {
 
   private checkCollisions(): void {
     const j = this.jarrad;
-    if (j.state === 'dead' || j.state === 'swinging') return;
+    if (j.state === 'dead' || j.state === 'swinging' || j.state === 'wall-running') return;
+
+    // Check for vault opportunity (before standard collision)
+    const leftHeld  = this.keys['ArrowLeft']  || this.keys['KeyA'] || this.mobileLeft;
+    const rightHeld = this.keys['ArrowRight'] || this.keys['KeyD'] || this.mobileRight;
+    const jumpNow   = this.keys['ArrowUp'] || this.keys['KeyW'] || this.keys['Space'] || this.mobileJump;
 
     for (let i = 0; i < this.platforms.length; i++) {
       const plat = this.platforms[i];
-
-      // Skip broken crumble
       if (plat.type === 'crumbling' && this.crumble5AState === 'broken') continue;
 
       const px = (plat.type === 'moving') ? this.movingPlatX : plat.baseX;
@@ -642,11 +917,33 @@ export class ScaffoldGame {
         jFeet >= py && jFeet <= pb + 12 &&
         jRight > px + 2 && jLeft < pr - 2
       ) {
+        // Splat particles on high fall
+        const fallDist = j.y - this.prevJarradY;
+        if (fallDist > HIGH_FALL_THRESHOLD) {
+          this.spawnSplatParticles(j.x + j.w / 2, j.y + j.h);
+        }
+
         j.y  = py - j.h;
         j.vy = 0;
         j.vx = 0;
         j.state = 'standing';
         if (j.isCrouching) { j.y += NORMAL_H - CROUCH_H; }
+
+        // Record safe rewind position
+        j.rewindX = j.x;
+        j.rewindY = j.y;
+
+        // Reset wall run
+        j.wallRunUsed = false;
+
+        // Combo: phase 4 check — if we pulled up and then landed it's already counted
+        // Reset combo on new platform landing (only if not just completed)
+        if (this.comboPhase < 4) {
+          this.comboPhase = 0; this.comboTimer = 0;
+        } else if (this.comboPhase === 4) {
+          this.comboPhase = 0;
+        }
+
         break;
       }
 
@@ -660,6 +957,8 @@ export class ScaffoldGame {
         j.vy    = 0;
         j.y     = pb;
         j.state = 'hanging';
+        // Combo: phase 2
+        if (this.comboPhase === 1) { this.comboPhase = 2; this.comboTimer = COMBO_WINDOW; this.hasShimmied = false; }
         break;
       }
     }
@@ -685,7 +984,6 @@ export class ScaffoldGame {
       const jFeet = j.y + j.h;
       const lv2 = this.platforms[1];
       if (Math.abs(jFeet - lv2.y) < 6) {
-        // On level 2 — check drop sheet
         const sheetRight = DROP_SHEET.x + DROP_SHEET.w;
         const jRight = j.x + j.w;
         const jLeft  = j.x;
@@ -695,11 +993,16 @@ export class ScaffoldGame {
         const sheetTop = DROP_SHEET.y;
 
         if (overlapX && jTop < sheetTop) {
-          // Jarrad's head is above sheet top → collision unless crouching
-          if (!j.isCrouching) {
-            // Bounce back
+          // Check for vault: fast + holding jump
+          if (!j.isCrouching && Math.abs(j.vx) >= VAULT_MIN_SPEED && jumpNow) {
+            // VAULT!
+            j.vy = JUMP_VY * 0.7; // gentle upward arc
+            j.y -= 6;
+            j.state = 'jumping';
+            this.vaultFlashTimer = 1.2;
+          } else if (!j.isCrouching) {
+            // Standard bounce back
             j.vx = j.vx !== 0 ? -j.vx * 0.5 : 0;
-            // Push out of the sheet zone
             if (j.x + j.w / 2 < DROP_SHEET.x + DROP_SHEET.w / 2) {
               j.x = DROP_SHEET.x - j.w - 1;
             } else {
@@ -726,6 +1029,7 @@ export class ScaffoldGame {
     j.lives--;
     j.state = 'dead';
     j.deathTimer = 1.2;
+    j.rewindAvailable = true; // Recharge on new life
     this.ropeGrabbed = false;
 
     if (j.lives <= 0) {
@@ -779,7 +1083,6 @@ export class ScaffoldGame {
     if (pg.scaredTimer > 0) pg.scaredTimer -= dt;
 
     if (pg.flying) {
-      // Animate across to target
       const dx = pg.flyTargetX - pg.x;
       const dy = pg.flyTargetY - pg.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
@@ -796,25 +1099,19 @@ export class ScaffoldGame {
 
     pg.jumpTimer -= dt;
     if (pg.jumpTimer <= 0) {
-      // Pick a new platform — prefer one Jarrad is NOT on
       const jarradPlatIdx = this.getJarradPlatformIdx();
-      // Valid: indices 1-6 (lv2 through lv5b), skip lv1 (spawn) and lv6 (win)
-      // Also skip broken crumble platform
       const candidates = [1, 2, 3, 4, 5, 6].filter(i => {
         if (i === pg.platformIdx) return false;
         if (i === 5 && this.crumble5AState === 'broken') return false;
         return true;
       });
-      // Prefer platforms Jarrad is not on
       const preferred = candidates.filter(i => i !== jarradPlatIdx);
       const pool = preferred.length > 0 ? preferred : candidates;
 
-      // Occasionally fly between towers (cross gap)
       const newIdx = pool[Math.floor(Math.random() * pool.length)];
       const newPlat = this.platforms[newIdx];
       const newPx = (newPlat.type === 'moving') ? this.movingPlatX : newPlat.baseX;
 
-      // Check if crossing the gap (x 180-220)
       const currentPlatX = (this.platforms[pg.platformIdx].type === 'moving')
         ? this.movingPlatX
         : this.platforms[pg.platformIdx].baseX;
@@ -823,7 +1120,6 @@ export class ScaffoldGame {
         (currentPlatX > 215 && newPx < 190);
 
       if (crossingGap || Math.random() < 0.3) {
-        // Fly animation
         pg.flying = true;
         pg.platformIdx = newIdx;
         pg.flyTargetX = newPx + 20;
@@ -842,9 +1138,10 @@ export class ScaffoldGame {
       const pr = px + plat.width;
 
       pg.x += pg.vx * dt;
-      if (pg.x <= px + 2)     { pg.x = px + 2;     pg.vx =  60; }
-      if (pg.x >= pr - 20)    { pg.x = pr - 20;    pg.vx = -60; }
-      pg.y = plat.y - 20;
+      if (pg.x <= px + 2)     { pg.x = px + 2;  pg.vx =  60; }
+      if (pg.x >= pr - 20)    { pg.x = pr - 20; pg.vx = -60; }
+      // Bob Y — sine wave
+      pg.y = plat.y - 20 + Math.sin(this.gameTime * 3.5 + pg.platformIdx) * 3;
     }
   }
 
@@ -901,11 +1198,85 @@ export class ScaffoldGame {
     this.drawWindEffect(ctx);
     this.drawTsuyoshi(ctx);
     this.drawPigeon(ctx);
+    this.drawWallDust(ctx);
+    this.drawSplatParticles(ctx);
     this.drawJarrad(ctx);
     this.drawHUD(ctx);
+    this.drawFlashTexts(ctx);
+    this.drawRewindFlash(ctx);
 
     if (this.phase === 'won')  this.drawWinOverlay(ctx);
     else if (this.phase === 'lost') this.drawLostOverlay(ctx);
+  }
+
+  // ─── Draw wall dust ───────────────────────────────────────────────────────
+
+  private drawWallDust(ctx: CanvasRenderingContext2D): void {
+    for (const p of this.wallDustParticles) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.alpha);
+      ctx.fillStyle = '#E8E0D0';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // ─── Draw splat particles ─────────────────────────────────────────────────
+
+  private drawSplatParticles(ctx: CanvasRenderingContext2D): void {
+    for (const p of this.splatParticles) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, p.alpha);
+      ctx.fillStyle = '#FFFFFF';
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // ─── Draw flash texts (VAULT!, COMBO!) ────────────────────────────────────
+
+  private drawFlashTexts(ctx: CanvasRenderingContext2D): void {
+    if (this.vaultFlashTimer > 0) {
+      const alpha = Math.min(1, this.vaultFlashTimer / 0.4);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle   = '#FFFF44';
+      ctx.font        = 'bold 28px system-ui, sans-serif';
+      ctx.textAlign   = 'center';
+      ctx.shadowColor = '#FF8800';
+      ctx.shadowBlur  = 8;
+      ctx.fillText('VAULT! 🏃', VW / 2, 200);
+      ctx.restore();
+    }
+
+    if (this.comboFlashTimer > 0) {
+      const alpha = Math.min(1, this.comboFlashTimer / 0.5);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle   = '#FF6600';
+      ctx.font        = 'bold 32px system-ui, sans-serif';
+      ctx.textAlign   = 'center';
+      ctx.shadowColor = '#FFDD00';
+      ctx.shadowBlur  = 12;
+      ctx.fillText('COMBO! 🔥 +3s', VW / 2, 160);
+      ctx.restore();
+    }
+  }
+
+  // ─── Rewind white flash ───────────────────────────────────────────────────
+
+  private drawRewindFlash(ctx: CanvasRenderingContext2D): void {
+    if (this.rewindFlashTimer <= 0) return;
+    const alpha = this.rewindFlashTimer / 0.3;
+    ctx.save();
+    ctx.globalAlpha = alpha * 0.85;
+    ctx.fillStyle   = '#FFFFFF';
+    ctx.fillRect(0, 0, VW, VH);
+    ctx.restore();
   }
 
   // ─── Background ───────────────────────────────────────────────────────────
@@ -917,17 +1288,14 @@ export class ScaffoldGame {
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, VW, VH);
 
-    // Building slabs behind scaffolding (two columns)
     ctx.fillStyle = '#C2BEB6';
     this.roundRect(ctx, 72, 60, 120, 540, 12); ctx.fill();
     ctx.fillStyle = '#CAC6BE';
     this.roundRect(ctx, 212, 60, 120, 540, 12); ctx.fill();
-    // Shading
     ctx.fillStyle = 'rgba(0,0,0,0.07)';
     this.roundRect(ctx, 72, 60, 18, 540, 10); ctx.fill();
     this.roundRect(ctx, 212, 60, 18, 540, 10); ctx.fill();
 
-    // Pool
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 635, VW, 8);
     const poolGrad = ctx.createLinearGradient(0, 643, 0, VH);
@@ -961,20 +1329,17 @@ export class ScaffoldGame {
     const ex = ax + ROPE_LENGTH * Math.sin(θ);
     const ey = ay + ROPE_LENGTH * Math.cos(θ);
 
-    // Draw rope as a thick brown curve
     ctx.save();
     ctx.strokeStyle = '#8B5A2B';
     ctx.lineWidth   = 5;
     ctx.lineCap     = 'round';
     ctx.beginPath();
-    // Slight sag via quadratic bezier
     const mx = (ax + ex) / 2 + Math.sin(θ) * 10;
     const my = (ay + ey) / 2 + 20;
     ctx.moveTo(ax, ay);
     ctx.quadraticCurveTo(mx, my, ex, ey);
     ctx.stroke();
 
-    // Rope end ring
     ctx.fillStyle   = '#6B4520';
     ctx.strokeStyle = '#4A3010';
     ctx.lineWidth   = 1.5;
@@ -987,17 +1352,13 @@ export class ScaffoldGame {
   // ─── Scaffold ─────────────────────────────────────────────────────────────
 
   private drawScaffold(ctx: CanvasRenderingContext2D): void {
-    // Helper: draw one tower
     const drawTower = (lx: number, rx: number): void => {
       const top = 80, bot = 560;
       ctx.strokeStyle = '#B8B8B8';
       ctx.lineWidth   = 5;
-      // Left pole
       ctx.beginPath(); ctx.moveTo(lx, top); ctx.lineTo(lx, bot); ctx.stroke();
-      // Right pole
       ctx.beginPath(); ctx.moveTo(rx, top); ctx.lineTo(rx, bot); ctx.stroke();
 
-      // X-bracing at each section
       const sectionYs = [80, 185, 270, 360, 450, 540, 560];
       ctx.strokeStyle = '#A0A0A0';
       ctx.lineWidth   = 2;
@@ -1009,12 +1370,10 @@ export class ScaffoldGame {
       }
     };
 
-    drawTower(80, 180);   // Tower A (left)
-    drawTower(220, 320);  // Tower B (right)
+    drawTower(80, 180);
+    drawTower(220, 320);
 
-    // Tower A ladder: x=130, y=185 to y=540
     this.drawLadder(ctx, 130, 185, 540);
-    // Tower B ladder: x=270, y=185 to y=360
     this.drawLadder(ctx, 270, 185, 360);
   }
 
@@ -1035,12 +1394,10 @@ export class ScaffoldGame {
     for (let i = 0; i < this.platforms.length; i++) {
       const plat = this.platforms[i];
 
-      // Skip broken crumble
       if (plat.type === 'crumbling' && this.crumble5AState === 'broken') continue;
 
       const px0 = (plat.type === 'moving') ? this.movingPlatX : plat.baseX;
 
-      // Shake offset for crumble
       let shakeX = 0;
       if (plat.type === 'crumbling' && this.crumble5AState === 'shaking') {
         shakeX = this.shakeNoise;
@@ -1052,7 +1409,6 @@ export class ScaffoldGame {
 
       ctx.save();
 
-      // Platform body colour
       if (plat.type === 'win') {
         const grad = ctx.createLinearGradient(px, py, px + pw, py);
         grad.addColorStop(0, '#FFD700');
@@ -1069,7 +1425,6 @@ export class ScaffoldGame {
       this.roundRect(ctx, px, py, pw, ph, 2);
       ctx.fill();
 
-      // Top highlight
       ctx.strokeStyle = (plat.type === 'win') ? '#FFE57A' : (plat.type === 'crumbling') ? '#E8C060' : '#D8D8D8';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -1077,11 +1432,9 @@ export class ScaffoldGame {
       ctx.lineTo(px + pw - 3, py + 1.5);
       ctx.stroke();
 
-      // Crumble cracks
       if (plat.type === 'crumbling') {
         ctx.strokeStyle = '#7A5010';
         ctx.lineWidth   = 1.5;
-        // Draw a few crack lines
         ctx.beginPath();
         ctx.moveTo(px + 20, py + 1); ctx.lineTo(px + 28, py + 7); ctx.lineTo(px + 35, py + 2);
         ctx.stroke();
@@ -1093,21 +1446,18 @@ export class ScaffoldGame {
         ctx.stroke();
       }
 
-      // Moving platform: dashed outline in contrasting colour
       if (plat.type === 'moving') {
         ctx.strokeStyle = '#F0F080';
         ctx.lineWidth   = 1.5;
         ctx.setLineDash([4, 3]);
         ctx.strokeRect(px, py, pw, ph);
         ctx.setLineDash([]);
-        // Direction arrows
         ctx.fillStyle = 'rgba(255,255,200,0.7)';
         ctx.font = 'bold 7px system-ui';
         ctx.textAlign = 'center';
         ctx.fillText('↔ MOVING', px + pw / 2, py + ph - 1);
       }
 
-      // Win banner
       if (plat.type === 'win') {
         ctx.fillStyle = '#333';
         ctx.font = 'bold 9px system-ui, sans-serif';
@@ -1124,13 +1474,11 @@ export class ScaffoldGame {
   private drawDropSheet(ctx: CanvasRenderingContext2D): void {
     const { x, y, w, h } = DROP_SHEET;
 
-    // Main drop cloth (white/cream with drape)
     ctx.save();
     ctx.fillStyle = '#F0EDE5';
     ctx.strokeStyle = '#C8C0A0';
     ctx.lineWidth = 1;
 
-    // Draw as draped rectangle — slightly wavy bottom
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(x + w, y);
@@ -1140,7 +1488,6 @@ export class ScaffoldGame {
     ctx.closePath();
     ctx.fill(); ctx.stroke();
 
-    // Drape fold lines
     ctx.strokeStyle = 'rgba(0,0,0,0.12)';
     ctx.lineWidth = 1;
     for (let i = 1; i < 4; i++) {
@@ -1151,11 +1498,11 @@ export class ScaffoldGame {
       ctx.stroke();
     }
 
-    // "DUCK →" label
     ctx.fillStyle = '#888866';
     ctx.font = 'bold 7px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText('DUCK ↓', x + w / 2, y - 3);
+    // Show VAULT hint if moving fast, else DUCK
+    ctx.fillText('DUCK ↓ / VAULT →', x + w / 2, y - 3);
 
     ctx.restore();
   }
@@ -1171,7 +1518,6 @@ export class ScaffoldGame {
     ctx.font        = 'bold 11px system-ui';
     ctx.textAlign   = 'center';
     ctx.fillText('→ JUMP! →', 200, 400);
-    // Arrow graphic
     ctx.strokeStyle = '#FFEE44';
     ctx.lineWidth   = 2;
     ctx.beginPath();
@@ -1199,7 +1545,6 @@ export class ScaffoldGame {
       ctx.lineTo(VW - xOff - len, y);
       ctx.stroke();
     }
-
     ctx.restore();
   }
 
@@ -1234,7 +1579,6 @@ export class ScaffoldGame {
     ctx.fillRect(tx - 5, ty - 38, 3, 3);
     ctx.fillRect(tx + 2, ty - 38, 3, 3);
 
-    // Speech bubble
     const speech   = this.tsuyoshiSpeech;
     const bubbleX  = tx - 40, bubbleY = ty - 80;
     const bubbleW  = 80, bubbleH = 22;
@@ -1267,7 +1611,7 @@ export class ScaffoldGame {
       ctx.save();
       ctx.translate(j.x + j.w / 2, j.y + j.h);
       ctx.rotate(Math.PI / 2);
-      this.drawJarradShape(ctx, 0, -NORMAL_H / 2, false);
+      this.drawJarradShape(ctx, 0, -NORMAL_H / 2, false, false);
       ctx.fillStyle = 'rgba(70,130,180,0.6)';
       ctx.beginPath(); ctx.arc(-10, 8, 12, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(10,  4, 8,  0, Math.PI * 2); ctx.fill();
@@ -1277,22 +1621,52 @@ export class ScaffoldGame {
     }
 
     if (j.state === 'swinging') {
-      // Draw Jarrad hanging from rope end
       const ex = ROPE_ANCHOR_X + ROPE_LENGTH * Math.sin(this.ropeAngle) - j.w / 2;
       const ey = ROPE_ANCHOR_Y + ROPE_LENGTH * Math.cos(this.ropeAngle);
       ctx.save();
       ctx.translate(ex + j.w / 2, ey);
       ctx.rotate(this.ropeAngle * 0.3);
-      this.drawJarradShape(ctx, -j.w / 2, -NORMAL_H, false);
+      this.drawJarradShape(ctx, -j.w / 2, -NORMAL_H, false, false);
+      ctx.restore();
+    } else if (j.state === 'wall-running') {
+      // Draw Jarrad tilted 30° toward the wall
+      ctx.save();
+      ctx.translate(j.x + j.w / 2, j.y + j.h / 2);
+      const tiltDir = j.wallRunDir; // 1=right wall, tilt right; -1=left wall, tilt left
+      ctx.rotate((Math.PI / 6) * tiltDir); // 30°
+      this.drawJarradShape(ctx, -j.w / 2, -j.h / 2, false, false);
+      ctx.restore();
+    } else if (j.state === 'hanging') {
+      // Draw Jarrad upside-down-ish at hanging position
+      ctx.save();
+      ctx.translate(j.x + j.w / 2, j.y);
+      this.drawJarradShape(ctx, -j.w / 2, 0, false, false);
+      // Swinging bucket when hanging/shimmying
+      const bx = j.w / 2 + 2;
+      const by = NORMAL_H * 0.6;
+      ctx.save();
+      ctx.translate(bx, by);
+      const shimBucketAngle = Math.sin(this.gameTime * 4) * 0.3; // swing while hanging
+      ctx.rotate(shimBucketAngle + j.bucketAngle);
+      ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 8); ctx.stroke();
+      ctx.fillStyle = '#C49A7A';
+      ctx.fillRect(-5, 8, 10, 10);
+      ctx.strokeStyle = '#A07050'; ctx.lineWidth = 1;
+      ctx.strokeRect(-5, 8, 10, 10);
+      ctx.fillStyle = '#F0ECE4';
+      ctx.fillRect(-3, 9, 6, 4);
+      ctx.restore();
       ctx.restore();
     } else {
-      this.drawJarradShape(ctx, j.x, j.y, j.isCrouching);
+      const isRunning = j.state === 'standing' && Math.abs(j.vx) > 10;
+      this.drawJarradShape(ctx, j.x, j.y, j.isCrouching, isRunning);
     }
 
     ctx.globalAlpha = 1;
 
-    // Bucket (only when not swinging)
-    if (j.state !== 'swinging') {
+    // Bucket (only when not swinging or hanging — handled above)
+    if (j.state !== 'swinging' && j.state !== 'hanging') {
       const bx = j.x + j.w + 2;
       const by = j.y + (j.isCrouching ? 10 : 20);
       ctx.save();
@@ -1310,59 +1684,56 @@ export class ScaffoldGame {
     }
   }
 
-  private drawJarradShape(ctx: CanvasRenderingContext2D, x: number, y: number, crouching: boolean): void {
+  private drawJarradShape(ctx: CanvasRenderingContext2D, x: number, y: number, crouching: boolean, running: boolean): void {
     if (crouching) {
-      // Squished body
       ctx.fillStyle = '#111111';
-      ctx.fillRect(x, y + 8, 18, 14); // shorter body
+      ctx.fillRect(x, y + 8, 18, 14);
 
-      // Plaster splats
       ctx.fillStyle = '#FFFFFF';
       ctx.beginPath(); ctx.arc(x + 5, y + 12, 2, 0, Math.PI * 2); ctx.fill();
       ctx.beginPath(); ctx.arc(x + 13, y + 16, 2, 0, Math.PI * 2); ctx.fill();
 
-      // Head (still normal size, near ground)
       ctx.fillStyle = '#C8A080';
       this.roundRect(ctx, x + 2, y, 14, 12, 3); ctx.fill();
 
-      // Hair
       ctx.fillStyle = '#1E1008';
       ctx.fillRect(x + 1, y - 5, 16, 6);
 
-      // Glasses
       ctx.strokeStyle = '#1A1A1A'; ctx.lineWidth = 1.5;
       ctx.strokeRect(x + 3, y + 3, 4, 3);
       ctx.strokeRect(x + 9, y + 3, 4, 3);
 
-      // Beard
       ctx.fillStyle = '#2A1808';
       ctx.fillRect(x + 4, y + 9, 9, 3);
 
-      // Legs (squatted)
       ctx.fillStyle = '#2A2A2A';
       ctx.fillRect(x + 1,  y + 22, 7, 5);
       ctx.fillRect(x + 10, y + 22, 7, 5);
       return;
     }
 
-    // Normal Jarrad
+    // Normal Jarrad body
     ctx.fillStyle = '#111111';
     ctx.fillRect(x, y + 14, 18, 30);
 
+    // Plaster splats on body
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath(); ctx.arc(x + 5,  y + 22, 2.5, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(x + 12, y + 28, 2,   0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(x + 7,  y + 35, 1.5, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.arc(x + 14, y + 19, 2,   0, Math.PI * 2); ctx.fill();
 
+    // Head
     ctx.fillStyle = '#C8A080';
     this.roundRect(ctx, x + 2, y, 14, 14, 3); ctx.fill();
 
+    // Hair
     ctx.fillStyle = '#1E1008';
     ctx.fillRect(x + 1,  y - 7, 16, 8);
     ctx.fillRect(x + 2,  y - 9, 5, 4);
     ctx.fillRect(x + 10, y - 8, 4, 3);
 
+    // Glasses
     ctx.strokeStyle = '#1A1A1A'; ctx.lineWidth = 1.5;
     ctx.strokeRect(x + 3, y + 4, 4, 3);
     ctx.strokeRect(x + 9, y + 4, 4, 3);
@@ -1373,12 +1744,28 @@ export class ScaffoldGame {
     ctx.fillRect(x + 4,  y + 5, 2, 2);
     ctx.fillRect(x + 10, y + 5, 2, 2);
 
+    // Beard
     ctx.fillStyle = '#2A1808';
     ctx.fillRect(x + 4, y + 10, 9, 4);
 
+    // Legs — alternate every 8 frames when running
     ctx.fillStyle = '#2A2A2A';
-    ctx.fillRect(x + 2,  y + 44, 6, 8);
-    ctx.fillRect(x + 10, y + 44, 6, 8);
+    if (running) {
+      const legPhase = Math.floor(this.frameCount / 8) % 2 === 0;
+      if (legPhase) {
+        // Left leg forward
+        ctx.fillRect(x + 1,  y + 38, 6, 14);
+        ctx.fillRect(x + 11, y + 44, 6, 8);
+      } else {
+        // Right leg forward
+        ctx.fillRect(x + 1,  y + 44, 6, 8);
+        ctx.fillRect(x + 11, y + 38, 6, 14);
+      }
+    } else {
+      // Standing legs
+      ctx.fillRect(x + 2,  y + 44, 6, 8);
+      ctx.fillRect(x + 10, y + 44, 6, 8);
+    }
   }
 
   // ─── Pigeon ───────────────────────────────────────────────────────────────
@@ -1396,16 +1783,25 @@ export class ScaffoldGame {
     ctx.fillStyle = '#666666';
     this.roundRect(ctx, -6, -4, 12, 6, 4); ctx.fill();
 
-    // Wings flap when flying
     if (pg.flying) {
+      // Flying wing flap
       const flapAng = Math.sin(this.gameTime * 15) * 0.4;
       ctx.save();
       ctx.rotate(flapAng);
       ctx.fillStyle = '#777777';
       ctx.fillRect(-8, -10, 16, 5);
       ctx.restore();
+    } else {
+      // Walking bob — gentle wing flicker
+      const bobAng = Math.sin(this.gameTime * 6) * 0.12;
+      ctx.save();
+      ctx.rotate(bobAng);
+      ctx.fillStyle = '#777777';
+      ctx.fillRect(-8, -8, 16, 4);
+      ctx.restore();
     }
 
+    // Head
     ctx.fillStyle = '#AAAAAA';
     this.roundRect(ctx, 4, -10, 10, 9, 4); ctx.fill();
     ctx.fillStyle = '#FF4400';
@@ -1427,7 +1823,6 @@ export class ScaffoldGame {
   // ─── HUD ──────────────────────────────────────────────────────────────────
 
   private drawHUD(ctx: CanvasRenderingContext2D): void {
-    // Main HUD strip
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(0, 0, VW, 36);
 
@@ -1436,6 +1831,13 @@ export class ScaffoldGame {
     for (let i = 0; i < 3; i++) {
       this.drawHeart(ctx, 8 + i * 22, 18, 8, i < this.jarrad.lives ? '#FF4060' : '#555555');
     }
+
+    // Dagger icon (Time Rewind)
+    ctx.font = '14px system-ui';
+    ctx.textAlign = 'left';
+    ctx.globalAlpha = this.jarrad.rewindAvailable ? 1.0 : 0.35;
+    ctx.fillText('🗡️', 72, 22);
+    ctx.globalAlpha = 1.0;
 
     // Level
     ctx.fillStyle = '#FFFFFF';
@@ -1460,6 +1862,16 @@ export class ScaffoldGame {
       ctx.restore();
     }
 
+    // Wall-run indicator
+    if (this.jarrad.state === 'wall-running') {
+      ctx.save();
+      ctx.fillStyle = '#44FFAA';
+      ctx.font = 'bold 11px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText('🏃 WALL RUN!', VW / 2, 34);
+      ctx.restore();
+    }
+
     // Crumble warning
     if (this.crumble5AState === 'shaking') {
       ctx.save();
@@ -1470,23 +1882,35 @@ export class ScaffoldGame {
       ctx.restore();
     }
 
-    // Mini-map (top right strip below HUD)
+    // Combo chain progress dots (when active)
+    if (this.comboPhase > 0 && this.comboPhase < 4) {
+      ctx.save();
+      ctx.textAlign = 'left';
+      ctx.font = '9px system-ui';
+      ctx.fillStyle = '#AAFFAA';
+      const phases = ['↑J', '🤲G', '↔S', '↑P'];
+      let cx2 = 4;
+      for (let i = 0; i < 4; i++) {
+        ctx.globalAlpha = i < this.comboPhase ? 1.0 : 0.3;
+        ctx.fillText(phases[i], cx2, VH - 8);
+        cx2 += 28;
+      }
+      ctx.restore();
+    }
+
     this.drawMiniMap(ctx);
   }
 
   private drawMiniMap(ctx: CanvasRenderingContext2D): void {
-    // Draw a tiny vertical minimap on the right side
     const mmX = VW - 28, mmY = 42, mmW = 22, mmH = 120;
 
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     this.roundRect(ctx, mmX - 2, mmY - 2, mmW + 4, mmH + 4, 4);
     ctx.fill();
 
-    // Scale: VH (700) maps to mmH (120), VW to mmW
     const scaleX = mmW / VW;
     const scaleY = mmH / 700;
 
-    // Draw platform dots
     for (let i = 0; i < this.platforms.length; i++) {
       const p  = this.platforms[i];
       if (p.type === 'crumbling' && this.crumble5AState === 'broken') continue;
@@ -1504,7 +1928,6 @@ export class ScaffoldGame {
       ctx.fillRect(mx, my, Math.max(mw, 2), 2);
     }
 
-    // Jarrad dot
     const j = this.jarrad;
     const jmx = mmX + (j.x + j.w / 2) * scaleX;
     const jmy = mmY + (j.y + j.h)      * scaleY;
