@@ -1,10 +1,16 @@
 import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { CameraController } from '../world/CameraController';
 
 export class Engine {
   renderer!: THREE.WebGLRenderer;
   scene!: THREE.Scene;
   camera!: CameraController;
+  private composer!: EffectComposer;
+  private clouds: { mesh: THREE.Group; speed: number }[] = [];
   private updateCallbacks: Array<(dt: number) => void> = [];
   private lastTime = 0;
 
@@ -36,12 +42,24 @@ export class Engine {
 
     // Scene
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x87CEEB);
-    this.scene.fog = new THREE.Fog(0x87CEEB, 150, 400);
+    this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.0025);
 
     // Camera
     this.camera = new CameraController();
     this.scene.add(this.camera.camera);
+
+    // ── Post-processing (EffectComposer) ──────────────────────────────────
+    this.composer = new EffectComposer(this.renderer);
+    this.composer.addPass(new RenderPass(this.scene, this.camera.camera));
+
+    const bloom = new UnrealBloomPass(
+      new THREE.Vector2(window.innerWidth, window.innerHeight),
+      0.3,   // strength — subtle glow on bright surfaces
+      0.4,   // radius
+      0.85   // threshold — only very bright things bloom
+    );
+    this.composer.addPass(bloom);
+    this.composer.addPass(new OutputPass());
 
     // Lighting — ambient + sun + fill + hemisphere
     const ambient = new THREE.AmbientLight(0xffffff, 0.5);
@@ -50,8 +68,8 @@ export class Engine {
     const sun = new THREE.DirectionalLight(0xfff4e0, 1.4);
     sun.position.set(80, 120, 40);
     sun.castShadow = true;
-    sun.shadow.mapSize.width = 1024;
-    sun.shadow.mapSize.height = 1024;
+    sun.shadow.mapSize.width = 2048;
+    sun.shadow.mapSize.height = 2048;
     sun.shadow.camera.near = 0.5;
     sun.shadow.camera.far = 600;
     sun.shadow.camera.left = -300;
@@ -76,9 +94,15 @@ export class Engine {
     this.createZebraCrossings();
     this.createRoadCorners();
 
+    // ── PS3-level graphics additions ──────────────────────────────────────
+    this.createSkyDome();
+    this.createClouds();
+    this.createPuddles();
+
     // Handle resize
     window.addEventListener('resize', () => {
       this.renderer.setSize(window.innerWidth, window.innerHeight);
+      this.composer.setSize(window.innerWidth, window.innerHeight);
       this.camera.camera.aspect = window.innerWidth / window.innerHeight;
       this.camera.camera.updateProjectionMatrix();
     });
@@ -437,7 +461,7 @@ export class Engine {
 
     // Window slots — upper wall, 3 across, recessed 0.1 from front face
     for (const wx of [-4.5, 0, 4.5]) {
-      this.addBox(group, 0x223344, 2.5, 1.8, 0.15, wx, 7, -6.93);
+      this.addGlassBox(group, 0x223344, 2.5, 1.8, 0.15, wx, 7, -6.93);
     }
 
     // Base planter in front of building
@@ -475,7 +499,7 @@ export class Engine {
       // White surround on wall face
       this.addBox(group, C.softWhite, 1.6, 2.6, 0.1, wx, 5.0, -5.99);
       // Dark glass, recessed 0.15 from front face (front face at z=-6)
-      this.addBox(group, 0x223344, 1.2, 2.2, 0.2, wx, 5.0, -5.75);
+      this.addGlassBox(group, 0x223344, 1.2, 2.2, 0.2, wx, 5.0, -5.75);
       // Iron grille bars — 3 horizontal per window
       for (const gy of [4.3, 5.0, 5.7]) {
         this.addBox(group, C.charcoal, 1.0, 0.08, 0.12, wx, gy, -5.68);
@@ -550,7 +574,7 @@ export class Engine {
 
     // Bay window glass — 3 panels side by side at front of bay (z = -7.0)
     for (const wx of [-0.8, 0.0, 0.8]) {
-      this.addBox(group, 0x334455, 0.7, 2.5, 0.2, wx, 4.0, -7.0);
+      this.addGlassBox(group, 0x334455, 0.7, 2.5, 0.2, wx, 4.0, -7.0);
     }
 
     // Arched entry hint (stepped arch at ground centre)
@@ -563,7 +587,7 @@ export class Engine {
       // White surround
       this.addBox(group, C.softWhite, 1.8, 1.5, 0.10, wx, 5.5, -5.50);
       // Glass
-      this.addBox(group, 0x334455,   1.5, 1.2, 0.15, wx, 5.5, -5.55);
+      this.addGlassBox(group, 0x334455, 1.5, 1.2, 0.15, wx, 5.5, -5.55);
     }
 
     // Low fence/wall — 1 unit in front of building
@@ -1928,12 +1952,131 @@ export class Engine {
     this.updateCallbacks.push(cb);
   }
 
+  // ── PS3-level graphics: sky gradient dome ──────────────────────────────
+  private createSkyDome(): void {
+    const skyGeo = new THREE.SphereGeometry(800, 32, 16);
+    skyGeo.scale(-1, 1, 1); // invert normals — visible from inside
+    const skyMat = new THREE.ShaderMaterial({
+      uniforms: {
+        topColor:    { value: new THREE.Color(0x4488CC) },
+        bottomColor: { value: new THREE.Color(0xC5E8F5) },
+        offset:      { value: 100 },
+        exponent:    { value: 0.8 },
+      },
+      vertexShader: `
+        varying vec3 vWorldPosition;
+        void main() {
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 topColor;
+        uniform vec3 bottomColor;
+        uniform float offset;
+        uniform float exponent;
+        varying vec3 vWorldPosition;
+        void main() {
+          float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
+          gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+        }
+      `,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+    const sky = new THREE.Mesh(skyGeo, skyMat);
+    this.scene.add(sky);
+  }
+
+  // ── PS3-level graphics: animated cloud clusters ─────────────────────────
+  private createClouds(): void {
+    const cloudMat = new THREE.MeshLambertMaterial({
+      color: 0xFFFFFF,
+      transparent: true,
+      opacity: 0.85,
+    });
+    for (let i = 0; i < 10; i++) {
+      const group = new THREE.Group();
+      const numPuffs = 3 + Math.floor(Math.random() * 4);
+      for (let j = 0; j < numPuffs; j++) {
+        const r = 8 + Math.random() * 12;
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(r, 7, 5), cloudMat);
+        puff.position.set(
+          j * 15 - numPuffs * 7 + (Math.random() - 0.5) * 10,
+          (Math.random() - 0.5) * 8,
+          (Math.random() - 0.5) * 15
+        );
+        group.add(puff);
+      }
+      group.position.set(
+        (Math.random() - 0.5) * 600,
+        80 + Math.random() * 60,
+        (Math.random() - 0.5) * 600
+      );
+      this.scene.add(group);
+      this.clouds.push({ mesh: group, speed: 0.3 + Math.random() * 0.7 });
+    }
+  }
+
+  // ── PS3-level graphics: ground puddles (wet sheen) ──────────────────────
+  private createPuddles(): void {
+    const puddleMat = new THREE.MeshLambertMaterial({
+      color: 0x8899AA,
+      transparent: true,
+      opacity: 0.35,
+    });
+    for (let i = 0; i < 20; i++) {
+      const w = 2 + Math.random() * 4;
+      const d = 1 + Math.random() * 2;
+      const puddle = new THREE.Mesh(new THREE.PlaneGeometry(w, d), puddleMat);
+      puddle.rotation.x = -Math.PI / 2;
+      puddle.position.set(
+        (Math.random() - 0.5) * 300,
+        0.015,
+        (Math.random() - 0.5) * 300
+      );
+      this.scene.add(puddle);
+    }
+  }
+
+  // ── Helper: add a glass box with emissive window glow ───────────────────
+  private addGlassBox(
+    group: THREE.Group,
+    color: number,
+    w: number, h: number, d: number,
+    x: number, y: number, z: number
+  ): void {
+    const emissiveColor = Math.random() > 0.6
+      ? new THREE.Color(0x223344)
+      : new THREE.Color(0x112233);
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(w, h, d),
+      new THREE.MeshLambertMaterial({
+        color,
+        emissive: emissiveColor,
+        emissiveIntensity: Math.random() * 0.4,
+      })
+    );
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  }
+
   start() {
     const loop = (time: number) => {
       const dt = Math.min((time - this.lastTime) / 1000, 0.05);
       this.lastTime = time;
       for (const cb of this.updateCallbacks) cb(dt);
-      this.renderer.render(this.scene, this.camera.camera);
+
+      // Drift clouds slowly westward, wrap around at ±350
+      for (const cloud of this.clouds) {
+        cloud.mesh.position.x -= cloud.speed * dt;
+        if (cloud.mesh.position.x < -350) cloud.mesh.position.x = 350;
+      }
+
+      this.composer.render();
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);

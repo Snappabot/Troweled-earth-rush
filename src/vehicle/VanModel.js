@@ -116,6 +116,20 @@ export class VanModel {
             headlight.receiveShadow = true;
             this.bodyGroup.add(headlight);
         }
+        // Headlight beam cones (very subtle volumetric hint)
+        const beamMat = new THREE.MeshBasicMaterial({
+            color: 0xFFFFCC,
+            transparent: true,
+            opacity: 0.08,
+            side: THREE.BackSide,
+        });
+        const beamGeo = new THREE.ConeGeometry(1.5, 8, 8, 1, true);
+        for (const bx of [-0.6, 0.6]) {
+            const beam = new THREE.Mesh(beamGeo, beamMat);
+            beam.rotation.x = Math.PI / 2; // point forward (-z)
+            beam.position.set(bx, 0.7, -3);
+            this.bodyGroup.add(beam);
+        }
         // Tail lights — emissive red
         const tailMat = new THREE.MeshLambertMaterial({
             color: 0xff2200,
