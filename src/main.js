@@ -10,6 +10,8 @@ import { JobBoard } from './ui/JobBoard';
 import { HUD } from './ui/HUD';
 import { MiniGameManager } from './minigames/MiniGameManager';
 import { AchievementGallery } from './ui/AchievementGallery';
+import { TrafficSystem } from './entities/TrafficSystem';
+import { PedestrianSystem } from './entities/PedestrianSystem';
 async function main() {
     const engine = new Engine();
     await engine.init();
@@ -80,6 +82,9 @@ async function main() {
         }
     });
     document.body.appendChild(jobsBtn);
+    // ── Traffic + Pedestrian systems ────────────────────────────────────────────
+    const traffic = new TrafficSystem(engine.scene);
+    const pedestrians = new PedestrianSystem(engine.scene);
     // Mini-game manager — overlays the world for plastering mini-games
     const miniGameManager = new MiniGameManager();
     // ── 📸 Photos button + Achievement Gallery ───────────────────────────────────
@@ -124,6 +129,13 @@ async function main() {
         spillMeter.update(dt);
         const vanX = van.mesh.position.x;
         const vanZ = van.mesh.position.z;
+        traffic.update(dt, vanX, vanZ);
+        pedestrians.update(dt, vanX, vanZ);
+        // Traffic collision
+        const trafficHit = traffic.checkVanCollision(vanX, vanZ);
+        if (trafficHit.hit) {
+            physics.applyImpulse(-trafficHit.pushX * 8, -trafficHit.pushZ * 8);
+        }
         waypointSystem.update(dt, vanX, vanZ);
         // ── Travel timer ──────────────────────────────────────────────────────────
         if (jobManager.activeJob) {

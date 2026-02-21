@@ -140,6 +140,11 @@ export class VanPhysics {
         }
         return { x: newX, z: newZ };
     }
+    applyImpulse(ix, iz) {
+        this._speed *= 0.5;
+        this.van.mesh.position.x += ix * 0.1;
+        this.van.mesh.position.z += iz * 0.1;
+    }
     // ── Curb detection (suspension bump + spill) ────────────────────────────────
     _checkCurbCrossings() {
         const curr = this.van.mesh.position;
