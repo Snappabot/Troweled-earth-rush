@@ -195,6 +195,8 @@ export class Engine {
     const yellowMat   = new THREE.MeshLambertMaterial({ color: 0xf0c040 });
     const sidewalkMat = new THREE.MeshLambertMaterial({ color: 0xc8c0b0 });
 
+    const segLen = GRID - ROAD_W; // sidewalk segment length (32 units) — stops at road edge
+
     // ── Horizontal roads (constant Z, extending along X) ──
     for (let z = -RANGE; z <= RANGE; z += GRID) {
       const len = RANGE * 2;
@@ -206,13 +208,16 @@ export class Engine {
       road.receiveShadow = true;
       this.scene.add(road);
 
-      // Sidewalks either side
-      for (const side of [-1, 1]) {
-        const sw = new THREE.Mesh(new THREE.PlaneGeometry(len, 2), sidewalkMat);
-        sw.rotation.x = -Math.PI / 2;
-        sw.position.set(0, 0.02, z + side * (ROAD_W / 2 + 1));
-        sw.receiveShadow = true;
-        this.scene.add(sw);
+      // Sidewalks either side — segmented between intersections (stops at road edge)
+      for (let ix = -RANGE; ix < RANGE; ix += GRID) {
+        const segCx = ix + GRID / 2;
+        for (const side of [-1, 1]) {
+          const sw = new THREE.Mesh(new THREE.PlaneGeometry(segLen, 2), sidewalkMat);
+          sw.rotation.x = -Math.PI / 2;
+          sw.position.set(segCx, 0.02, z + side * (ROAD_W / 2 + 1));
+          sw.receiveShadow = true;
+          this.scene.add(sw);
+        }
       }
 
       // Yellow edge lines
@@ -265,13 +270,16 @@ export class Engine {
       road.receiveShadow = true;
       this.scene.add(road);
 
-      // Sidewalks either side
-      for (const side of [-1, 1]) {
-        const sw = new THREE.Mesh(new THREE.PlaneGeometry(2, len), sidewalkMat);
-        sw.rotation.x = -Math.PI / 2;
-        sw.position.set(x + side * (ROAD_W / 2 + 1), 0.02, 0);
-        sw.receiveShadow = true;
-        this.scene.add(sw);
+      // Sidewalks either side — segmented between intersections (stops at road edge)
+      for (let iz = -RANGE; iz < RANGE; iz += GRID) {
+        const segCz = iz + GRID / 2;
+        for (const side of [-1, 1]) {
+          const sw = new THREE.Mesh(new THREE.PlaneGeometry(2, segLen), sidewalkMat);
+          sw.rotation.x = -Math.PI / 2;
+          sw.position.set(x + side * (ROAD_W / 2 + 1), 0.02, segCz);
+          sw.receiveShadow = true;
+          this.scene.add(sw);
+        }
       }
 
       // Yellow edge lines
