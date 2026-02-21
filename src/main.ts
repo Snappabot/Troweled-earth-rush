@@ -148,10 +148,12 @@ async function main() {
     traffic.update(dt, vanX, vanZ);
     pedestrians.update(dt, vanX, vanZ);
 
-    // Traffic collision
-    const trafficHit = traffic.checkVanCollision(vanX, vanZ);
-    if (trafficHit.hit) {
-      physics.applyImpulse(-trafficHit.pushX * 8, -trafficHit.pushZ * 8);
+    // Traffic collision — AABB resolve (ejects van from car immediately)
+    const trafficResolved = traffic.resolveVan(vanX, vanZ);
+    if (trafficResolved.hit) {
+      van.mesh.position.x = trafficResolved.x;
+      van.mesh.position.z = trafficResolved.z;
+      physics.applyImpulse(0, 0); // scrub speed only
     }
 
     waypointSystem.update(dt, vanX, vanZ);

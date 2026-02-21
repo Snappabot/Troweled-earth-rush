@@ -98,18 +98,41 @@ export class TrafficSystem {
             this._applyPosition(car);
         }
     }
-    checkVanCollision(vanX, vanZ) {
+    /**
+     * Resolve van position against all traffic cars using AABB Minkowski sum.
+     * Returns corrected {x, z} and whether a hit occurred (for speed scrub).
+     */
+    resolveVan(vanX, vanZ, vanRadius = 1.8) {
+        let rx = vanX, rz = vanZ;
+        let hit = false;
         for (const car of this.cars) {
             const cx = car.group.position.x;
             const cz = car.group.position.z;
-            const dx = vanX - cx;
-            const dz = vanZ - cz;
-            const dist = Math.sqrt(dx * dx + dz * dz);
-            if (dist < 5) {
-                const len = Math.max(dist, 0.01);
-                return { hit: true, pushX: dx / len, pushZ: dz / len };
+            // Car body: 3.5W × 6.5D — axis determines which is which in world space
+            // axis='x': car length (6.5) runs along X, so hw=3.25, hd=1.75
+            // axis='z': car length (6.5) runs along Z, so hw=1.75, hd=3.25
+            const hw = (car.axis === 'x' ? 3.25 : 1.75) + vanRadius;
+            const hd = (car.axis === 'x' ? 1.75 : 3.25) + vanRadius;
+            const dx = rx - cx;
+            const dz = rz - cz;
+            if (Math.abs(dx) < hw && Math.abs(dz) < hd) {
+                // Inside — push out on shortest axis
+                const overlapX = hw - Math.abs(dx);
+                const overlapZ = hd - Math.abs(dz);
+                if (overlapX < overlapZ) {
+                    rx += dx < 0 ? -overlapX : overlapX;
+                }
+                else {
+                    rz += dz < 0 ? -overlapZ : overlapZ;
+                }
+                hit = true;
             }
         }
-        return { hit: false, pushX: 0, pushZ: 0 };
+        return { x: rx, z: rz, hit };
+    }
+    /** @deprecated Use resolveVan instead */
+    checkVanCollision(vanX, vanZ) {
+        const result = this.resolveVan(vanX, vanZ);
+        return { hit: result.hit, pushX: result.x - vanX, pushZ: result.z - vanZ };
     }
 }
