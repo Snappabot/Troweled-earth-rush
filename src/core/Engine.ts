@@ -2000,14 +2000,12 @@ export class Engine {
     this.addBox(group, signCol, 0.3, 2.5, 6, 15.16, 4, 0);
     this.addBox(group, textCol, 0.32, 2.0, 5.5, 15.17, 4, 0);
 
-    // ── TEM tree logo on front face — either side of roller door ─────────────
-    const wsTex = makeTEMRoofTexture(512);
+    // ── TEM tree logo — single large centrepiece on front face ───────────────
+    const wsTex = makeTEMRoofTexture(1024);
     const wsMat = new THREE.MeshLambertMaterial({ map: wsTex, transparent: false });
-    for (const lx of [-10, 10]) {
-      const logo = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 2.8), wsMat.clone());
-      logo.position.set(lx, 3.2, -10.38);
-      group.add(logo);
-    }
+    const bigLogo = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), wsMat);
+    bigLogo.position.set(0, 4.5, -10.40);
+    group.add(bigLogo);
 
     group.position.set(x, 0, z);
     this.scene.add(group);
