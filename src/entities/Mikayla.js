@@ -79,6 +79,7 @@ export class Mikayla {
         const tex = new THREE.CanvasTexture(cv);
         return new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
     }
+    /** Returns true if a dialogue line was just triggered this frame */
     update(dt, vanX, vanZ, speechBubble) {
         // Animation tick
         this.character.update(dt);
@@ -95,7 +96,9 @@ export class Mikayla {
             const line = DIALOGUE[Math.floor(Math.random() * DIALOGUE.length)];
             speechBubble.show(CREW_CONFIGS['Mikayla'], line);
             this.lastDialogue = now;
+            return true;
         }
+        return false;
     }
     dispose(scene) {
         scene.remove(this.wrapper);

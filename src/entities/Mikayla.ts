@@ -100,11 +100,12 @@ export class Mikayla {
     );
   }
 
+  /** Returns true if a dialogue line was just triggered this frame */
   update(
     dt: number,
     vanX: number, vanZ: number,
     speechBubble: SpeechBubble
-  ): void {
+  ): boolean {
     // Animation tick
     this.character.update(dt);
 
@@ -123,7 +124,9 @@ export class Mikayla {
       const line = DIALOGUE[Math.floor(Math.random() * DIALOGUE.length)];
       speechBubble.show(CREW_CONFIGS['Mikayla'], line);
       this.lastDialogue = now;
+      return true;
     }
+    return false;
   }
 
   dispose(scene: THREE.Scene): void {

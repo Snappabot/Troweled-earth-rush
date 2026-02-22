@@ -17,6 +17,7 @@ import { CoffeeShop } from './entities/CoffeeShop';
 import { BladderMeter } from './gameplay/BladderMeter';
 import { Mikayla } from './entities/Mikayla';
 import { SpeechBubble } from './ui/SpeechBubble';
+import { CREW_CONFIGS } from './entities/CrewCharacter';
 
 async function main() {
   const engine = new Engine();
@@ -112,7 +113,8 @@ async function main() {
   const bladderMeter = new BladderMeter();
   const mikayla = new Mikayla(engine.scene);
   const speechBubble = new SpeechBubble();
-  const mikaylaHeadPos = new THREE.Vector3(Mikayla.POS.x, 6.0, Mikayla.POS.z);
+  // Tracks world position of whoever last spoke — bubble projects from here each frame
+  const activeSpeakerPos = new THREE.Vector3(Mikayla.POS.x, 6.0, Mikayla.POS.z);
 
   // Mini-game manager — overlays the world for plastering mini-games
   const miniGameManager = new MiniGameManager();
@@ -198,10 +200,20 @@ async function main() {
     }
     spillMeter.spillRateMultiplier = bladderMeter.spillMultiplier;
 
-    mikayla.update(dt, vanX, vanZ, speechBubble);
-    // Project Mikayla's head to screen — keep bubble above her head
+    // ── Character proximity dialogue ─────────────────────────────────────────
+    if (mikayla.update(dt, vanX, vanZ, speechBubble)) {
+      activeSpeakerPos.set(Mikayla.POS.x, 6.0, Mikayla.POS.z);
+    }
+
+    const crewDialogue = characters.checkProximityDialogue(vanX, vanZ);
+    if (crewDialogue) {
+      activeSpeakerPos.set(crewDialogue.pos.x, 6.0, crewDialogue.pos.z);
+      speechBubble.show(CREW_CONFIGS[crewDialogue.name], crewDialogue.line);
+    }
+
+    // Keep bubble anchored above the active speaker every frame
     {
-      const projected = mikaylaHeadPos.clone().project(engine.camera.camera);
+      const projected = activeSpeakerPos.clone().project(engine.camera.camera);
       const sx = (projected.x * 0.5 + 0.5) * window.innerWidth;
       const sy = (-projected.y * 0.5 + 0.5) * window.innerHeight;
       speechBubble.setScreenPosition(sx, sy);
