@@ -72,7 +72,7 @@ export class Mikayla {
         const tex = new THREE.CanvasTexture(cv);
         return new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.6), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
     }
-    update(dt, vanX, vanZ, showToast) {
+    update(dt, vanX, vanZ, speechBubble) {
         // Animation tick
         this.character.update(dt);
         // Spin rope around X axis — arcs over head front-to-back like a real jump rope
@@ -81,12 +81,12 @@ export class Mikayla {
         const dx = vanX - POS.x;
         const dz = vanZ - POS.z;
         this.character.group.rotation.y = Math.atan2(dx, dz);
-        // Proximity dialogue
+        // Proximity dialogue — speech bubble
         const dist = Math.sqrt(dx * dx + dz * dz);
         const now = Date.now();
         if (dist < Mikayla.TRIGGER_RADIUS && now - this.lastDialogue > this.cooldown) {
             const line = DIALOGUE[Math.floor(Math.random() * DIALOGUE.length)];
-            showToast(`💗 Mikayla: "${line}"`, 0xCC3377);
+            speechBubble.show(CREW_CONFIGS['Mikayla'], line);
             this.lastDialogue = now;
         }
     }

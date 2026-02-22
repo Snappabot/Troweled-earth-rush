@@ -15,6 +15,7 @@ import { PedestrianSystem } from './entities/PedestrianSystem';
 import { CoffeeShop } from './entities/CoffeeShop';
 import { BladderMeter } from './gameplay/BladderMeter';
 import { Mikayla } from './entities/Mikayla';
+import { SpeechBubble } from './ui/SpeechBubble';
 
 async function main() {
   const engine = new Engine();
@@ -109,6 +110,7 @@ async function main() {
   const coffeeShop = new CoffeeShop(engine.scene);
   const bladderMeter = new BladderMeter();
   const mikayla = new Mikayla(engine.scene);
+  const speechBubble = new SpeechBubble();
 
   // Mini-game manager — overlays the world for plastering mini-games
   const miniGameManager = new MiniGameManager();
@@ -194,7 +196,7 @@ async function main() {
     }
     spillMeter.spillRateMultiplier = bladderMeter.spillMultiplier;
 
-    mikayla.update(dt, vanX, vanZ, (msg, color) => hud.showToast(msg, color));
+    mikayla.update(dt, vanX, vanZ, speechBubble);
 
     traffic.update(dt, vanX, vanZ);
     pedestrians.update(dt, vanX, vanZ);

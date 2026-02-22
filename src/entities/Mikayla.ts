@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CrewCharacter, CREW_CONFIGS } from './CrewCharacter';
+import { SpeechBubble } from '../ui/SpeechBubble';
 
 // Just outside workshop trigger radius (workshop at 10,15 — triggerRadius 18)
 const POS = { x: 30, z: 28 };
@@ -94,7 +95,7 @@ export class Mikayla {
   update(
     dt: number,
     vanX: number, vanZ: number,
-    showToast: (msg: string, color?: number) => void
+    speechBubble: SpeechBubble
   ): void {
     // Animation tick
     this.character.update(dt);
@@ -107,12 +108,12 @@ export class Mikayla {
     const dz = vanZ - POS.z;
     this.character.group.rotation.y = Math.atan2(dx, dz);
 
-    // Proximity dialogue
+    // Proximity dialogue — speech bubble
     const dist = Math.sqrt(dx * dx + dz * dz);
     const now = Date.now();
     if (dist < Mikayla.TRIGGER_RADIUS && now - this.lastDialogue > this.cooldown) {
       const line = DIALOGUE[Math.floor(Math.random() * DIALOGUE.length)];
-      showToast(`💗 Mikayla: "${line}"`, 0xCC3377);
+      speechBubble.show(CREW_CONFIGS['Mikayla'], line);
       this.lastDialogue = now;
     }
   }
