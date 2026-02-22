@@ -35,9 +35,9 @@ const CREW_DIALOGUE = {
         "I've mapped every building in this city by square meterage.",
         "My spread rate calculations are never wrong. The surface is wrong.",
         "VOC under 50 grams per litre. Green Star compliant. Obviously.",
-        "I've read the TDS front to back. Three times. This week.",
-        "You drive within acceptable tolerance of my calculated path.",
+        "Have you seen my sister Mikayla? She's supposed to be helping. She's doing jump rope.",
         "The sealer should dry in 1 to 2 hours. I timed it. It was 1.4.",
+        "Mikayla borrowed my trowel again. I've got a spare. I'm not lending that one.",
         "Technically the cure time is 5 to 7 days. I'm tracking day 6.",
     ],
     Phil: [

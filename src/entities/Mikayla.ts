@@ -9,14 +9,14 @@ const DIALOGUE: string[] = [
   "Got a dollar, mate? 💸",
   "You got a light? 🚬",
   "Nice van. Does it leak?",
-  "You heading to the coffee shop? ☕",
+  "My brother Jarrad says I'm not qualified. He's right but I don't like it.",
   "These boots were not made for plastering. Yet here we are.",
   "Jump in? No seriously, I need a lift.",
-  "Phil owes me fifty bucks. Pass it on.",
-  "I timed my jumps to the Tadelakt dry time. Six hours. That's a lot of jumps.",
+  "Jarrad's been tracking the cure time on that wall for six days. Six. Days.",
   "You look like you need a coffee and a toilet. In that order.",
+  "Phil owes me fifty bucks. Pass it on.",
+  "I plastered that wall. Don't tell Jarrad.",
   "Matt left the primer lid off again. Just letting you know.",
-  "I plastered that wall. Don't tell anyone it was me.",
 ];
 
 export class Mikayla {
