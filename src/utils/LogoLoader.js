@@ -70,14 +70,25 @@ export function makeTEMShirtTexture(shirtColor) {
  * Van roof / workshop / map surface logo.
  * White tree on black — uses the white variant directly.
  */
+/**
+ * Van roof / workshop logo — transparent background, white tree only.
+ * Bright pixels (tree) stay opaque; dark background pixels become transparent.
+ */
 export function makeTEMRoofTexture(size = 512) {
     const cv = document.createElement('canvas');
     cv.width = cv.height = size;
     const ctx = cv.getContext('2d');
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, size, size);
+    // Canvas starts fully transparent
     if (_imgWhiteOnBlack) {
         ctx.drawImage(_imgWhiteOnBlack, 0, 0, size, size);
+        const imgData = ctx.getImageData(0, 0, size, size);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+            // Bright = tree (keep), dark = background (transparent)
+            const brightness = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            d[i + 3] = Math.round(Math.min(255, brightness * 1.5));
+        }
+        ctx.putImageData(imgData, 0, 0);
     }
     else {
         ctx.strokeStyle = '#FFFFFF';

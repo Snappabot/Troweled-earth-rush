@@ -2002,7 +2002,7 @@ export class Engine {
 
     // ── TEM tree logo — single large centrepiece on front face ───────────────
     const wsTex = makeTEMRoofTexture(1024);
-    const wsMat = new THREE.MeshLambertMaterial({ map: wsTex, transparent: false });
+    const wsMat = new THREE.MeshLambertMaterial({ map: wsTex, transparent: true, depthWrite: false });
     const bigLogo = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), wsMat);
     bigLogo.position.set(0, 4.5, -10.40);
     group.add(bigLogo);
