@@ -18,7 +18,19 @@ import { BladderMeter } from './gameplay/BladderMeter';
 import { Mikayla } from './entities/Mikayla';
 import { Connie } from './entities/Connie';
 import { SpeechBubble } from './ui/SpeechBubble';
+import { DialoguePause } from './ui/DialoguePause';
 import { CREW_CONFIGS } from './entities/CrewCharacter';
+import type { Job } from './gameplay/JobManager';
+
+// ── Crew pickup one-liners ────────────────────────────────────────────────────
+const CREW_PICKUP_QUIPS: Record<string, string> = {
+  Matt:     "Matt folds himself into the back. \"Took your time.\" He's already on his phone.",
+  Jose:     "Jose appears from nowhere, bucket in hand. \"Vámonos — I was getting bored.\"",
+  Jarrad:   "Jarrad adjusts his hard hat. \"I've been standing here fifteen minutes.\" He has.",
+  Phil:     "Phil sips the last of his tea, unhurried. \"Right then. Let's go.\" He fastens his seatbelt twice.",
+  Tsuyoshi: "Tsuyoshi vaults in without opening the door. His mohawk grazes the roof lining.",
+  Fabio:    "Fabio loads in, trowel over his shoulder. \"You're late.\" He's smiling though.",
+};
 
 async function main() {
   const engine = new Engine();
@@ -32,30 +44,35 @@ async function main() {
   const van = new VanModel(engine.scene);
   const spillMeter = new SpillMeter();
   const hud = new HUD();
+  const dialoguePause = new DialoguePause();
 
   // ── Job system ──────────────────────────────────────────────────────────────
   const jobManager = new JobManager();
 
   const physics = new VanPhysics(van, input,
-    // Curb bump — 2.5% only after materials picked up (phase 2+)
     (intensity: number) => {
       if (jobManager.activePhase >= 2) spillMeter.triggerBump(intensity);
     },
     engine.collisionWorld,
-    // Building crash — 30% only after materials picked up
     () => {
       if (jobManager.activePhase >= 2) spillMeter.triggerCrash();
     }
   );
   const waypointSystem = new WaypointSystem(engine.scene);
 
-  const jobBoard = new JobBoard((job) => {
-    // Phase 1 starts: accept the job, point waypoint at the workshop
-    jobManager.acceptJob(job);
-    waypointSystem.setTarget(JobManager.WORKSHOP_POS);
+  // ── Job accepted → show briefing, then start Phase 1 ────────────────────────
+  const jobBoard = new JobBoard((job: Job) => {
     jobBoard.hide();
-    hud.setActiveJob(job, 1);
-    hud.updateCrewStatus([], [], false);
+    dialoguePause.show(
+      `📋 ${job.title}`,
+      `Client: ${job.client}\n\n${job.description}\n\n💰 Pay: $${job.pay.toLocaleString()}\n\n🏭 Head to the TEM workshop to collect supplies.`,
+      () => {
+        jobManager.acceptJob(job);
+        waypointSystem.setTarget(JobManager.WORKSHOP_POS);
+        hud.setActiveJob(job, 1);
+        hud.updateCrewStatus([], [], false);
+      }
+    );
   });
 
   // ── Spill penalty callback ───────────────────────────────────────────────────
@@ -65,7 +82,7 @@ async function main() {
     hud.showSpillPenalty(penalty);
   };
 
-  // ── JOBS button — top-right, out of the way of controls ─────────────────────
+  // ── JOBS button ──────────────────────────────────────────────────────────────
   const jobsBtn = document.createElement('button');
   jobsBtn.textContent = '📋 JOBS';
   jobsBtn.style.cssText = `
@@ -115,10 +132,9 @@ async function main() {
   const mikayla = new Mikayla(engine.scene);
   const connie = new Connie(engine.scene);
   const speechBubble = new SpeechBubble();
-  // Tracks world position of whoever last spoke — bubble projects from here each frame
   const activeSpeakerPos = new THREE.Vector3(Mikayla.POS.x, 6.0, Mikayla.POS.z);
 
-  // Mini-game manager — overlays the world for plastering mini-games
+  // Mini-game manager
   const miniGameManager = new MiniGameManager();
 
   // ── 📸 Photos button + Achievement Gallery ───────────────────────────────────
@@ -150,7 +166,7 @@ async function main() {
   // Guard to prevent job completion firing more than once per arrival
   let jobCompleting = false;
 
-  // ── Debug panel (small, top-left) ──────────────────────────────────────────
+  // ── Debug panel ──────────────────────────────────────────────────────────────
   const dbg = document.createElement('div');
   dbg.style.cssText = `
     position:fixed; top:8px; left:8px; z-index:5000;
@@ -162,19 +178,39 @@ async function main() {
 
   // ── Update loop ─────────────────────────────────────────────────────────────
   engine.onUpdate((dt: number) => {
+    const vanX = van.mesh.position.x;
+    const vanZ = van.mesh.position.z;
+
+    // ── Dialogue pause — freeze game, check for resume input ─────────────────
+    if (dialoguePause.isActive) {
+      if (input.forward || input.brake) dialoguePause.tryResume();
+      // Still animate characters + update camera while paused
+      characters.updateAll(dt);
+      mikayla.update(dt, vanX, vanZ, speechBubble);
+      connie.update(dt, vanX, vanZ, speechBubble);
+      engine.camera.follow(van.mesh.position, van.velocity, van.heading);
+      // Keep speech bubble projected
+      {
+        const projected = activeSpeakerPos.clone().project(engine.camera.camera);
+        const sx = (projected.x * 0.5 + 0.5) * window.innerWidth;
+        const sy = (-projected.y * 0.5 + 0.5) * window.innerHeight;
+        speechBubble.setScreenPosition(sx, sy);
+      }
+      return; // Skip physics, timers, checkpoints
+    }
+
+    // ── Normal game loop ──────────────────────────────────────────────────────
     physics.update(dt);
     van.updateSuspension(dt);
+
     const jobActive = jobManager.activeJob !== null && jobManager.activePhase >= 2;
     spillMeter.setVisible(jobActive);
     if (jobActive) {
       spillMeter.update(dt);
     } else {
-      spillMeter.level = 0; // reset when not on a job
+      spillMeter.level = 0;
     }
     characters.updateAll(dt);
-
-    const vanX = van.mesh.position.x;
-    const vanZ = van.mesh.position.z;
 
     // ── Coffee shop + Bladder mechanic ────────────────────────────────────────
     coffeeShop.update(dt);
@@ -227,12 +263,12 @@ async function main() {
     traffic.update(dt, vanX, vanZ);
     pedestrians.update(dt, vanX, vanZ);
 
-    // Traffic collision — AABB resolve (ejects van from car immediately)
+    // Traffic collision — eject van immediately
     const trafficResolved = traffic.resolveVan(vanX, vanZ);
     if (trafficResolved.hit) {
       van.mesh.position.x = trafficResolved.x;
       van.mesh.position.z = trafficResolved.z;
-      physics.applyImpulse(0, 0); // scrub speed only
+      physics.applyImpulse(0, 0);
       if (jobManager.activePhase >= 2) spillMeter.triggerCrash();
     }
 
@@ -250,7 +286,6 @@ async function main() {
         hud.setActiveJob(null, 1);
         hud.updateMoney(jobManager.money);
         hud.updateCrewStatus([], [], false);
-        // Restore all crew after failed job
         characters.showAllCrew();
         setTimeout(() => jobBoard.show(jobManager.getAvailableJobs()), 3500);
       }
@@ -263,7 +298,6 @@ async function main() {
       if (jobManager.activePhase === 1) {
         hud.updateJobDistance(jobManager.distanceToWorkshop(vanX, vanZ));
       } else if (jobManager.activePhase === 2) {
-        // Distance to next crew member needed
         const nextCrew = jobManager.nextCrewNeeded();
         if (nextCrew) {
           const crewPos = characters.getCrewPosition(nextCrew);
@@ -272,35 +306,34 @@ async function main() {
           );
         }
       } else {
-        // Phase 3: distance to job site
         hud.updateJobDistance(jobManager.distanceTo(vanX, vanZ));
       }
     }
 
-    // ── Phase 1: workshop arrival ─────────────────────────────────────────────
+    // ── Phase 1: workshop arrival → supplies loaded ───────────────────────────
     if (jobManager.activeJob && jobManager.activePhase === 1 && !jobCompleting) {
       if (jobManager.checkPhase1Arrival(vanX, vanZ)) {
         jobCompleting = true;
-        jobManager.advanceToPhase2();
-        spillMeter.level = 0; // fresh bucket on pickup
-        connie.playLaugh(); // Connie loses it every time buckets go out
+        spillMeter.level = 0;
+        connie.playLaugh();
 
-        // Point waypoint at first required crew member
-        const firstCrew = jobManager.nextCrewNeeded();
-        if (firstCrew) {
-          const crewPos = characters.getCrewPosition(firstCrew);
-          waypointSystem.setTarget(crewPos);
-        }
-
-        hud.showPhase1Complete();
-        hud.setActiveJob(jobManager.activeJob, 2);
-        hud.updateCrewStatus(
-          jobManager.crewToPickup,
-          jobManager.crewPickedUp,
-          true
+        const crewNames = jobManager.crewToPickup.join(' + ');
+        dialoguePause.show(
+          '📦 Supplies Loaded!',
+          `Connie's cackle echoes through the factory as the buckets go in.\n\nNow go pick up the crew:\n👷 ${crewNames}\n\nThey're scattered around the city. Your waypoint will guide you.`,
+          () => {
+            jobManager.advanceToPhase2();
+            const firstCrew = jobManager.nextCrewNeeded();
+            if (firstCrew) {
+              const crewPos = characters.getCrewPosition(firstCrew);
+              waypointSystem.setTarget(crewPos);
+            }
+            hud.showPhase1Complete();
+            hud.setActiveJob(jobManager.activeJob, 2);
+            hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
+            jobCompleting = false;
+          }
         );
-
-        setTimeout(() => { jobCompleting = false; }, 2000);
       }
     }
 
@@ -313,41 +346,55 @@ async function main() {
         const dist = jobManager.distanceToPoint(vanX, vanZ, crewPos.x, crewPos.z);
 
         if (dist < 10) {
-          // Pick up this crew member
           jobCompleting = true;
           characters.hideCrew(name);
           const allCollected = jobManager.pickupCrew(name);
 
-          // Update crew status in HUD
           hud.updateCrewStatus(
             jobManager.crewToPickup,
             jobManager.crewPickedUp,
             true
           );
 
-          if (allCollected) {
-            // All crew collected → advance to Phase 3
-            jobManager.advanceToPhase3();
-            waypointSystem.setTarget(jobManager.activeJob!.position);
-            hud.showCrewPickup(name, null);
-            hud.setActiveJob(jobManager.activeJob, 3);
-          } else {
-            // Point waypoint at next crew member
-            const nextCrew = jobManager.nextCrewNeeded();
-            if (nextCrew) {
-              const nextPos = characters.getCrewPosition(nextCrew);
-              waypointSystem.setTarget(nextPos);
-              hud.showCrewPickup(name, nextCrew);
-            }
-          }
+          const quip = CREW_PICKUP_QUIPS[name] ?? `${name} hops in.`;
 
-          setTimeout(() => { jobCompleting = false; }, 1500);
-          break; // Only pick up one per frame
+          if (allCollected) {
+            dialoguePause.show(
+              `🚐 ${name} aboard — Full crew!`,
+              `${quip}\n\nFull crew loaded. Everyone's in (sort of).\n\nHead to the job site now. Your waypoint is set.`,
+              () => {
+                jobManager.advanceToPhase3();
+                waypointSystem.setTarget(jobManager.activeJob!.position);
+                hud.showCrewPickup(name, null);
+                hud.setActiveJob(jobManager.activeJob, 3);
+                jobCompleting = false;
+              }
+            );
+          } else {
+            const nextCrew = jobManager.nextCrewNeeded();
+            const stillNeeded = jobManager.crewToPickup
+              .filter(n => !jobManager.crewPickedUp.includes(n))
+              .join(', ');
+            dialoguePause.show(
+              `🧑‍🔧 ${name} aboard!`,
+              `${quip}\n\nStill need to collect:\n👷 ${stillNeeded}`,
+              () => {
+                if (nextCrew) {
+                  const nextPos = characters.getCrewPosition(nextCrew);
+                  waypointSystem.setTarget(nextPos);
+                  hud.showCrewPickup(name, nextCrew);
+                }
+                hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
+                jobCompleting = false;
+              }
+            );
+          }
+          break;
         }
       }
     }
 
-    // ── Phase 3: job site arrival → troweling mini-game ───────────────────────
+    // ── Phase 3: job site arrival → briefing → mini-game ─────────────────────
     if (
       jobManager.activeJob &&
       jobManager.activePhase === 3 &&
@@ -358,24 +405,26 @@ async function main() {
       if (arrived !== null) {
         jobCompleting = true;
         waypointSystem.setTarget(null);
-        hud.setActiveJob(null, 3);
-        hud.updateCrewStatus([], [], false);
 
-        // Launch the troweling mini-game
-        miniGameManager.startRandom((result) => {
-          const earned = jobManager.completeJob(arrived, result.qualityPct);
-          hud.showJobComplete(arrived.title, earned);
-          hud.updateMoney(jobManager.money);
-          // Restore all crew to their city positions for next job
-          characters.showAllCrew();
-          jobCompleting = false;
-          setTimeout(() => {
-            const available = jobManager.getAvailableJobs();
-            if (available.length > 0) {
-              jobBoard.show(available);
-            }
-          }, 3500);
-        });
+        dialoguePause.show(
+          `🏗️ ${arrived.title}`,
+          `${arrived.client} is waiting.\n\n${arrived.description}\n\nTime to get to work. Show them what TEM does.`,
+          () => {
+            hud.setActiveJob(null, 3);
+            hud.updateCrewStatus([], [], false);
+            miniGameManager.startRandom((result) => {
+              const earned = jobManager.completeJob(arrived, result.qualityPct);
+              hud.showJobComplete(arrived.title, earned);
+              hud.updateMoney(jobManager.money);
+              characters.showAllCrew();
+              jobCompleting = false;
+              setTimeout(() => {
+                const available = jobManager.getAvailableJobs();
+                if (available.length > 0) jobBoard.show(available);
+              }, 3500);
+            });
+          }
+        );
       }
     }
 
@@ -402,7 +451,7 @@ async function main() {
     dbg.textContent = `${phase} | dist:${dist} | ${crew} | lock:${jobCompleting} | mg:${miniGameManager.isActive()}`;
   });
 
-  // Show job board on first load so player can pick a job immediately
+  // Show job board on first load
   setTimeout(() => {
     jobBoard.show(jobManager.getAvailableJobs());
   }, 1000);
