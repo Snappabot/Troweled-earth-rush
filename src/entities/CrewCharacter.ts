@@ -34,6 +34,7 @@ export class CrewCharacter {
   private walkAction!: THREE.AnimationAction;
   private idleAction!: THREE.AnimationAction;
   private currentAction!: THREE.AnimationAction;
+  private logoMesh!: THREE.Mesh;
 
   constructor(config: CrewConfig) {
     this.group = new THREE.Group();
@@ -94,6 +95,7 @@ export class CrewCharacter {
     const logoTex = this._makeLogo(cfg);
     const lp = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.50), new THREE.MeshBasicMaterial({ map: logoTex }));
     lp.position.set(0, 0.02, 0.145); spine.add(lp);
+    this.logoMesh = lp;
 
     // Pelvis
     addBox(hip, cfg.pantsColor, 0.44, 0.20, 0.26, 0, 0, 0);
@@ -194,6 +196,13 @@ export class CrewCharacter {
         break;
       }
     }
+  }
+
+  /** Replace the shirt logo texture after construction */
+  setLogoTexture(tex: THREE.Texture): void {
+    const mat = this.logoMesh.material as THREE.MeshBasicMaterial;
+    mat.map = tex;
+    mat.needsUpdate = true;
   }
 
   private _makeLogo(cfg: CrewConfig): THREE.Texture {

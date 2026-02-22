@@ -1,5 +1,51 @@
 import * as THREE from 'three';
 import { CrewCharacter, CREW_CONFIGS } from './CrewCharacter';
+/** TEM tree logo — black tree on white shirt background */
+function _makeConnieLogo() {
+    const cv = document.createElement('canvas');
+    cv.width = 256;
+    cv.height = 256;
+    const ctx = cv.getContext('2d');
+    // White shirt background
+    ctx.fillStyle = '#F0EDE8';
+    ctx.fillRect(0, 0, 256, 256);
+    ctx.strokeStyle = '#111111';
+    ctx.fillStyle = '#111111';
+    ctx.lineCap = 'round';
+    // Trunk (thick at base, taper toward top)
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.moveTo(128, 220);
+    ctx.lineTo(128, 150);
+    ctx.stroke();
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(128, 150);
+    ctx.lineTo(128, 95);
+    ctx.stroke();
+    // Branches — pairs radiating out and up
+    const branches = [
+        [128, 175, 78, 148], [128, 175, 178, 148],
+        [128, 158, 68, 132], [128, 158, 188, 132],
+        [128, 140, 80, 115], [128, 140, 176, 115],
+        [128, 122, 90, 98], [128, 122, 166, 98],
+        [128, 108, 100, 84], [128, 108, 156, 84],
+        [128, 97, 112, 70], [128, 97, 144, 70],
+        [128, 88, 120, 58], [128, 88, 136, 58],
+    ];
+    ctx.lineWidth = 4;
+    for (const [x1, y1, x2, y2] of branches) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        // Dot at branch tip
+        ctx.beginPath();
+        ctx.arc(x2, y2, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    return new THREE.CanvasTexture(cv);
+}
 // Out the front of the factory/workshop (workshop is at 10,15)
 const POS = { x: -4, z: -6 };
 const DIALOGUE = [
@@ -24,16 +70,17 @@ export class Connie {
         this.character = new CrewCharacter(CREW_CONFIGS['Connie']);
         // Tall — scale slightly taller than crew
         this.character.group.scale.set(2.0, 2.35, 2.0);
-        // ── Extra chest geometry (added in character group's local/pre-scale space) ──
-        // Spine world y ≈ 1.55 local → × scale = 3.64 world
-        // z = -0.17 local → front of torso
+        // ── Extra chest geometry — placed on front (+z) of torso ──
+        // Spine world y ≈ 1.55 local; character front is +z
         const bustMat = new THREE.MeshLambertMaterial({ color: 0xF0EDE8 });
         const bustL = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), bustMat);
-        bustL.position.set(-0.12, 1.55, -0.19);
+        bustL.position.set(-0.12, 1.55, 0.19);
         const bustR = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 6), bustMat);
-        bustR.position.set(0.12, 1.55, -0.19);
+        bustR.position.set(0.12, 1.55, 0.19);
         this.character.group.add(bustL);
         this.character.group.add(bustR);
+        // ── TEM tree logo on shirt (black tree on white, matching van/HQ logo) ──
+        this.character.setLogoTexture(_makeConnieLogo());
         // ── Name billboard — golden background ──
         const nameBoard = this._makeNameBoard();
         nameBoard.position.set(0, 8.8, 0);
