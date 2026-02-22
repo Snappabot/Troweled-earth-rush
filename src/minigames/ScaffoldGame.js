@@ -78,7 +78,7 @@ export class ScaffoldGame {
     _createOverlay() {
         this.overlay = document.createElement('div');
         this.overlay.style.cssText = `
-      position:fixed; inset:0; z-index:9000; overflow:hidden; touch-action:none;
+      position:fixed; inset:0; z-index:10000; overflow:hidden; touch-action:none;
       background:#87CEEB;
     `;
         document.body.appendChild(this.overlay);
