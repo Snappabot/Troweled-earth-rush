@@ -147,7 +147,7 @@ export class SpeechBubble {
         this.visible = true;
         if (this.hideTimeout !== null)
             clearTimeout(this.hideTimeout);
-        this.hideTimeout = window.setTimeout(() => this.hide(), 4500);
+        this.hideTimeout = window.setTimeout(() => this.hide(), 10000);
     }
     /** Update bubble anchor to sit above the given screen-space point (character head). */
     setScreenPosition(screenX, screenY) {
