@@ -140,11 +140,11 @@ async function main() {
             spillMeter.level = Math.max(0, spillMeter.level - 0.6);
             hud.showToast('☕ Coffee stop! Plaster calmed!', 0xD4622A);
         }
-        bladderMeter.update(dt, physics.speed);
+        bladderMeter.update(dt, jobManager.activeJob ? physics.speed : 0);
         if (bladderMeter.tryRelief(vanX, vanZ)) {
             hud.showToast('🚽 Ahhh relief! Back on the tools!', 0x2196F3);
         }
-        if (bladderMeter.isUrgent) {
+        if (bladderMeter.isUrgent && jobManager.activeJob) {
             const now = Date.now();
             if (now - bladderMeter.lastUrgentToast > 15000) {
                 bladderMeter.lastUrgentToast = now;
