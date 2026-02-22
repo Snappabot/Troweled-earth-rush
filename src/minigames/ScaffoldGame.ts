@@ -1281,43 +1281,222 @@ export class ScaffoldGame {
 
   // ─── Background ───────────────────────────────────────────────────────────
 
+  private drawCloud(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number): void {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.90)';
+    const rx = w / 2, ry = h / 2;
+    // Centre puff
+    ctx.beginPath(); ctx.ellipse(x + rx, y + ry, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    // Left puff
+    ctx.beginPath(); ctx.ellipse(x + rx * 0.35, y + ry * 1.1, rx * 0.55, ry * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+    // Right puff
+    ctx.beginPath(); ctx.ellipse(x + rx * 1.65, y + ry * 1.1, rx * 0.55, ry * 0.7, 0, 0, Math.PI * 2); ctx.fill();
+    // Top centre puff
+    ctx.beginPath(); ctx.ellipse(x + rx, y + ry * 0.4, rx * 0.5, ry * 0.65, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   private drawBackground(ctx: CanvasRenderingContext2D): void {
-    const skyGrad = ctx.createLinearGradient(0, 0, 0, VH);
-    skyGrad.addColorStop(0, '#87CEEB');
-    skyGrad.addColorStop(1, '#C5E8F5');
+    // ── Sky ───────────────────────────────────────────────────────────────────
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, 500);
+    skyGrad.addColorStop(0,   '#1A6DB5');
+    skyGrad.addColorStop(0.6, '#4A9ED4');
+    skyGrad.addColorStop(1,   '#A8D4ED');
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, VW, VH);
 
-    ctx.fillStyle = '#C2BEB6';
-    this.roundRect(ctx, 72, 60, 120, 540, 12); ctx.fill();
-    ctx.fillStyle = '#CAC6BE';
-    this.roundRect(ctx, 212, 60, 120, 540, 12); ctx.fill();
-    ctx.fillStyle = 'rgba(0,0,0,0.07)';
-    this.roundRect(ctx, 72, 60, 18, 540, 10); ctx.fill();
-    this.roundRect(ctx, 212, 60, 18, 540, 10); ctx.fill();
+    // ── Drifting clouds ───────────────────────────────────────────────────────
+    const c1x = ((this.gameTime * 12)       % (VW + 130)) - 65;
+    const c2x = ((this.gameTime * 8  + 150) % (VW + 130)) - 65;
+    const c3x = ((this.gameTime * 6  + 310) % (VW + 130)) - 65;
+    this.drawCloud(ctx, c1x, 28, 90, 36);
+    this.drawCloud(ctx, c2x, 52, 70, 28);
+    this.drawCloud(ctx, c3x, 14, 80, 32);
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 635, VW, 8);
-    const poolGrad = ctx.createLinearGradient(0, 643, 0, VH);
-    poolGrad.addColorStop(0, '#48B8C8');
-    poolGrad.addColorStop(1, '#2A9AAD');
-    ctx.fillStyle = poolGrad;
-    ctx.fillRect(0, 643, VW, VH - 643);
-
-    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 5; i++) {
-      const y = 660 + i * 8;
-      const off = Math.sin(this.gameTime * 2 + i) * 5;
-      ctx.beginPath();
-      ctx.moveTo(10 + off, y); ctx.lineTo(VW - 10 + off, y);
-      ctx.stroke();
+    // ── Background flanking buildings ─────────────────────────────────────────
+    ctx.fillStyle = '#9A9790';
+    ctx.fillRect(0, 160, 65, 465);
+    ctx.fillStyle = '#2A3A50';
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 2; col++) {
+        ctx.fillRect(8 + col * 25, 175 + row * 55, 14, 20);
+      }
+    }
+    ctx.fillStyle = '#9A9790';
+    ctx.fillRect(335, 120, 65, 505);
+    ctx.fillStyle = '#2A3A50';
+    for (let row = 0; row < 6; row++) {
+      for (let col = 0; col < 2; col++) {
+        ctx.fillRect(342 + col * 25, 135 + row * 55, 14, 20);
+      }
     }
 
-    ctx.fillStyle = '#8B7355';
-    ctx.fillRect(0, 625, VW, 15);
-    ctx.fillStyle = '#7A6345';
-    ctx.fillRect(0, 627, VW, 4);
+    // ── Main Victorian terrace house ──────────────────────────────────────────
+    const bx = 62, bw = 276, by = 88;
+    const facadeGrad = ctx.createLinearGradient(bx, by, bx + bw, by + 537);
+    facadeGrad.addColorStop(0,   '#EAE4DA');
+    facadeGrad.addColorStop(0.6, '#DED8CE');
+    facadeGrad.addColorStop(1,   '#D8D0C4');
+    ctx.fillStyle = facadeGrad;
+    ctx.fillRect(bx, by, bw, 537);
+
+    // Cornice / parapet
+    ctx.fillStyle = '#E0D8CC';
+    ctx.fillRect(bx - 4, by - 10, bw + 8, 16);
+    ctx.fillStyle = '#C8C0B4';
+    ctx.fillRect(bx - 4, by + 4, bw + 8, 4);
+    // Dentil blocks
+    ctx.fillStyle = '#D0C8BC';
+    for (let dx = bx + 4; dx < bx + bw - 4; dx += 14) {
+      ctx.fillRect(dx, by - 8, 9, 10);
+    }
+
+    // Floor band dividers
+    const floorBands = [100, 185, 270, 360, 450, 540];
+    for (const fy of floorBands) {
+      ctx.strokeStyle = '#C4BDB2'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(bx, fy); ctx.lineTo(bx + bw, fy); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,0.07)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(bx, fy + 2); ctx.lineTo(bx + bw, fy + 2); ctx.stroke();
+    }
+
+    // 4 floors × 4 windows — sash style
+    const winFloors = [105, 192, 278, 368];
+    const winXposns = [70, 122, 235, 287];
+    const winW = 30, winH = 42;
+    for (const wy of winFloors) {
+      for (const wx of winXposns) {
+        // Render surround
+        ctx.fillStyle = '#C4BDB2';
+        ctx.fillRect(wx - 4, wy - 4, winW + 8, winH + 8);
+        // Glass gradient
+        const glassGrad = ctx.createLinearGradient(wx, wy, wx + winW, wy + winH);
+        glassGrad.addColorStop(0, '#2A4A6A');
+        glassGrad.addColorStop(1, '#3A6080');
+        ctx.fillStyle = glassGrad;
+        ctx.fillRect(wx, wy, winW, winH);
+        // White glazing bars
+        ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(wx, wy + winH / 2); ctx.lineTo(wx + winW, wy + winH / 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(wx + winW / 2, wy); ctx.lineTo(wx + winW / 2, wy + winH); ctx.stroke();
+        // Glass highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillRect(wx + 1, wy + 1, winW / 2 - 1, winH / 2 - 1);
+        // Window sill
+        ctx.fillStyle = '#D0C8BC';
+        ctx.fillRect(wx - 5, wy + winH, winW + 10, 5);
+      }
+    }
+
+    // Ground floor — Victorian arched doorway
+    const doorX = 162, doorY = 462, doorW = 36, doorH = 90;
+    ctx.fillStyle = '#C4BDB2';
+    ctx.fillRect(doorX - 6, doorY - 6, doorW + 12, doorH + 6);
+    ctx.fillStyle = '#3A2510';
+    ctx.fillRect(doorX, doorY, doorW, doorH);
+    // Arch surround
+    ctx.fillStyle = '#C4BDB2';
+    ctx.beginPath();
+    ctx.arc(doorX + doorW / 2, doorY, doorW / 2 + 4, Math.PI, 0);
+    ctx.fill();
+    // Fanlight glass
+    ctx.fillStyle = '#4A7090';
+    ctx.beginPath();
+    ctx.arc(doorX + doorW / 2, doorY, doorW / 2, Math.PI, 0);
+    ctx.fill();
+    // Fanlight spokes
+    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 1;
+    const dcx = doorX + doorW / 2;
+    for (let a = 0; a < 4; a++) {
+      const ang = Math.PI + (a + 0.5) * (Math.PI / 4);
+      ctx.beginPath();
+      ctx.moveTo(dcx, doorY);
+      ctx.lineTo(dcx + Math.cos(ang) * doorW / 2, doorY + Math.sin(ang) * doorW / 2);
+      ctx.stroke();
+    }
+    // Door panels
+    ctx.strokeStyle = '#5A3820'; ctx.lineWidth = 1;
+    ctx.strokeRect(doorX + 3,            doorY + 5, doorW / 2 - 5, doorH * 0.35);
+    ctx.strokeRect(doorX + doorW / 2 + 2, doorY + 5, doorW / 2 - 5, doorH * 0.35);
+    ctx.strokeRect(doorX + 3,            doorY + doorH * 0.42, doorW / 2 - 5, doorH * 0.5);
+    ctx.strokeRect(doorX + doorW / 2 + 2, doorY + doorH * 0.42, doorW / 2 - 5, doorH * 0.5);
+    // Door step
+    ctx.fillStyle = '#B8B0A4';
+    ctx.fillRect(doorX - 8, doorY + doorH, doorW + 16, 6);
+
+    // Plaster-in-progress patch (top right of facade)
+    ctx.save();
+    ctx.fillStyle = '#F0EBE0';
+    ctx.fillRect(260, by + 10, 72, 100);
+    ctx.strokeStyle = 'rgba(200,190,175,0.5)'; ctx.lineWidth = 0.8;
+    for (let ly = by + 14; ly < by + 108; ly += 6) {
+      ctx.beginPath(); ctx.moveTo(262, ly); ctx.lineTo(330, ly); ctx.stroke();
+    }
+    ctx.fillStyle = '#8A7860';
+    ctx.font = 'bold 7px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('MARBELLINO', 296, by + 60);
+    ctx.fillText('IN PROGRESS', 296, by + 70);
+    ctx.restore();
+
+    // Iron lacework balcony rail at y=460
+    ctx.save();
+    ctx.strokeStyle = '#2A2A2A'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(bx, 460); ctx.lineTo(bx + bw, 460); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx, 490); ctx.lineTo(bx + bw, 490); ctx.stroke();
+    for (let vx = bx + 4; vx < bx + bw; vx += 8) {
+      ctx.beginPath(); ctx.moveTo(vx, 460); ctx.lineTo(vx, 490); ctx.stroke();
+    }
+    ctx.lineWidth = 0.8; ctx.strokeStyle = '#1A1A1A';
+    for (let vx = bx + 4; vx < bx + bw - 8; vx += 16) {
+      ctx.beginPath(); ctx.moveTo(vx, 460); ctx.lineTo(vx + 8, 475); ctx.lineTo(vx + 16, 460); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(vx, 490); ctx.lineTo(vx + 8, 475); ctx.lineTo(vx + 16, 490); ctx.stroke();
+    }
+    ctx.restore();
+
+    // ── Footpath ──────────────────────────────────────────────────────────────
+    ctx.fillStyle = '#B0A898';
+    ctx.fillRect(0, 625, VW, 22);
+    ctx.strokeStyle = '#9A9288'; ctx.lineWidth = 1;
+    for (let sx = 0; sx < VW; sx += 50) {
+      ctx.beginPath(); ctx.moveTo(sx, 625); ctx.lineTo(sx, 647); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(0, 636); ctx.lineTo(VW, 636); ctx.stroke();
+
+    // TEM render mixer/bucket at street level (left)
+    ctx.save();
+    ctx.translate(12, 590);
+    ctx.fillStyle = '#D4A044';
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(30, 0); ctx.lineTo(26, 35); ctx.lineTo(4, 35);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#A07030'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(15, -2, 10, Math.PI, 0); ctx.stroke();
+    ctx.fillStyle = '#7A5020';
+    ctx.font = 'bold 7px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('TEM', 15, 20);
+    ctx.restore();
+
+    // ── Death zone: plaster trough ────────────────────────────────────────────
+    ctx.fillStyle = '#F0EAD8';
+    ctx.fillRect(0, 647, VW, VH - 647);
+    ctx.fillStyle = '#C8BEA8';
+    ctx.fillRect(0, 647, VW, 6);
+    // Animated plaster ripples
+    ctx.strokeStyle = 'rgba(255,250,240,0.5)'; ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const ry = 660 + i * 8;
+      const off = Math.sin(this.gameTime * 2.5 + i * 1.2) * 6;
+      ctx.beginPath();
+      ctx.moveTo(10 + off, ry); ctx.lineTo(VW - 10 + off, ry);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#8A7860';
+    ctx.font = 'bold 10px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('🪣 PLASTER TROUGH', VW / 2, 685);
   }
 
   // ─── Rope ─────────────────────────────────────────────────────────────────
@@ -1352,40 +1531,85 @@ export class ScaffoldGame {
   // ─── Scaffold ─────────────────────────────────────────────────────────────
 
   private drawScaffold(ctx: CanvasRenderingContext2D): void {
-    const drawTower = (lx: number, rx: number): void => {
-      const top = 80, bot = 560;
-      ctx.strokeStyle = '#B8B8B8';
-      ctx.lineWidth   = 5;
-      ctx.beginPath(); ctx.moveTo(lx, top); ctx.lineTo(lx, bot); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(rx, top); ctx.lineTo(rx, bot); ctx.stroke();
+    const standards = [72, 186, 214, 328];
+    const ledgerYs  = [90, 100, 185, 270, 360, 450, 540, 625];
+    const bays: [number, number][] = [[72, 186], [214, 328]];
 
-      const sectionYs = [80, 185, 270, 360, 450, 540, 560];
-      ctx.strokeStyle = '#A0A0A0';
-      ctx.lineWidth   = 2;
-      for (let i = 0; i < sectionYs.length - 1; i++) {
-        const y1 = sectionYs[i];
-        const y2 = sectionYs[i + 1];
+    ctx.save();
+
+    // Vertical standards — galvanized steel with metallic gradient
+    for (const sx of standards) {
+      const poleGrad = ctx.createLinearGradient(sx - 2, 0, sx + 2, 0);
+      poleGrad.addColorStop(0,    '#A0A8AC');
+      poleGrad.addColorStop(0.35, '#E0E8EC');
+      poleGrad.addColorStop(0.65, '#E0E8EC');
+      poleGrad.addColorStop(1,    '#A0A8AC');
+      ctx.fillStyle = poleGrad;
+      ctx.fillRect(sx - 2, 88, 4, 537);
+      // Baseplate
+      ctx.fillStyle = '#8A9298';
+      ctx.fillRect(sx - 8, 622, 16, 4);
+    }
+
+    // Horizontal ledgers with coupler dots
+    for (const ly of ledgerYs) {
+      for (const [lx, rx] of bays) {
+        const ledGrad = ctx.createLinearGradient(0, ly - 1, 0, ly + 3);
+        ledGrad.addColorStop(0, '#D8E0E4');
+        ledGrad.addColorStop(1, '#A0A8AC');
+        ctx.fillStyle = ledGrad;
+        ctx.fillRect(lx - 2, ly - 1, rx - lx + 4, 3);
+        // Coupler dots
+        ctx.fillStyle = '#7A8890';
+        ctx.beginPath(); ctx.arc(lx, ly + 0.5, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(rx, ly + 0.5, 3.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    // Cross-bracing diagonals (X-pattern in each bay between floor sections)
+    ctx.strokeStyle = '#9AAAB2'; ctx.lineWidth = 1.5;
+    const sectionPairs: [number, number][] = [
+      [90, 185], [185, 270], [270, 360], [360, 450], [450, 540], [540, 625]
+    ];
+    for (const [y1, y2] of sectionPairs) {
+      for (const [lx, rx] of bays) {
         ctx.beginPath(); ctx.moveTo(lx, y1); ctx.lineTo(rx, y2); ctx.stroke();
         ctx.beginPath(); ctx.moveTo(rx, y1); ctx.lineTo(lx, y2); ctx.stroke();
       }
-    };
+    }
 
-    drawTower(80, 180);
-    drawTower(220, 320);
+    // Mid-span transoms (just above each main platform level)
+    const transomYs = [177, 262, 352, 442, 532];
+    for (const ty of transomYs) {
+      for (const [lx, rx] of bays) {
+        ctx.fillStyle = 'rgba(192,208,216,0.7)';
+        ctx.fillRect(lx, ty, rx - lx, 2);
+      }
+    }
 
+    ctx.restore();
+
+    // Ladders
     this.drawLadder(ctx, 130, 185, 540);
     this.drawLadder(ctx, 270, 185, 360);
   }
 
   private drawLadder(ctx: CanvasRenderingContext2D, x: number, yTop: number, yBot: number): void {
-    ctx.strokeStyle = '#909090';
-    ctx.lineWidth   = 2.5;
-    ctx.beginPath(); ctx.moveTo(x, yTop); ctx.lineTo(x, yBot); ctx.stroke();
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = '#A0A0A0';
-    for (let y = yTop; y <= yBot; y += 20) {
-      ctx.beginPath(); ctx.moveTo(x - 8, y); ctx.lineTo(x + 8, y); ctx.stroke();
+    ctx.save();
+    // Two side rails
+    ctx.strokeStyle = '#B0B8BC'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(x - 5, yTop); ctx.lineTo(x - 5, yBot); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x + 5, yTop); ctx.lineTo(x + 5, yBot); ctx.stroke();
+    // Steel rungs with metallic highlight
+    for (let ry = yTop + 4; ry <= yBot; ry += 18) {
+      const rungGrad = ctx.createLinearGradient(x - 7, ry, x + 7, ry + 3);
+      rungGrad.addColorStop(0,   '#909898');
+      rungGrad.addColorStop(0.4, '#D8E0E4');
+      rungGrad.addColorStop(1,   '#909898');
+      ctx.fillStyle = rungGrad;
+      ctx.fillRect(x - 7, ry, 14, 3);
     }
+    ctx.restore();
   }
 
   // ─── Platforms ────────────────────────────────────────────────────────────
@@ -1409,55 +1633,76 @@ export class ScaffoldGame {
 
       ctx.save();
 
+      // ── Scaffold boards visual ──────────────────────────────────────────────
+      const numPlanks = 4;
+      const plankH = ph; // each plank fills the height
+      const plankW = pw / numPlanks;
+
+      // Choose plank face colour by type
+      let faceCol  = '#C8A064';
+      let stripeCol = '#D4B07A';
+      let gapCol    = '#9A7848';
+      if (plat.type === 'moving')   { faceCol = '#B0A8D8'; stripeCol = '#C0BAE8'; gapCol = '#8880B8'; }
+      if (plat.type === 'crumbling') { faceCol = '#A87840'; stripeCol = '#B8885A'; gapCol = '#785028'; }
       if (plat.type === 'win') {
-        const grad = ctx.createLinearGradient(px, py, px + pw, py);
-        grad.addColorStop(0, '#FFD700');
-        grad.addColorStop(1, '#FFA500');
-        ctx.fillStyle = grad;
-      } else if (plat.type === 'crumbling') {
-        ctx.fillStyle = '#C8A040';
-      } else if (plat.type === 'moving') {
-        ctx.fillStyle = '#8080D0';
-      } else {
-        ctx.fillStyle = '#B0B0B0';
+        const winGrad = ctx.createLinearGradient(px, py, px + pw, py);
+        winGrad.addColorStop(0, '#FFD700');
+        winGrad.addColorStop(1, '#FFA500');
+        ctx.fillStyle = winGrad;
+        ctx.fillRect(px, py, pw, ph);
+        faceCol = '#FFD700'; stripeCol = '#FFE060'; gapCol = '#CC8800';
       }
 
-      this.roundRect(ctx, px, py, pw, ph, 2);
-      ctx.fill();
+      for (let p = 0; p < numPlanks; p++) {
+        const bpx = px + p * plankW;
+        // Main board face
+        ctx.fillStyle = faceCol;
+        ctx.fillRect(bpx, py, plankW - 1, plankH);
+        // Lighter stripe down centre
+        ctx.fillStyle = stripeCol;
+        ctx.fillRect(bpx + plankW * 0.3, py, plankW * 0.35, plankH);
+        // Dark gap between boards
+        ctx.fillStyle = gapCol;
+        ctx.fillRect(bpx + plankW - 1, py, 1, plankH);
+        // Wood grain lines
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)'; ctx.lineWidth = 0.5;
+        for (let g = 1; g < 4; g++) {
+          const gx = bpx + (plankW / 4) * g;
+          ctx.beginPath(); ctx.moveTo(gx, py); ctx.lineTo(gx, py + plankH); ctx.stroke();
+        }
+      }
 
-      ctx.strokeStyle = (plat.type === 'win') ? '#FFE57A' : (plat.type === 'crumbling') ? '#E8C060' : '#D8D8D8';
-      ctx.lineWidth = 1.5;
+      // Crumbling: crack lines across boards
+      if (plat.type === 'crumbling') {
+        ctx.strokeStyle = '#604020'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px + 22, py); ctx.lineTo(px + 30, py + ph); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(px + 58, py); ctx.lineTo(px + 64, py + ph); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(px + 85, py); ctx.lineTo(px + 90, py + ph); ctx.stroke();
+      }
+
+      // Toe boards on outer edges
+      ctx.fillStyle = gapCol;
+      ctx.fillRect(px, py - 8, 4, 8);           // left toe board
+      ctx.fillRect(px + pw - 4, py - 8, 4, 8);  // right toe board
+
+      // Handrail (thin bar 28px above platform, full width)
+      ctx.strokeStyle = gapCol; ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(px + 3, py + 1.5);
-      ctx.lineTo(px + pw - 3, py + 1.5);
+      ctx.moveTo(px, py - 28); ctx.lineTo(px + pw, py - 28);
       ctx.stroke();
 
-      if (plat.type === 'crumbling') {
-        ctx.strokeStyle = '#7A5010';
-        ctx.lineWidth   = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(px + 20, py + 1); ctx.lineTo(px + 28, py + 7); ctx.lineTo(px + 35, py + 2);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(px + 55, py + 2); ctx.lineTo(px + 60, py + 7); ctx.lineTo(px + 68, py + 1);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(px + 80, py + 3); ctx.lineTo(px + 87, py + 6); ctx.lineTo(px + 93, py + 1);
-        ctx.stroke();
-      }
-
+      // Moving platform: arrow indicator
       if (plat.type === 'moving') {
-        ctx.strokeStyle = '#F0F080';
-        ctx.lineWidth   = 1.5;
-        ctx.setLineDash([4, 3]);
-        ctx.strokeRect(px, py, pw, ph);
-        ctx.setLineDash([]);
-        ctx.fillStyle = 'rgba(255,255,200,0.7)';
-        ctx.font = 'bold 7px system-ui';
+        ctx.fillStyle = 'rgba(240,240,255,0.85)';
+        ctx.font = 'bold 9px system-ui';
         ctx.textAlign = 'center';
-        ctx.fillText('↔ MOVING', px + pw / 2, py + ph - 1);
+        ctx.fillText('↔', px + pw / 2, py + ph - 1);
       }
 
+      // Win platform: plank-texture overlay + label
       if (plat.type === 'win') {
         ctx.fillStyle = '#333';
         ctx.font = 'bold 9px system-ui, sans-serif';
@@ -1686,60 +1931,106 @@ export class ScaffoldGame {
 
   private drawJarradShape(ctx: CanvasRenderingContext2D, x: number, y: number, crouching: boolean, running: boolean): void {
     if (crouching) {
+      // ── Crouching pose ──────────────────────────────────────────────────────
+      // Black shirt body (compressed)
       ctx.fillStyle = '#111111';
-      ctx.fillRect(x, y + 8, 18, 14);
+      ctx.fillRect(x + 1, y + 12, 16, 12);
+      // Hi-vis vest panels
+      ctx.fillStyle = '#FF8C00';
+      ctx.fillRect(x + 1, y + 12, 5, 12);
+      ctx.fillRect(x + 12, y + 12, 5, 12);
+      // Reflective stripes
+      ctx.fillStyle = '#C8C8C8';
+      ctx.fillRect(x + 1, y + 15, 16, 2);
+      ctx.fillRect(x + 1, y + 20, 16, 2);
+      // Tool belt
+      ctx.fillStyle = '#7A5020';
+      ctx.fillRect(x + 1, y + 22, 16, 3);
 
-      ctx.fillStyle = '#FFFFFF';
-      ctx.beginPath(); ctx.arc(x + 5, y + 12, 2, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.arc(x + 13, y + 16, 2, 0, Math.PI * 2); ctx.fill();
-
+      // Head
       ctx.fillStyle = '#C8A080';
-      this.roundRect(ctx, x + 2, y, 14, 12, 3); ctx.fill();
+      this.roundRect(ctx, x + 2, y + 2, 14, 12, 3); ctx.fill();
 
-      ctx.fillStyle = '#1E1008';
-      ctx.fillRect(x + 1, y - 5, 16, 6);
+      // Hard hat (yellow, flattened in duck pose)
+      ctx.fillStyle = '#FFD700';
+      ctx.fillRect(x, y - 4, 18, 8);
+      ctx.fillRect(x - 2, y + 1, 22, 3);
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      ctx.fillRect(x + 1, y - 3, 16, 3);
 
+      // Glasses
       ctx.strokeStyle = '#1A1A1A'; ctx.lineWidth = 1.5;
-      ctx.strokeRect(x + 3, y + 3, 4, 3);
-      ctx.strokeRect(x + 9, y + 3, 4, 3);
+      ctx.strokeRect(x + 3, y + 5, 4, 3);
+      ctx.strokeRect(x + 9, y + 5, 4, 3);
 
+      // Beard
       ctx.fillStyle = '#2A1808';
-      ctx.fillRect(x + 4, y + 9, 9, 3);
+      ctx.fillRect(x + 4, y + 11, 9, 3);
 
+      // Tucked legs
       ctx.fillStyle = '#2A2A2A';
-      ctx.fillRect(x + 1,  y + 22, 7, 5);
-      ctx.fillRect(x + 10, y + 22, 7, 5);
+      ctx.fillRect(x + 1,  y + 25, 7, 7);
+      ctx.fillRect(x + 10, y + 25, 7, 7);
       return;
     }
 
-    // Normal Jarrad body
+    // ── Normal standing / running Jarrad ─────────────────────────────────────
+    // Black shirt body
     ctx.fillStyle = '#111111';
-    ctx.fillRect(x, y + 14, 18, 30);
+    ctx.fillRect(x + 1, y + 14, 16, 24);
 
-    // Plaster splats on body
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath(); ctx.arc(x + 5,  y + 22, 2.5, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 12, y + 28, 2,   0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 7,  y + 35, 1.5, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(x + 14, y + 19, 2,   0, Math.PI * 2); ctx.fill();
+    // Hi-vis vest left & right panels
+    ctx.fillStyle = '#FF8C00';
+    ctx.fillRect(x + 1,  y + 14, 5, 22);
+    ctx.fillRect(x + 12, y + 14, 5, 22);
+    // Shoulder straps
+    ctx.fillRect(x + 4,  y + 14, 3, 8);
+    ctx.fillRect(x + 11, y + 14, 3, 8);
 
-    // Head
+    // Reflective silver stripes across torso
+    ctx.fillStyle = '#C8C8C8';
+    ctx.fillRect(x + 1, y + 19, 16, 2);
+    ctx.fillRect(x + 1, y + 27, 16, 2);
+
+    // Plaster splats on vest
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.beginPath(); ctx.arc(x + 5,  y + 23, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x + 13, y + 32, 1.5, 0, Math.PI * 2); ctx.fill();
+
+    // Tool belt
+    ctx.fillStyle = '#7A5020';
+    ctx.fillRect(x + 1, y + 34, 16, 4);
+    ctx.fillStyle = '#5A3810';
+    ctx.fillRect(x + 2,  y + 35, 4, 3);
+    ctx.fillRect(x + 12, y + 35, 4, 3);
+
+    // Arms (hanging at sides)
+    ctx.fillStyle = '#C8A080';
+    ctx.fillRect(x - 3, y + 14, 4, 16);
+    ctx.fillRect(x + 17, y + 14, 4, 16);
+
+    // Head (skin tone)
     ctx.fillStyle = '#C8A080';
     this.roundRect(ctx, x + 2, y, 14, 14, 3); ctx.fill();
 
-    // Hair
-    ctx.fillStyle = '#1E1008';
-    ctx.fillRect(x + 1,  y - 7, 16, 8);
-    ctx.fillRect(x + 2,  y - 9, 5, 4);
-    ctx.fillRect(x + 10, y - 8, 4, 3);
+    // Hard hat (yellow dome + brim)
+    ctx.fillStyle = '#FFD700';
+    this.roundRect(ctx, x + 1, y - 10, 16, 12, 4); ctx.fill();
+    ctx.fillRect(x - 2, y, 22, 3); // brim
+    // Hat inner shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.1)';
+    ctx.fillRect(x + 2, y - 9, 14, 4);
+    // TEM logo on hat
+    ctx.fillStyle = '#CC9900';
+    ctx.font = 'bold 5px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText('TEM', x + 9, y - 2);
 
-    // Glasses
+    // Glasses (signature Jarrad rectangles)
     ctx.strokeStyle = '#1A1A1A'; ctx.lineWidth = 1.5;
     ctx.strokeRect(x + 3, y + 4, 4, 3);
     ctx.strokeRect(x + 9, y + 4, 4, 3);
-    ctx.beginPath();
-    ctx.moveTo(x + 7, y + 5.5); ctx.lineTo(x + 9, y + 5.5); ctx.stroke();
-
+    ctx.beginPath(); ctx.moveTo(x + 7, y + 5.5); ctx.lineTo(x + 9, y + 5.5); ctx.stroke();
     ctx.fillStyle = '#1A1A1A';
     ctx.fillRect(x + 4,  y + 5, 2, 2);
     ctx.fillRect(x + 10, y + 5, 2, 2);
@@ -1748,24 +2039,25 @@ export class ScaffoldGame {
     ctx.fillStyle = '#2A1808';
     ctx.fillRect(x + 4, y + 10, 9, 4);
 
-    // Legs — alternate every 8 frames when running
+    // Legs — dark work pants, alternate when running
     ctx.fillStyle = '#2A2A2A';
     if (running) {
       const legPhase = Math.floor(this.frameCount / 8) % 2 === 0;
       if (legPhase) {
-        // Left leg forward
-        ctx.fillRect(x + 1,  y + 38, 6, 14);
-        ctx.fillRect(x + 11, y + 44, 6, 8);
+        ctx.fillRect(x + 1,  y + 38, 7, 14);
+        ctx.fillRect(x + 10, y + 44, 7, 8);
       } else {
-        // Right leg forward
-        ctx.fillRect(x + 1,  y + 44, 6, 8);
-        ctx.fillRect(x + 11, y + 38, 6, 14);
+        ctx.fillRect(x + 1,  y + 44, 7, 8);
+        ctx.fillRect(x + 10, y + 38, 7, 14);
       }
     } else {
-      // Standing legs
-      ctx.fillRect(x + 2,  y + 44, 6, 8);
-      ctx.fillRect(x + 10, y + 44, 6, 8);
+      ctx.fillRect(x + 2,  y + 38, 7, 14);
+      ctx.fillRect(x + 9,  y + 38, 7, 14);
     }
+    // Boot tips
+    ctx.fillStyle = '#1A1A1A';
+    ctx.fillRect(x + 1,  y + 50, 9, 3);
+    ctx.fillRect(x + 8,  y + 50, 9, 3);
   }
 
   // ─── Pigeon ───────────────────────────────────────────────────────────────
