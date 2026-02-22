@@ -28,12 +28,20 @@ async function main() {
   const spillMeter = new SpillMeter();
   const hud = new HUD();
 
-  const physics = new VanPhysics(van, input, (intensity: number) => {
-    spillMeter.triggerBump(intensity);
-  }, engine.collisionWorld);
-
   // ── Job system ──────────────────────────────────────────────────────────────
   const jobManager = new JobManager();
+
+  const physics = new VanPhysics(van, input,
+    // Curb bump — 2.5% only after materials picked up (phase 2+)
+    (intensity: number) => {
+      if (jobManager.activePhase >= 2) spillMeter.triggerBump(intensity);
+    },
+    engine.collisionWorld,
+    // Building crash — 30% only after materials picked up
+    () => {
+      if (jobManager.activePhase >= 2) spillMeter.triggerCrash();
+    }
+  );
   const waypointSystem = new WaypointSystem(engine.scene);
 
   const jobBoard = new JobBoard((job) => {
@@ -181,6 +189,7 @@ async function main() {
       van.mesh.position.x = trafficResolved.x;
       van.mesh.position.z = trafficResolved.z;
       physics.applyImpulse(0, 0); // scrub speed only
+      if (jobManager.activePhase >= 2) spillMeter.triggerCrash();
     }
 
     waypointSystem.update(dt, vanX, vanZ);
@@ -190,6 +199,7 @@ async function main() {
       const result = jobManager.tickTravel(dt);
       hud.updateTravelTimer(jobManager.travelTimer);
       if (result?.failed) {
+        spillMeter.level = 0;
         waypointSystem.setTarget(null);
         hud.updateTravelTimer(null);
         hud.showTimerFail(150_000);
@@ -228,6 +238,7 @@ async function main() {
       if (jobManager.checkPhase1Arrival(vanX, vanZ)) {
         jobCompleting = true;
         jobManager.advanceToPhase2();
+        spillMeter.level = 0; // fresh bucket on pickup
 
         // Point waypoint at first required crew member
         const firstCrew = jobManager.nextCrewNeeded();

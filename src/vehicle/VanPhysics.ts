@@ -54,17 +54,19 @@ export class VanPhysics {
   private velocityAngle = 0;
   private prevPos = new THREE.Vector3();
   private onBump?: (intensity: number) => void;
+  private onBuildingHit?: () => void;
   private collisionWorld?: CollisionWorld;
 
   // Grid collision constants — road(4) + sidewalk(2) + tiny buffer(0.5)
   private readonly COLL_GRID = 40;
   private readonly COLL_ROAD_HALF = 6.5;
 
-  constructor(van: VanModel, input: InputManager, onBump?: (intensity: number) => void, collisionWorld?: CollisionWorld) {
+  constructor(van: VanModel, input: InputManager, onBump?: (intensity: number) => void, collisionWorld?: CollisionWorld, onBuildingHit?: () => void) {
     this.van = van;
     this.input = input;
     this.onBump = onBump;
     this.collisionWorld = collisionWorld;
+    this.onBuildingHit = onBuildingHit;
     this.velocityAngle = this.van.heading;
     this.prevPos.copy(this.van.mesh.position);
   }
@@ -137,6 +139,7 @@ export class VanPhysics {
       );
       if (aabbResolved.x !== this.van.mesh.position.x || aabbResolved.z !== this.van.mesh.position.z) {
         this._speed *= 0.65;  // scrub speed on building hit
+        this.onBuildingHit?.();
         this.van.mesh.position.x = aabbResolved.x;
         this.van.mesh.position.z = aabbResolved.z;
       }

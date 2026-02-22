@@ -124,7 +124,7 @@ export class SpillMeter {
   /** Call every frame with dt in seconds */
   update(dt: number): void {
     // Slowly drain when not bumping
-    this.level = Math.max(0, this.level - dt * 0.05 / this.spillRateMultiplier);
+    // No passive drain — only bumps and crashes affect the meter
 
     // Update fill bar width
     const pct = this.level * 100;
@@ -170,7 +170,13 @@ export class SpillMeter {
   }
 
   /** Called when the van hits a curb */
-  triggerBump(intensity: number): void {
-    this.addSpill(intensity * 0.3);
+  /** Curb crossing — 2.5% spill */
+  triggerBump(_intensity: number): void {
+    this.addSpill(0.025);
+  }
+
+  /** Crash into building or traffic car — 30% spill */
+  triggerCrash(): void {
+    this.addSpill(0.30);
   }
 }
