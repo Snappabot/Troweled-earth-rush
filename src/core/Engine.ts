@@ -5,6 +5,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { CameraController } from '../world/CameraController';
 import { CollisionWorld } from './CollisionWorld';
+import { makeTEMTreeTexture } from '../utils/TreeTexture';
 
 export class Engine {
   renderer!: THREE.WebGLRenderer;
@@ -1998,6 +1999,15 @@ export class Engine {
     // ── Side signage: small TEM logo block on right side ─────────────────────
     this.addBox(group, signCol, 0.3, 2.5, 6, 15.16, 4, 0);
     this.addBox(group, textCol, 0.32, 2.0, 5.5, 15.17, 4, 0);
+
+    // ── TEM tree logo on front face — either side of roller door ─────────────
+    const wsTex = makeTEMTreeTexture(256);
+    const wsMat = new THREE.MeshLambertMaterial({ map: wsTex, transparent: false });
+    for (const lx of [-10, 10]) {
+      const logo = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 2.8), wsMat.clone());
+      logo.position.set(lx, 3.2, -10.38);
+      group.add(logo);
+    }
 
     group.position.set(x, 0, z);
     this.scene.add(group);
