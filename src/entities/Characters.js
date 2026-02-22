@@ -7,6 +7,7 @@ const CREW_CITY_POSITIONS = {
     Phil: { x: -40, z: 80 }, // Brunswick north
     Tsuyoshi: { x: 120, z: -40 }, // Richmond far
     Fabio: { x: -120, z: 40 }, // Footscray
+    Joe: { x: 0, z: -120 }, // CBD south
 };
 /**
  * TEM Crew Characters — low-poly 3D avatars
@@ -32,6 +33,7 @@ export class Characters {
             Phil: () => this.buildPhil(),
             Tsuyoshi: () => this.buildTsuyoshi(),
             Fabio: () => this.buildFabio(),
+            Joe: () => this.buildJoe(),
         };
         for (const [name, pos] of Object.entries(CREW_CITY_POSITIONS)) {
             const wrapper = new THREE.Group();
@@ -133,7 +135,7 @@ export class Characters {
             ctx.stroke();
         }
         // Small leaf dots at branch tips
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = logoHex;
         const leafTips = [[160, 240], [352, 240], [180, 200], [332, 200], [200, 170], [312, 170], [230, 155], [282, 155], [256, 145]];
         for (const [lx, ly] of leafTips) {
             ctx.beginPath();
@@ -141,7 +143,7 @@ export class Characters {
             ctx.fill();
         }
         // "TROWELED EARTH" text — bottom of canvas
-        ctx.fillStyle = '#FFFFFF';
+        ctx.fillStyle = logoHex;
         ctx.font = 'bold 44px Arial, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -149,8 +151,10 @@ export class Characters {
         ctx.fillText('EARTH', 256, 480);
         // Character name tag — small, above "TROWELED EARTH"
         ctx.font = '28px Arial, sans-serif';
-        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillStyle = logoHex;
+        ctx.globalAlpha = 0.6;
         ctx.fillText(name.toUpperCase(), 256, 395);
+        ctx.globalAlpha = 1.0;
         return new THREE.CanvasTexture(canvas);
     }
     // ── Jose ──────────────────────────────────────────────────────────────────
@@ -205,7 +209,7 @@ export class Characters {
     buildJarrad() {
         const g = new THREE.Group();
         const skin = 0xC8A080;
-        const shirt = 0x111111;
+        const shirt = 0x0A0A0A;
         const pants = 0x2A2A2A;
         const hair = 0x1E1008;
         this.addBox(g, pants, 0.40, 0.9, 0.33, -0.17, 0.45, 0);
@@ -247,7 +251,7 @@ export class Characters {
     buildMatt() {
         const g = new THREE.Group();
         const skin = 0xC8956A;
-        const shirt = 0x333330;
+        const shirt = 0x0A0A0A;
         const pants = 0x282828;
         const beard = 0x3A2010;
         const hair = 0x2E1E0E;
@@ -327,7 +331,7 @@ export class Characters {
         this.addSphere(g, 0xCCC8C0, 0.04, 0.28, 1.75, 0.265);
         // Shirt logo panel (front face of shirt)
         // shirt box: 1.0 wide, 1.1 tall, 0.52 deep, centre y=1.55 → front z = 0.26 + 0.005 = 0.265
-        const shirtTex = this.createShirtTexture('Phil', shirt);
+        const shirtTex = this.createShirtTexture('Phil', shirt, 0x111111);
         const logoPanelMat = new THREE.MeshBasicMaterial({ map: shirtTex, transparent: false });
         const logoPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.96, 1.02), logoPanelMat);
         logoPanel.position.set(0, 1.55, 0.265);
@@ -338,7 +342,7 @@ export class Characters {
     buildTsuyoshi() {
         const g = new THREE.Group();
         const skin = 0xB88858;
-        const shirt = 0x1A1A18;
+        const shirt = 0x0A0A0A;
         const pants = 0x222220;
         const hawk = 0x0A0A08;
         this.addBox(g, pants, 0.40, 0.92, 0.34, -0.17, 0.46, 0);
@@ -381,7 +385,7 @@ export class Characters {
     buildFabio() {
         const g = new THREE.Group();
         const skin = 0xBE8E60;
-        const shirt = 0x607080;
+        const shirt = 0x1B7EC4;
         const pants = 0x282830;
         this.addBox(g, pants, 0.44, 0.95, 0.36, -0.19, 0.475, 0);
         this.addBox(g, pants, 0.44, 0.95, 0.36, 0.19, 0.475, 0);
@@ -414,6 +418,46 @@ export class Characters {
         const logoPanelMat = new THREE.MeshBasicMaterial({ map: shirtTex, transparent: false });
         const logoPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.80, 0.92), logoPanelMat);
         logoPanel.position.set(0, 1.42, 0.235);
+        g.add(logoPanel);
+        return g;
+    }
+    // ── Joe ───────────────────────────────────────────────────────────────────
+    // Tall site foreman — yellow hi-vis top, white hard hat, no-nonsense
+    buildJoe() {
+        const g = new THREE.Group();
+        const skin = 0xD4A070;
+        const hivis = 0xF0C000; // yellow hi-vis
+        const pants = 0x2A2A38;
+        const helmet = 0xF5F5F0; // white hard hat
+        // Legs
+        this.addBox(g, pants, 0.46, 1.05, 0.36, -0.20, 0.525, 0);
+        this.addBox(g, pants, 0.46, 1.05, 0.36, 0.20, 0.525, 0);
+        // Boots
+        this.addBox(g, 0x1A1A18, 0.48, 0.20, 0.42, -0.20, 0.10, 0.04);
+        this.addBox(g, 0x1A1A18, 0.48, 0.20, 0.42, 0.20, 0.10, 0.04);
+        // Hi-vis body (slightly taller/broader — site foreman physique)
+        this.addBox(g, hivis, 0.94, 1.12, 0.50, 0, 1.56, 0);
+        // Reflective stripes (two white bands across chest)
+        this.addBox(g, 0xFFFFFF, 0.96, 0.10, 0.52, 0, 1.85, 0);
+        this.addBox(g, 0xFFFFFF, 0.96, 0.10, 0.52, 0, 1.45, 0);
+        // Arms (hi-vis sleeves)
+        this.addBox(g, hivis, 0.22, 0.86, 0.22, -0.60, 1.38, 0);
+        this.addBox(g, hivis, 0.22, 0.86, 0.22, 0.60, 1.38, 0);
+        // Hands
+        this.addBox(g, skin, 0.20, 0.20, 0.20, -0.60, 0.90, 0);
+        this.addBox(g, skin, 0.20, 0.20, 0.20, 0.60, 0.90, 0);
+        // Neck
+        this.addBox(g, skin, 0.24, 0.26, 0.24, 0, 2.23, 0);
+        // Head
+        this.addSphere(g, skin, 0.44, 0, 2.76, 0);
+        // White hard hat — brim + dome
+        this.addBox(g, helmet, 1.10, 0.10, 1.10, 0, 3.08, -0.04); // brim
+        this.addBox(g, helmet, 0.82, 0.36, 0.82, 0, 3.28, -0.04); // dome
+        // Hi-vis shirt logo panel
+        const shirtTex = this.createShirtTexture('Joe', hivis, 0x1A1A1A);
+        const logoPanelMat = new THREE.MeshBasicMaterial({ map: shirtTex, transparent: false });
+        const logoPanel = new THREE.Mesh(new THREE.PlaneGeometry(0.88, 1.04), logoPanelMat);
+        logoPanel.position.set(0, 1.56, 0.256);
         g.add(logoPanel);
         return g;
     }
