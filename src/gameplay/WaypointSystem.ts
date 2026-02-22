@@ -111,6 +111,11 @@ export class WaypointSystem {
     this.setTarget(job?.position ?? null);
   }
 
+  /** Returns the current target position so callers can save/restore it. */
+  get currentTarget(): { x: number; z: number } | null {
+    return this.targetPos ? { ...this.targetPos } : null;
+  }
+
   update(dt: number, vanX: number, vanZ: number): void {
     this.time += dt;
 
