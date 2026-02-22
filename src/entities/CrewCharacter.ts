@@ -226,8 +226,8 @@ export class CrewCharacter {
   /** Jump rope animation — bouncing with arms out holding rope */
   buildJumpRopeClip(): THREE.AnimationClip {
     const D = Math.PI / 180;
-    const dur = 0.5;
-    const t = [0, 0.125, 0.25, 0.375, 0.5];
+    const dur = 0.9; // ~1 jump per second — matches rope rotation speed
+    const t = [0, 0.225, 0.45, 0.675, 0.9];
     const q = (rx: number, ry = 0, rz = 0) =>
       Array.from(new THREE.Quaternion().setFromEuler(new THREE.Euler(rx * D, ry * D, rz * D)).toArray());
 

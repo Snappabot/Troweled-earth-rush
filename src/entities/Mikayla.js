@@ -21,6 +21,7 @@ export class Mikayla {
     wrapper;
     character;
     ropeRing;
+    ropePivot;
     lastDialogue = 0;
     cooldown = 9000; // ms between lines
     constructor(scene) {
@@ -31,11 +32,17 @@ export class Mikayla {
         // Stop the default idle, play jump rope
         this.character.mixer.stopAllAction();
         this.character.mixer.clipAction(jumpClip).play();
-        // ── Rope prop — torus spinning above head in local space ──
-        this.ropeRing = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.045, 7, 24), new THREE.MeshLambertMaterial({ color: 0x7B4A1E }));
-        // y=3.0 in local (×2 scale = 6.0 world) — above her head
-        this.ropeRing.position.set(0, 3.0, 0);
-        this.character.group.add(this.ropeRing);
+        // ── Rope prop ──────────────────────────────────────────────────────────────
+        // Pivot at mid-body (y=1.3 local = 2.6 world after ×2 scale)
+        // Torus radius 1.35 → arcs from y≈0 (under feet) to y≈2.6 (over head)
+        // pivot.rotation.y = PI/2 → ring sits in the YZ plane (goes front-to-back)
+        // Spinning the torus around its own Z axis sweeps it front-to-back over her
+        this.ropePivot = new THREE.Group();
+        this.ropePivot.position.set(0, 1.3, 0);
+        this.ropePivot.rotation.y = Math.PI / 2;
+        this.character.group.add(this.ropePivot);
+        this.ropeRing = new THREE.Mesh(new THREE.TorusGeometry(1.35, 0.05, 7, 28), new THREE.MeshLambertMaterial({ color: 0x7B4A1E }));
+        this.ropePivot.add(this.ropeRing);
         // ── Name billboard — pink background ──
         const nameBoard = this._makeNameBoard();
         nameBoard.position.set(0, 8.8, 0);
@@ -75,8 +82,9 @@ export class Mikayla {
     update(dt, vanX, vanZ, speechBubble) {
         // Animation tick
         this.character.update(dt);
-        // Spin rope around X axis — arcs over head front-to-back like a real jump rope
-        this.ropeRing.rotation.x += dt * Math.PI * 3.2;
+        // Spin around pivot's Z axis (= world X) — sweeps front-to-back over her head
+        // ~1.1 rotations/sec — comfortable, visible jump rope pace
+        this.ropeRing.rotation.z += dt * Math.PI * 2.2;
         // Always face the van
         const dx = vanX - POS.x;
         const dz = vanZ - POS.z;
