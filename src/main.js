@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { Engine } from './core/Engine';
 import { Characters } from './entities/Characters';
 import { VanModel } from './vehicle/VanModel';
@@ -102,6 +103,7 @@ async function main() {
     const bladderMeter = new BladderMeter();
     const mikayla = new Mikayla(engine.scene);
     const speechBubble = new SpeechBubble();
+    const mikaylaHeadPos = new THREE.Vector3(Mikayla.POS.x, 6.0, Mikayla.POS.z);
     // Mini-game manager — overlays the world for plastering mini-games
     const miniGameManager = new MiniGameManager();
     // ── 📸 Photos button + Achievement Gallery ───────────────────────────────────
@@ -180,6 +182,13 @@ async function main() {
         }
         spillMeter.spillRateMultiplier = bladderMeter.spillMultiplier;
         mikayla.update(dt, vanX, vanZ, speechBubble);
+        // Project Mikayla's head to screen — keep bubble above her head
+        {
+            const projected = mikaylaHeadPos.clone().project(engine.camera.camera);
+            const sx = (projected.x * 0.5 + 0.5) * window.innerWidth;
+            const sy = (-projected.y * 0.5 + 0.5) * window.innerHeight;
+            speechBubble.setScreenPosition(sx, sy);
+        }
         traffic.update(dt, vanX, vanZ);
         pedestrians.update(dt, vanX, vanZ);
         // Traffic collision — AABB resolve (ejects van from car immediately)

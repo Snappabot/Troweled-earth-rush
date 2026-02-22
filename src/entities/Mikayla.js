@@ -82,9 +82,7 @@ export class Mikayla {
     update(dt, vanX, vanZ, speechBubble) {
         // Animation tick
         this.character.update(dt);
-        // Spin around pivot's Z axis (= world X) — sweeps front-to-back over her head
-        // ~1.1 rotations/sec — comfortable, visible jump rope pace
-        this.ropeRing.rotation.z += dt * Math.PI * 2.2;
+        // Rope is static — no rotation, sits as an arc prop
         // Always face the van
         const dx = vanX - POS.x;
         const dz = vanZ - POS.z;

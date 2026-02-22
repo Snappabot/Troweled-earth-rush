@@ -24,9 +24,10 @@ export class SpeechBubble {
         style.textContent = `
       #tem-speech-bubble {
         position: fixed;
-        bottom: 220px;
-        left: 50%;
-        transform: translateX(-50%) scale(0.85);
+        left: 0;
+        top: 0;
+        /* transform is set dynamically to position above character */
+        transform: translate(-50%, -115%) scale(0.85);
         display: none;
         align-items: flex-end;
         gap: 14px;
@@ -35,7 +36,7 @@ export class SpeechBubble {
         padding: 12px 18px 12px 12px;
         box-shadow: 0 6px 28px rgba(0,0,0,0.28), 0 1px 4px rgba(0,0,0,0.12);
         border: 2.5px solid #e8e8e8;
-        width: 310px;
+        width: 290px;
         z-index: 1001;
         opacity: 0;
         transition: opacity 0.18s ease, transform 0.18s ease;
@@ -43,7 +44,7 @@ export class SpeechBubble {
       }
       #tem-speech-bubble.sb-visible {
         opacity: 1;
-        transform: translateX(-50%) scale(1);
+        transform: translate(-50%, -115%) scale(1);
       }
       /* Tail pointing downward */
       #tem-speech-bubble::after {
@@ -147,6 +148,11 @@ export class SpeechBubble {
         if (this.hideTimeout !== null)
             clearTimeout(this.hideTimeout);
         this.hideTimeout = window.setTimeout(() => this.hide(), 4500);
+    }
+    /** Update bubble anchor to sit above the given screen-space point (character head). */
+    setScreenPosition(screenX, screenY) {
+        this.container.style.left = `${screenX}px`;
+        this.container.style.top = `${screenY}px`;
     }
     hide() {
         this.container.classList.remove('sb-visible');
