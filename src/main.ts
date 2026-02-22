@@ -164,18 +164,24 @@ async function main() {
     coffeeShop.update(dt);
     if (coffeeShop.tryVisit(vanX, vanZ)) {
       spillMeter.level = Math.max(0, spillMeter.level - 0.6);
-      hud.showToast('☕ Coffee stop! Plaster calmed!', 0xD4622A);
+      bladderMeter.drinkCoffee();
+      const urgentAfter = bladderMeter.isUrgent;
+      if (urgentAfter) {
+        hud.showToast('☕ Coffeed up — now find a toilet, fast!', 0xD4622A);
+      } else {
+        hud.showToast('☕ Coffee hit! Plaster steady, bladder loading...', 0xD4622A);
+      }
     }
 
     bladderMeter.update(dt, jobManager.activeJob ? physics.speed : 0);
     if (bladderMeter.tryRelief(vanX, vanZ)) {
-      hud.showToast('🚽 Ahhh relief! Back on the tools!', 0x2196F3);
+      hud.showToast('🚽 Ahhh! Relief! Ready for the next coffee ☕', 0x2196F3);
     }
     if (bladderMeter.isUrgent && jobManager.activeJob) {
       const now = Date.now();
       if (now - bladderMeter.lastUrgentToast > 15000) {
         bladderMeter.lastUrgentToast = now;
-        hud.showToast('🚽 Need a pee break! Find the toilet!', 0xFF5722);
+        hud.showToast('🚽 Bursting! Find the toilet before you spill!', 0xFF5722);
       }
     }
     spillMeter.spillRateMultiplier = bladderMeter.spillMultiplier;

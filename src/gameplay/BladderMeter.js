@@ -2,13 +2,30 @@ export class BladderMeter {
     level = 0; // 0.0–1.0
     isUrgent = false;
     lastUrgentToast = 0; // timestamp ms
+    /** True for 30s after drinking coffee — bladder fills 1.5x faster */
+    caffeinated = false;
+    caffeineTimer = 0;
     update(dt, vanSpeed) {
+        // Tick caffeine countdown
+        if (this.caffeinated) {
+            this.caffeineTimer -= dt;
+            if (this.caffeineTimer <= 0)
+                this.caffeinated = false;
+        }
+        const fillRate = this.caffeinated ? 0.018 : 0.012;
         if (Math.abs(vanSpeed) > 2) {
-            this.level = Math.min(1, this.level + dt * 0.012);
+            this.level = Math.min(1, this.level + dt * fillRate);
         }
         else {
             this.level = Math.max(0, this.level - dt * 0.005);
         }
+        this.isUrgent = this.level > 0.8;
+    }
+    /** Call when player visits the coffee shop */
+    drinkCoffee() {
+        this.level = Math.min(1, this.level + 0.4); // spike bladder +40%
+        this.caffeinated = true;
+        this.caffeineTimer = 30; // 30s caffeinated state
         this.isUrgent = this.level > 0.8;
     }
     tryRelief(vanX, vanZ) {
@@ -20,6 +37,8 @@ export class BladderMeter {
             return false;
         this.level = 0;
         this.isUrgent = false;
+        this.caffeinated = false;
+        this.caffeineTimer = 0;
         return true;
     }
     get spillMultiplier() {
