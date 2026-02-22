@@ -170,6 +170,12 @@ async function main() {
   // Guard to prevent job completion firing more than once per arrival
   let jobCompleting = false;
 
+  // ── Break stops between workshop and crew pickup ─────────────────────────────
+  let coffeeStopNeeded = false;  // true after workshop loads — must visit coffee shop
+  let toiletStopNeeded = false;  // true after coffee — must hit the toilet first
+  const COFFEE_STOP_POS = { x: -60, z: -100 };
+  const TOILET_STOP_POS = { x: 100, z: 60 };
+
   // ── Debug panel ──────────────────────────────────────────────────────────────
   const dbg = document.createElement('div');
   dbg.style.cssText = `
@@ -218,7 +224,8 @@ async function main() {
 
     // ── Coffee shop + Bladder mechanic ────────────────────────────────────────
     coffeeShop.update(dt);
-    if (coffeeShop.tryVisit(vanX, vanZ)) {
+    if (coffeeShop.tryVisit(vanX, vanZ) && !coffeeStopNeeded) {
+      // Normal visit — coffeeStopNeeded handled separately as a job waypoint
       spillMeter.level = Math.max(0, spillMeter.level - 0.6);
       bladderMeter.drinkCoffee();
       const urgentAfter = bladderMeter.isUrgent;
@@ -230,7 +237,8 @@ async function main() {
     }
 
     bladderMeter.update(dt, jobManager.activeJob ? physics.speed : 0);
-    if (bladderMeter.tryRelief(vanX, vanZ)) {
+    if (bladderMeter.tryRelief(vanX, vanZ) && !toiletStopNeeded) {
+      // Normal visit — toiletStopNeeded handled separately as a job waypoint
       hud.showToast('🚽 Ahhh! Relief! Ready for the next coffee ☕', 0x2196F3);
     }
     if (bladderMeter.isUrgent && jobManager.activeJob) {
@@ -324,16 +332,58 @@ async function main() {
         const crewNames = jobManager.crewToPickup.join(' + ');
         dialoguePause.show(
           '📦 Supplies Loaded!',
-          `Connie's cackle echoes through the factory as the buckets go in.\n\nNow go pick up the crew:\n👷 ${crewNames}\n\nThey're scattered around the city. Your waypoint will guide you.`,
+          `Connie's cackle echoes through the factory as the buckets go in.\n\n"One sec — grab a coffee before you go. You look terrible."\n\n☕ Hit the cafe first, then collect the crew:\n👷 ${crewNames}`,
           () => {
             jobManager.advanceToPhase2();
-            const firstCrew = jobManager.nextCrewNeeded();
+            coffeeStopNeeded = true;
+            toiletStopNeeded = false;
+            waypointSystem.setTarget(COFFEE_STOP_POS);
+            hud.showPhase1Complete();
+            hud.setActiveJob(jobManager.activeJob, 2);
+            hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, false);
+            jobCompleting = false;
+          }
+        );
+      }
+    }
+
+    // ── Phase 2: coffee stop ──────────────────────────────────────────────────
+    if (jobManager.activeJob && jobManager.activePhase === 2 && coffeeStopNeeded && !jobCompleting) {
+      const dx = vanX - COFFEE_STOP_POS.x;
+      const dz = vanZ - COFFEE_STOP_POS.z;
+      if (Math.sqrt(dx * dx + dz * dz) < 14) {
+        jobCompleting = true;
+        coffeeStopNeeded = false;
+        bladderMeter.drinkCoffee();
+        dialoguePause.show(
+          '☕ Coffee Break!',
+          `You grab a flat white. The barista knows your order.\n\nBladder's filing fast...\n\n🚽 Better hit the toilet before you collect the crew.`,
+          () => {
+            toiletStopNeeded = true;
+            waypointSystem.setTarget(TOILET_STOP_POS);
+            jobCompleting = false;
+          }
+        );
+      }
+    }
+
+    // ── Phase 2: toilet stop ──────────────────────────────────────────────────
+    if (jobManager.activeJob && jobManager.activePhase === 2 && toiletStopNeeded && !jobCompleting) {
+      const dx = vanX - TOILET_STOP_POS.x;
+      const dz = vanZ - TOILET_STOP_POS.z;
+      if (Math.sqrt(dx * dx + dz * dz) < 14) {
+        jobCompleting = true;
+        toiletStopNeeded = false;
+        bladderMeter.tryRelief(vanX, vanZ); // reset bladder
+        const firstCrew = jobManager.nextCrewNeeded();
+        dialoguePause.show(
+          '🚽 Crisis Averted!',
+          `Ahhh. Much better.\n\nNow let's go get the crew.\n👷 ${jobManager.crewToPickup.join(' + ')}\n\nYour waypoint will guide you.`,
+          () => {
             if (firstCrew) {
               const crewPos = characters.getCrewPosition(firstCrew);
               waypointSystem.setTarget(crewPos);
             }
-            hud.showPhase1Complete();
-            hud.setActiveJob(jobManager.activeJob, 2);
             hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
             jobCompleting = false;
           }
@@ -342,7 +392,7 @@ async function main() {
     }
 
     // ── Phase 2: crew pickup ──────────────────────────────────────────────────
-    if (jobManager.activeJob && jobManager.activePhase === 2 && !jobCompleting) {
+    if (jobManager.activeJob && jobManager.activePhase === 2 && !coffeeStopNeeded && !toiletStopNeeded && !jobCompleting) {
       for (const name of jobManager.crewToPickup) {
         if (jobManager.crewPickedUp.includes(name)) continue;
 
@@ -421,6 +471,8 @@ async function main() {
               hud.showJobComplete(arrived.title, earned);
               hud.updateMoney(jobManager.money);
               characters.showAllCrew();
+              coffeeStopNeeded = false;
+              toiletStopNeeded = false;
               jobCompleting = false;
               setTimeout(() => {
                 const available = jobManager.getAvailableJobs();
