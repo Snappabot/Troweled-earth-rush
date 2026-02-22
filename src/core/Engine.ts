@@ -247,14 +247,14 @@ export class Engine {
         }
       }
 
-      // Parked cars
+      // Parked cars — rotated PI/2 so car length runs parallel to road (along X)
       for (let x = -RANGE + 8; x < RANGE; x += 17) {
         const cr = this.seed(x, z, 60);
         if (cr > 0.45) {
           const side = cr > 0.72 ? 1 : -1;
           const px = x + (this.seed(x, z, 61) - 0.5) * 4;
-          const pz = z + side * (ROAD_W / 2 + 1.1);
-          this.addParkedCar(px, pz, x + side * 3, z + 7);
+          const pz = z + side * (ROAD_W / 2 + 2.0); // 6.0 from road centre — clear of road edge (4.0)
+          this.addParkedCar(px, pz, x + side * 3, z + 7, Math.PI / 2);
         }
       }
     }
@@ -309,14 +309,14 @@ export class Engine {
         }
       }
 
-      // Parked cars
+      // Parked cars — no rotation, car length naturally runs along Z (parallel to road)
       for (let z = -RANGE + 8; z < RANGE; z += 17) {
         const cr = this.seed(x, z, 62);
         if (cr > 0.45) {
           const side = cr > 0.72 ? 1 : -1;
-          const px = x + side * (ROAD_W / 2 + 1.1);
+          const px = x + side * (ROAD_W / 2 + 2.0); // 6.0 from road centre — clear of road edge (4.0)
           const pz = z + (this.seed(x, z, 63) - 0.5) * 4;
-          this.addParkedCar(px, pz, x + 9, z + side * 3);
+          this.addParkedCar(px, pz, x + 9, z + side * 3, 0);
         }
       }
     }
@@ -398,18 +398,25 @@ export class Engine {
   }
 
   // ── Parked car ──
-  private addParkedCar(x: number, z: number, sx: number, sz: number) {
+  // rotY = 0 → car length (3) runs along Z (for vertical roads)
+  // rotY = PI/2 → car length (3) runs along X (for horizontal roads, parallel to road)
+  private addParkedCar(x: number, z: number, sx: number, sz: number, rotY = 0) {
     const colours = [0xcc3333, 0x3355cc, 0xaaaaaa, 0xdddddd, 0x222222];
     const ci = Math.floor(this.seed(sx, sz, 20) * colours.length);
     const carMat = new THREE.MeshLambertMaterial({ color: colours[ci] });
 
     const car = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 3), carMat);
     car.position.set(x, 0.6, z);
+    car.rotation.y = rotY;
     this.scene.add(car);
 
+    // Windshield — offset toward "front" based on rotation
     const wsMat = new THREE.MeshLambertMaterial({ color: 0x223344 });
     const ws = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.5, 0.1), wsMat);
-    ws.position.set(x, 1.3, z - 0.9);
+    const wsOffX = -0.9 * Math.sin(rotY);
+    const wsOffZ = -0.9 * Math.cos(rotY);
+    ws.position.set(x + wsOffX, 1.3, z + wsOffZ);
+    ws.rotation.y = rotY;
     this.scene.add(ws);
   }
 
