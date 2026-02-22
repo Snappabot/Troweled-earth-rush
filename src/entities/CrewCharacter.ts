@@ -232,12 +232,12 @@ export class CrewCharacter {
       Array.from(new THREE.Quaternion().setFromEuler(new THREE.Euler(rx * D, ry * D, rz * D)).toArray());
 
     return new THREE.AnimationClip('jumprope', dur, [
-      // Bounce up and down
+      // Bounce up and down — generous height so it reads clearly at game scale
       new THREE.VectorKeyframeTrack('Hip.position', t, [
         0, 1.00, 0,
-        0, 1.14, 0,
+        0, 1.28, 0,
         0, 1.00, 0,
-        0, 1.14, 0,
+        0, 1.28, 0,
         0, 1.00, 0,
       ]),
       // Arms out to sides, slightly raised — holding rope handles

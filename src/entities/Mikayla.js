@@ -75,8 +75,8 @@ export class Mikayla {
     update(dt, vanX, vanZ, showToast) {
         // Animation tick
         this.character.update(dt);
-        // Spin rope — ~1.6 rotations/sec (feels like real jump rope pace)
-        this.ropeRing.rotation.z += dt * Math.PI * 3.2;
+        // Spin rope around X axis — arcs over head front-to-back like a real jump rope
+        this.ropeRing.rotation.x += dt * Math.PI * 3.2;
         // Always face the van
         const dx = vanX - POS.x;
         const dz = vanZ - POS.z;
