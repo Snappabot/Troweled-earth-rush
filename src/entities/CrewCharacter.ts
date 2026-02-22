@@ -21,6 +21,7 @@ export const CREW_CONFIGS: Record<string, CrewConfig> = {
   Tsuyoshi: { name: 'Tsuyoshi', skinColor: 0xB88858, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x222220, hairColor: 0x0A0A0A, hairStyle: 'mohawk' },
   Fabio:    { name: 'Fabio',    skinColor: 0xBE8E60, shirtColor: 0x1B7EC4, shirtLogoColor: 0xFFFFFF, pantsColor: 0x282830, hairColor: 0x1A1008, hairStyle: 'bun', glassesColor: 0x2A1A08 },
   Joe:      { name: 'Joe',      skinColor: 0xD4A070, shirtColor: 0xF0C000, shirtLogoColor: 0x1A1A1A, pantsColor: 0x2A2A38, hairColor: 0x3A2A1A, hairStyle: 'short', helmetColor: 0xF5F5F0, hiVisBands: true },
+  Mikayla:  { name: 'Mikayla', skinColor: 0xD4A880, shirtColor: 0xF0EDE8, shirtLogoColor: 0x111111, pantsColor: 0x1A1020, hairColor: 0x992244, hairStyle: 'bun' },
 };
 
 export class CrewCharacter {
@@ -219,6 +220,43 @@ export class CrewCharacter {
       new THREE.VectorKeyframeTrack('Hip.position', t, [0,1.00,0, 0,1.01,0, 0,1.00,0, 0,0.99,0, 0,1.00,0]),
       new THREE.QuaternionKeyframeTrack('LShoulder.quaternion', [0,2.4], [...q(0,0,8),...q(0,0,8)]),
       new THREE.QuaternionKeyframeTrack('RShoulder.quaternion', [0,2.4], [...q(0,0,-8),...q(0,0,-8)]),
+    ]);
+  }
+
+  /** Jump rope animation — bouncing with arms out holding rope */
+  buildJumpRopeClip(): THREE.AnimationClip {
+    const D = Math.PI / 180;
+    const dur = 0.5;
+    const t = [0, 0.125, 0.25, 0.375, 0.5];
+    const q = (rx: number, ry = 0, rz = 0) =>
+      Array.from(new THREE.Quaternion().setFromEuler(new THREE.Euler(rx * D, ry * D, rz * D)).toArray());
+
+    return new THREE.AnimationClip('jumprope', dur, [
+      // Bounce up and down
+      new THREE.VectorKeyframeTrack('Hip.position', t, [
+        0, 1.00, 0,
+        0, 1.14, 0,
+        0, 1.00, 0,
+        0, 1.14, 0,
+        0, 1.00, 0,
+      ]),
+      // Arms out to sides, slightly raised — holding rope handles
+      new THREE.QuaternionKeyframeTrack('LShoulder.quaternion', [0, 0.5], [...q(0, 0, 52), ...q(0, 0, 52)]),
+      new THREE.QuaternionKeyframeTrack('RShoulder.quaternion', [0, 0.5], [...q(0, 0, -52), ...q(0, 0, -52)]),
+      // Slight forearm droop (holding handles down)
+      new THREE.QuaternionKeyframeTrack('LForeArm.quaternion', [0, 0.5], [...q(-20), ...q(-20)]),
+      new THREE.QuaternionKeyframeTrack('RForeArm.quaternion', [0, 0.5], [...q(-20), ...q(-20)]),
+      // Knee flex on landing, extend on jump
+      new THREE.QuaternionKeyframeTrack('LKnee.quaternion', t, [
+        ...q(-22), ...q(-5), ...q(-22), ...q(-5), ...q(-22),
+      ]),
+      new THREE.QuaternionKeyframeTrack('RKnee.quaternion', t, [
+        ...q(-22), ...q(-5), ...q(-22), ...q(-5), ...q(-22),
+      ]),
+      // Slight forward lean on each land
+      new THREE.QuaternionKeyframeTrack('Spine.quaternion', t, [
+        ...q(8), ...q(2), ...q(8), ...q(2), ...q(8),
+      ]),
     ]);
   }
 
