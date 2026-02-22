@@ -1,13 +1,12 @@
 import * as THREE from 'three';
 
 /**
- * Draws the actual Troweled Earth "Tree of Life" logo:
- *  - White silhouette on black background
- *  - Single short trunk that Y-forks ~1/3 up
- *  - Organic gnarled branches fanning out to both sides (2-3 per side, subdividing)
- *  - Roots mirroring branches going downward
- *  - Roughly 1:1 width:height ratio, no enclosing circle
- *  - Matches the white logo on TEM black t-shirts and product buckets
+ * Draws the actual Troweled Earth logo as seen on the product buckets:
+ *  - White circle border
+ *  - Thick trunk, wide at base, narrowing upward
+ *  - Many intricate bare-winter branches spreading wide (bare oak / gnarled tree style)
+ *  - No roots visible — clean trunk base
+ *  - White on black background
  */
 export function makeTEMTreeTexture(size = 256): THREE.CanvasTexture {
   const c = document.createElement('canvas');
@@ -18,91 +17,128 @@ export function makeTEMTreeTexture(size = 256): THREE.CanvasTexture {
   ctx.fillStyle = '#000000';
   ctx.fillRect(0, 0, size, size);
 
-  // Scale helper — coords are in 0–100 SVG space
-  const p = (v: number) => v * size / 100;
+  const cx = size / 2;
+  const cy = size / 2;
+  const R  = size * 0.44;  // circle radius
 
   ctx.strokeStyle = '#FFFFFF';
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
+  ctx.fillStyle   = '#FFFFFF';
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
 
-  // ── Helper: draw a single curved branch/root stroke ──────────────────────
-  const branch = (lw: number, x1: number, y1: number, cpx: number, cpy: number, x2: number, y2: number) => {
-    ctx.lineWidth = p(lw);
+  // ── Circle border ─────────────────────────────────────────────────────────
+  ctx.lineWidth = size * 0.018;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Coordinate helper: tree space (0–100) → canvas pixels
+  // Tree is positioned so trunk base sits near bottom of circle
+  // cx,cy = 50,50 in tree space; scale to canvas
+  const tx = (x: number) => cx + (x - 50) * R / 46;
+  const ty = (y: number) => cy * 1.08 + (y - 50) * R / 46;
+
+  // Branch helper: quadratic bezier stroke with given line width
+  const br = (lw: number, x1: number, y1: number, cpx: number, cpy: number, x2: number, y2: number) => {
+    ctx.lineWidth = size * lw / 100;
     ctx.beginPath();
-    ctx.moveTo(p(x1), p(y1));
-    ctx.quadraticCurveTo(p(cpx), p(cpy), p(x2), p(y2));
+    ctx.moveTo(tx(x1), ty(y1));
+    ctx.quadraticCurveTo(tx(cpx), ty(cpy), tx(x2), ty(y2));
     ctx.stroke();
   };
 
-  // ── Trunk (short, Y-forks at ~y=55) ──────────────────────────────────────
-  branch(5.5, 50, 92, 50, 75, 50, 58);   // main trunk, base to fork
+  // Straight line helper
+  const ln = (lw: number, x1: number, y1: number, x2: number, y2: number) => {
+    ctx.lineWidth = size * lw / 100;
+    ctx.beginPath();
+    ctx.moveTo(tx(x1), ty(y1));
+    ctx.lineTo(tx(x2), ty(y2));
+    ctx.stroke();
+  };
 
-  // ── Left upper branches ───────────────────────────────────────────────────
-  // Primary left: fork → mid-left
-  branch(4.0, 50, 58, 38, 46, 26, 34);
-  // Continue left primary to tip
-  branch(2.8, 26, 34, 16, 22, 10, 12);
-  // Left tip split A
-  branch(1.8, 10, 12,  4,  5,  4,  4);
-  // Left tip split B
-  branch(1.6, 10, 12, 14,  5, 18,  3);
+  // ── Trunk — thick, flares at base ────────────────────────────────────────
+  // Draw as filled trapezoid for proper thickness taper
+  ctx.beginPath();
+  ctx.moveTo(tx(46.5), ty(90));
+  ctx.lineTo(tx(53.5), ty(90));
+  ctx.lineTo(tx(52.5), ty(72));
+  ctx.lineTo(tx(47.5), ty(72));
+  ctx.closePath();
+  ctx.fill();
 
-  // Secondary left branch (from mid-trunk area)
-  branch(3.2, 48, 52, 32, 42, 18, 28);
-  branch(2.0, 18, 28,  8, 18,  5, 12);
-  branch(1.5, 18, 28, 20, 20, 24, 14);
+  // Trunk upper narrowing section
+  ctx.beginPath();
+  ctx.moveTo(tx(47.5), ty(72));
+  ctx.lineTo(tx(52.5), ty(72));
+  ctx.lineTo(tx(51.5), ty(58));
+  ctx.lineTo(tx(48.5), ty(58));
+  ctx.closePath();
+  ctx.fill();
 
-  // Tertiary left (lower spread)
-  branch(2.8, 49, 56, 36, 50, 24, 44);
-  branch(1.8, 24, 44, 12, 36,  8, 28);
+  // ── First fork — two main boughs ─────────────────────────────────────────
+  // Left main bough
+  br(3.8, 50, 62, 40, 54, 30, 44);
+  br(3.0, 30, 44, 20, 36, 12, 26);
+  // Right main bough
+  br(3.8, 50, 62, 60, 54, 70, 44);
+  br(3.0, 70, 44, 80, 36, 88, 26);
 
-  // ── Right upper branches (mirror) ────────────────────────────────────────
-  // Primary right
-  branch(4.0, 50, 58, 62, 46, 74, 34);
-  branch(2.8, 74, 34, 84, 22, 90, 12);
-  branch(1.8, 90, 12, 96,  5, 96,  4);
-  branch(1.6, 90, 12, 86,  5, 82,  3);
+  // ── Second-level branches from each main bough ────────────────────────────
+  // Left side
+  br(2.2, 22, 31, 14, 22,  8, 14);
+  br(1.8, 22, 31, 20, 20, 24, 12);
+  br(2.0, 30, 44, 22, 32, 16, 22);
+  br(1.6, 16, 22, 10, 14,  6,  8);
+  br(1.5, 16, 22, 18, 13, 20,  8);
+  br(2.2, 40, 50, 30, 38, 22, 28);
+  br(1.8, 22, 28, 14, 18,  8, 10);
+  br(1.6, 22, 28, 22, 18, 26, 12);
+  br(2.0, 46, 55, 38, 44, 28, 34);
+  br(1.5, 28, 34, 18, 24, 12, 16);
 
-  // Secondary right
-  branch(3.2, 52, 52, 68, 42, 82, 28);
-  branch(2.0, 82, 28, 92, 18, 95, 12);
-  branch(1.5, 82, 28, 80, 20, 76, 14);
+  // Right side (mirror)
+  br(2.2, 78, 31, 86, 22, 92, 14);
+  br(1.8, 78, 31, 80, 20, 76, 12);
+  br(2.0, 70, 44, 78, 32, 84, 22);
+  br(1.6, 84, 22, 90, 14, 94,  8);
+  br(1.5, 84, 22, 82, 13, 80,  8);
+  br(2.2, 60, 50, 70, 38, 78, 28);
+  br(1.8, 78, 28, 86, 18, 92, 10);
+  br(1.6, 78, 28, 78, 18, 74, 12);
+  br(2.0, 54, 55, 62, 44, 72, 34);
+  br(1.5, 72, 34, 82, 24, 88, 16);
 
-  // Tertiary right
-  branch(2.8, 51, 56, 64, 50, 76, 44);
-  branch(1.8, 76, 44, 88, 36, 92, 28);
+  // ── Third-level fine tips ─────────────────────────────────────────────────
+  // Left tips
+  ln(1.2,  8, 14,  3,  7);
+  ln(1.1,  8, 14, 10,  6);
+  ln(1.1, 12, 16,  8,  8);
+  ln(1.0, 12, 16, 16,  8);
+  ln(1.1, 20,  8, 16,  3);
+  ln(1.0, 20,  8, 23,  3);
+  ln(1.2, 24, 12, 20,  5);
+  ln(1.0, 24, 12, 28,  6);
+  ln(1.1,  6,  8,  2,  2);
+  ln(1.0, 26, 12, 30,  5);
 
-  // ── Left roots (mirror branches, going DOWN) ──────────────────────────────
-  // Primary left root
-  branch(4.0, 50, 62, 38, 72, 26, 82);
-  branch(2.8, 26, 82, 16, 89, 10, 96);
-  branch(1.8, 10, 96,  4, 100,  3, 100);
-  branch(1.6, 10, 96, 14, 100, 18, 100);
+  // Right tips (mirror)
+  ln(1.2, 92, 14, 97,  7);
+  ln(1.1, 92, 14, 90,  6);
+  ln(1.1, 88,  8, 92, 14);
+  ln(1.0, 88,  8, 84,  8);
+  ln(1.1, 80,  8, 84,  3);
+  ln(1.0, 80,  8, 77,  3);
+  ln(1.2, 76, 12, 80,  5);
+  ln(1.0, 76, 12, 72,  6);
+  ln(1.1, 94,  8, 98,  2);
+  ln(1.0, 74, 12, 70,  5);
 
-  // Secondary left root
-  branch(3.2, 48, 66, 32, 76, 18, 88);
-  branch(2.0, 18, 88,  8, 94,  4, 98);
-  branch(1.5, 18, 88, 20, 94, 24, 98);
-
-  // Tertiary left root
-  branch(2.8, 49, 64, 36, 74, 24, 80);
-  branch(1.8, 24, 80, 12, 88,  8, 94);
-
-  // ── Right roots (mirror) ──────────────────────────────────────────────────
-  // Primary right root
-  branch(4.0, 50, 62, 62, 72, 74, 82);
-  branch(2.8, 74, 82, 84, 89, 90, 96);
-  branch(1.8, 90, 96, 96, 100, 97, 100);
-  branch(1.6, 90, 96, 86, 100, 82, 100);
-
-  // Secondary right root
-  branch(3.2, 52, 66, 68, 76, 82, 88);
-  branch(2.0, 82, 88, 92, 94, 96, 98);
-  branch(1.5, 82, 88, 80, 94, 76, 98);
-
-  // Tertiary right root
-  branch(2.8, 51, 64, 64, 74, 76, 80);
-  branch(1.8, 76, 80, 88, 88, 92, 94);
+  // ── Extra mid-level branches for fullness ─────────────────────────────────
+  br(1.8, 48, 60, 36, 50, 24, 40);
+  br(1.4, 24, 40, 14, 28,  8, 18);
+  br(1.3,  8, 18,  3, 12,  1, 10);
+  br(1.8, 52, 60, 64, 50, 76, 40);
+  br(1.4, 76, 40, 86, 28, 92, 18);
 
   const tex = new THREE.CanvasTexture(c);
   tex.needsUpdate = true;
