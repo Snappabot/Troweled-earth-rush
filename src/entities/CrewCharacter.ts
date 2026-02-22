@@ -10,7 +10,7 @@ export interface CrewConfig {
   shirtLogoColor: number;
   pantsColor: number;
   hairColor: number;
-  hairStyle: 'short' | 'dreadlocks' | 'mohawk' | 'silver' | 'bun';
+  hairStyle: 'short' | 'dreadlocks' | 'mohawk' | 'silver' | 'bun' | 'wildblonde';
   helmetColor?: number;
   glassesColor?: number;
   hiVisBands?: boolean;
@@ -25,6 +25,7 @@ export const CREW_CONFIGS: Record<string, CrewConfig> = {
   Fabio:    { name: 'Fabio',    skinColor: 0xBE8E60, shirtColor: 0x1B7EC4, shirtLogoColor: 0xFFFFFF, pantsColor: 0x282830, hairColor: 0x1A1008, hairStyle: 'bun', glassesColor: 0x2A1A08 },
   Joe:      { name: 'Joe',      skinColor: 0xD4A070, shirtColor: 0xF0C000, shirtLogoColor: 0x1A1A1A, pantsColor: 0x2A2A38, hairColor: 0x3A2A1A, hairStyle: 'short', helmetColor: 0xF5F5F0, hiVisBands: true },
   Mikayla:  { name: 'Mikayla', skinColor: 0xD4A880, shirtColor: 0xF0EDE8, shirtLogoColor: 0x111111, pantsColor: 0x1A1020, hairColor: 0x992244, hairStyle: 'bun' },
+  Connie:   { name: 'Connie',  skinColor: 0xE8C898, shirtColor: 0xF0EDE8, shirtLogoColor: 0x111111, pantsColor: 0x2A2A3A, hairColor: 0xF5D060, hairStyle: 'wildblonde' },
 };
 
 export class CrewCharacter {
@@ -170,6 +171,28 @@ export class CrewCharacter {
         add(new THREE.SphereGeometry(0.215, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.5), 0, 0.10, 0);
         add(new THREE.SphereGeometry(0.09, 7, 6), 0, 0.05, -0.19);
         break;
+      case 'wildblonde': {
+        // Cap
+        add(new THREE.SphereGeometry(0.225, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.55), 0, 0.10, 0);
+        // Long wild strands — flowing outward and downward
+        const strandData: [number, number, number, number, number][] = [
+          [-0.20, -0.18,  0.04,  0.30, 0],    // left
+          [ 0.20, -0.18,  0.04, -0.30, 0],    // right
+          [-0.14, -0.22, -0.14,  0.20, 0.15], // back-left
+          [ 0.14, -0.22, -0.14, -0.20, 0.15], // back-right
+          [ 0.00, -0.26, -0.18,  0.00, 0],    // back-centre
+          [-0.10, -0.16,  0.16, -0.15, 0],    // front-left
+          [ 0.10, -0.16,  0.16,  0.15, 0],    // front-right
+        ];
+        for (const [sx, sy, sz, rz, rx] of strandData) {
+          const strand = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.020, 0.50, 5), hm);
+          strand.position.set(sx, sy, sz);
+          strand.rotation.z = rz;
+          strand.rotation.x = rx;
+          head.add(strand);
+        }
+        break;
+      }
     }
   }
 

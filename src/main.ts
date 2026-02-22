@@ -16,6 +16,7 @@ import { PedestrianSystem } from './entities/PedestrianSystem';
 import { CoffeeShop } from './entities/CoffeeShop';
 import { BladderMeter } from './gameplay/BladderMeter';
 import { Mikayla } from './entities/Mikayla';
+import { Connie } from './entities/Connie';
 import { SpeechBubble } from './ui/SpeechBubble';
 import { CREW_CONFIGS } from './entities/CrewCharacter';
 
@@ -112,6 +113,7 @@ async function main() {
   const coffeeShop = new CoffeeShop(engine.scene);
   const bladderMeter = new BladderMeter();
   const mikayla = new Mikayla(engine.scene);
+  const connie = new Connie(engine.scene);
   const speechBubble = new SpeechBubble();
   // Tracks world position of whoever last spoke — bubble projects from here each frame
   const activeSpeakerPos = new THREE.Vector3(Mikayla.POS.x, 6.0, Mikayla.POS.z);
@@ -204,6 +206,9 @@ async function main() {
     if (mikayla.update(dt, vanX, vanZ, speechBubble)) {
       activeSpeakerPos.set(Mikayla.POS.x, 6.0, Mikayla.POS.z);
     }
+    if (connie.update(dt, vanX, vanZ, speechBubble)) {
+      activeSpeakerPos.set(Connie.POS.x, 6.0, Connie.POS.z);
+    }
 
     const crewDialogue = characters.checkProximityDialogue(vanX, vanZ);
     if (crewDialogue) {
@@ -278,6 +283,7 @@ async function main() {
         jobCompleting = true;
         jobManager.advanceToPhase2();
         spillMeter.level = 0; // fresh bucket on pickup
+        connie.playLaugh(); // Connie loses it every time buckets go out
 
         // Point waypoint at first required crew member
         const firstCrew = jobManager.nextCrewNeeded();
