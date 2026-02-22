@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { makeTEMTreeTexture } from '../utils/TreeTexture';
+import { makeTEMRoofTexture } from '../utils/LogoLoader';
 export class VanModel {
     mesh;
     velocity = new THREE.Vector3();
@@ -116,7 +116,7 @@ export class VanModel {
             this.bodyGroup.add(rail);
         }
         // ── TEM tree logo on van roof (white tree, black background) ────────────
-        const treeTex = makeTEMTreeTexture();
+        const treeTex = makeTEMRoofTexture(512);
         const treeMat = new THREE.MeshLambertMaterial({ map: treeTex, transparent: false });
         const treePlane = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), treeMat);
         treePlane.rotation.x = -Math.PI / 2;

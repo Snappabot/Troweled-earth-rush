@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { makeTEMShirtTexture } from '../utils/LogoLoader';
 /** Shared jump rope cycle duration — rope rotation in Mikayla.ts must match this exactly */
 export const JUMP_ROPE_DURATION = 0.9; // seconds per jump cycle
 export const CREW_CONFIGS = {
@@ -207,37 +208,8 @@ export class CrewCharacter {
         mat.needsUpdate = true;
     }
     _makeLogo(cfg) {
-        const cv = document.createElement('canvas');
-        cv.width = 256;
-        cv.height = 256;
-        const ctx = cv.getContext('2d');
-        const bg = `#${cfg.shirtColor.toString(16).padStart(6, '0')}`;
-        const fg = `#${cfg.shirtLogoColor.toString(16).padStart(6, '0')}`;
-        ctx.fillStyle = bg;
-        ctx.fillRect(0, 0, 256, 256);
-        ctx.strokeStyle = fg;
-        ctx.lineWidth = 6;
-        ctx.beginPath();
-        ctx.moveTo(128, 198);
-        ctx.lineTo(128, 108);
-        ctx.stroke();
-        for (const [x1, y1, x2, y2] of [[128, 168, 78, 128], [128, 168, 178, 128], [128, 143, 88, 108], [128, 143, 168, 108], [128, 123, 98, 93], [128, 123, 158, 93], [128, 108, 114, 88], [128, 108, 142, 88]]) {
-            ctx.beginPath();
-            ctx.moveTo(x1, y1);
-            ctx.lineTo(x2, y2);
-            ctx.stroke();
-        }
-        ctx.fillStyle = fg;
-        for (const [lx, ly] of [[78, 128], [178, 128], [88, 108], [168, 108], [98, 93], [158, 93], [114, 88], [142, 88], [128, 80]]) {
-            ctx.beginPath();
-            ctx.arc(lx, ly, 7, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        ctx.font = 'bold 28px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('TROWELED', 128, 230);
-        ctx.fillText('EARTH', 128, 252);
-        return new THREE.CanvasTexture(cv);
+        // Use the preloaded real TEM logo — matches shirtColor automatically
+        return makeTEMShirtTexture(cfg.shirtColor);
     }
     _buildWalkClip() {
         const D = Math.PI / 180;

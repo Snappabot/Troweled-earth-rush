@@ -20,6 +20,7 @@ import { Connie } from './entities/Connie';
 import { SpeechBubble } from './ui/SpeechBubble';
 import { DialoguePause } from './ui/DialoguePause';
 import { CREW_CONFIGS } from './entities/CrewCharacter';
+import { preloadTEMLogo } from './utils/LogoLoader';
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS = {
     Matt: "Matt folds himself into the back. \"Took your time.\" He's already on his phone.",
@@ -30,6 +31,8 @@ const CREW_PICKUP_QUIPS = {
     Fabio: "Fabio loads in, trowel over his shoulder. \"You're late.\" He's smiling though.",
 };
 async function main() {
+    // Preload TEM logo before any game objects are created — textures ready instantly
+    await preloadTEMLogo();
     const engine = new Engine();
     await engine.init();
     // ── Spawn crew scattered across the city ───────────────────────────────────

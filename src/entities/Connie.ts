@@ -1,47 +1,7 @@
 import * as THREE from 'three';
 import { CrewCharacter, CREW_CONFIGS } from './CrewCharacter';
 import { SpeechBubble } from '../ui/SpeechBubble';
-
-/** TEM tree logo — black tree on white shirt background */
-function _makeConnieLogo(): THREE.Texture {
-  const cv = document.createElement('canvas');
-  cv.width = 256; cv.height = 256;
-  const ctx = cv.getContext('2d')!;
-
-  // White shirt background
-  ctx.fillStyle = '#F0EDE8';
-  ctx.fillRect(0, 0, 256, 256);
-
-  ctx.strokeStyle = '#111111';
-  ctx.fillStyle = '#111111';
-  ctx.lineCap = 'round';
-
-  // Trunk (thick at base, taper toward top)
-  ctx.lineWidth = 10;
-  ctx.beginPath(); ctx.moveTo(128, 220); ctx.lineTo(128, 150); ctx.stroke();
-  ctx.lineWidth = 6;
-  ctx.beginPath(); ctx.moveTo(128, 150); ctx.lineTo(128, 95); ctx.stroke();
-
-  // Branches — pairs radiating out and up
-  const branches: [number,number,number,number][] = [
-    [128,175, 78,148], [128,175, 178,148],
-    [128,158, 68,132], [128,158, 188,132],
-    [128,140, 80,115], [128,140, 176,115],
-    [128,122, 90,98],  [128,122, 166,98],
-    [128,108, 100,84], [128,108, 156,84],
-    [128,97,  112,70], [128,97,  144,70],
-    [128,88,  120,58], [128,88,  136,58],
-  ];
-
-  ctx.lineWidth = 4;
-  for (const [x1,y1,x2,y2] of branches) {
-    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-    // Dot at branch tip
-    ctx.beginPath(); ctx.arc(x2, y2, 4.5, 0, Math.PI*2); ctx.fill();
-  }
-
-  return new THREE.CanvasTexture(cv);
-}
+import { makeTEMShirtTexture } from '../utils/LogoLoader';
 
 // Out the front of the factory/workshop (workshop is at 10,15)
 const POS = { x: -4, z: -6 };
@@ -84,7 +44,7 @@ export class Connie {
     this.character.group.add(bustR);
 
     // ── TEM tree logo on shirt (black tree on white, matching van/HQ logo) ──
-    this.character.setLogoTexture(_makeConnieLogo());
+    this.character.setLogoTexture(makeTEMShirtTexture(CREW_CONFIGS['Connie'].shirtColor));
 
     // ── Name billboard — golden background ──
     const nameBoard = this._makeNameBoard();

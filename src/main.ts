@@ -21,6 +21,7 @@ import { SpeechBubble } from './ui/SpeechBubble';
 import { DialoguePause } from './ui/DialoguePause';
 import { CREW_CONFIGS } from './entities/CrewCharacter';
 import type { Job } from './gameplay/JobManager';
+import { preloadTEMLogo } from './utils/LogoLoader';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -33,6 +34,9 @@ const CREW_PICKUP_QUIPS: Record<string, string> = {
 };
 
 async function main() {
+  // Preload TEM logo before any game objects are created — textures ready instantly
+  await preloadTEMLogo();
+
   const engine = new Engine();
   await engine.init();
 
