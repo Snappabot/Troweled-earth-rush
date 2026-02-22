@@ -103,6 +103,11 @@ export class SpillMeter {
         });
         this.container.appendChild(label);
         document.body.appendChild(this.container);
+        this.container.style.display = 'none'; // hidden until job starts
+    }
+    /** Show or hide the entire meter */
+    setVisible(visible) {
+        this.container.style.display = visible ? 'flex' : 'none';
     }
     /** Add spill amount directly */
     addSpill(amount) {

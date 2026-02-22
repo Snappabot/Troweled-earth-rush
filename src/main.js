@@ -139,7 +139,14 @@ async function main() {
     engine.onUpdate((dt) => {
         physics.update(dt);
         van.updateSuspension(dt);
-        spillMeter.update(dt);
+        const jobActive = jobManager.activeJob !== null && jobManager.activePhase >= 2;
+        spillMeter.setVisible(jobActive);
+        if (jobActive) {
+            spillMeter.update(dt);
+        }
+        else {
+            spillMeter.level = 0; // reset when not on a job
+        }
         characters.updateAll(dt);
         const vanX = van.mesh.position.x;
         const vanZ = van.mesh.position.z;
