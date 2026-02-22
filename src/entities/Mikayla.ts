@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CrewCharacter, CREW_CONFIGS } from './CrewCharacter';
+import { CrewCharacter, CREW_CONFIGS, JUMP_ROPE_DURATION } from './CrewCharacter';
 import { SpeechBubble } from '../ui/SpeechBubble';
 
 // Just outside workshop trigger radius (workshop at 10,15 — triggerRadius 18)
@@ -108,8 +108,8 @@ export class Mikayla {
     // Animation tick
     this.character.update(dt);
 
-    // Spin rope around pivot's Z axis — sweeps front-to-back over her head like a jump rope
-    this.ropeRing.rotation.z += dt * Math.PI * 2.2;
+    // Exactly one rope rotation per jump cycle — stays in sync with animation, never drifts
+    this.ropeRing.rotation.z += dt * (2 * Math.PI / JUMP_ROPE_DURATION);
 
     // Always face the van
     const dx = vanX - POS.x;

@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+/** Shared jump rope cycle duration — rope rotation in Mikayla.ts must match this exactly */
+export const JUMP_ROPE_DURATION = 0.9; // seconds per jump cycle
 export const CREW_CONFIGS = {
     Matt: { name: 'Matt', skinColor: 0xD4A880, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x2A2A2A, hairColor: 0x5C3A1E, hairStyle: 'short' },
     Jose: { name: 'Jose', skinColor: 0xC49A70, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x2A2A2A, hairColor: 0x0A0A0A, hairStyle: 'dreadlocks' },
@@ -237,7 +239,7 @@ export class CrewCharacter {
     /** Jump rope animation — bouncing with arms out holding rope */
     buildJumpRopeClip() {
         const D = Math.PI / 180;
-        const dur = 0.9; // ~1 jump per second — matches rope rotation speed
+        const dur = JUMP_ROPE_DURATION;
         const t = [0, 0.225, 0.45, 0.675, 0.9];
         const q = (rx, ry = 0, rz = 0) => Array.from(new THREE.Quaternion().setFromEuler(new THREE.Euler(rx * D, ry * D, rz * D)).toArray());
         return new THREE.AnimationClip('jumprope', dur, [
