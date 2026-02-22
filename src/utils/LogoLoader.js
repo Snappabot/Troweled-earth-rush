@@ -1,143 +1,102 @@
 import * as THREE from 'three';
+// ── Loaded images ─────────────────────────────────────────────────────────────
+// tem-logo.jpg     = black tree on white background  (light shirts, light surfaces)
+// tem-logo-white.jpg = white tree on black background (dark shirts, van roof, HQ, map)
+let _imgBlackOnWhite = null;
+let _imgWhiteOnBlack = null;
 /**
- * Module-level loaded image — populated by preloadTEMLogo() before any game
- * objects are constructed. Stays null if the load fails (canvas fallback used).
- */
-let _rawImg = null;
-/**
- * Call once at startup (await it) before creating VanModel, Characters, Engine, etc.
- * Loads tem-logo.jpg from public/ into memory.
+ * Preload both logo variants before any game objects are constructed.
+ * Must be awaited in main() — guarantees textures are available synchronously.
  */
 export async function preloadTEMLogo() {
     const base = import.meta.env?.BASE_URL ?? './';
-    const img = new Image();
-    await new Promise((resolve) => {
-        img.onload = () => resolve();
-        img.onerror = () => {
-            console.warn('[LogoLoader] tem-logo.jpg failed to load — using canvas fallback');
-            resolve(); // don't block the game
-        };
-        img.src = `${base}tem-logo.jpg`;
-    });
-    if (img.complete && img.naturalWidth > 0) {
-        _rawImg = img;
-        console.log('[LogoLoader] tem-logo.jpg loaded OK', img.naturalWidth, '×', img.naturalHeight);
+    async function load(src) {
+        const img = new Image();
+        return new Promise((resolve) => {
+            img.onload = () => resolve(img.naturalWidth > 0 ? img : null);
+            img.onerror = () => { console.warn('[LogoLoader] failed:', src); resolve(null); };
+            img.src = src;
+        });
     }
+    [_imgBlackOnWhite, _imgWhiteOnBlack] = await Promise.all([
+        load(`${base}tem-logo.jpg`),
+        load(`${base}tem-logo-white.jpg`),
+    ]);
+    console.log('[LogoLoader] black-on-white:', !!_imgBlackOnWhite, '| white-on-black:', !!_imgWhiteOnBlack);
 }
-/** True once preloadTEMLogo() has successfully loaded the image. */
-export function isLogoReady() { return _rawImg !== null; }
+// ── Public texture factories ──────────────────────────────────────────────────
 /**
- * Generate a shirt logo texture for any shirt colour.
+ * Shirt logo — automatically picks the right variant:
  * - Light shirts (Phil, Connie, Mikayla, Joe): black tree on shirt-coloured bg
  * - Dark shirts (Matt, Jose, Jarrad, Tsuyoshi, Fabio): white tree on shirt-coloured bg
- * Falls back to the canvas-drawn simplified tree if image not loaded.
  */
 export function makeTEMShirtTexture(shirtColor) {
     const size = 256;
     const cv = document.createElement('canvas');
     cv.width = cv.height = size;
     const ctx = cv.getContext('2d');
-    // Fill shirt-colour background
-    const hex = `#${shirtColor.toString(16).padStart(6, '0')}`;
-    ctx.fillStyle = hex;
+    // Shirt background
+    ctx.fillStyle = `#${shirtColor.toString(16).padStart(6, '0')}`;
     ctx.fillRect(0, 0, size, size);
-    if (_rawImg) {
-        // Determine if shirt is dark (need white tree) or light (keep black tree)
-        const r = (shirtColor >> 16) & 0xFF;
-        const g = (shirtColor >> 8) & 0xFF;
-        const b = shirtColor & 0xFF;
-        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-        const isDark = lum < 128;
-        // Draw logo onto temp canvas, then extract just the tree as the desired color
-        const tmp = document.createElement('canvas');
-        tmp.width = tmp.height = size;
-        const tc = tmp.getContext('2d');
-        tc.drawImage(_rawImg, 0, 0, size, size);
-        if (isDark) {
-            // Logo is black-on-white; invert so tree is white
-            const d = tc.getImageData(0, 0, size, size);
-            for (let i = 0; i < d.data.length; i += 4) {
-                d.data[i] = 255 - d.data[i];
-                d.data[i + 1] = 255 - d.data[i + 1];
-                d.data[i + 2] = 255 - d.data[i + 2];
-            }
-            tc.putImageData(d, 0, 0);
-            // Use 'screen' so white tree paints over dark shirt, black bg disappears
-            ctx.globalCompositeOperation = 'screen';
-        }
-        else {
-            // Black tree on white image; use 'multiply' so white bg is transparent
-            ctx.globalCompositeOperation = 'multiply';
-        }
-        ctx.drawImage(tmp, 0, 0);
+    // Determine shirt brightness
+    const r = (shirtColor >> 16) & 0xFF;
+    const g = (shirtColor >> 8) & 0xFF;
+    const b = shirtColor & 0xFF;
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+    const isDark = lum < 128;
+    if (isDark && _imgWhiteOnBlack) {
+        // Draw white-on-black logo with 'screen' blend — white tree shows, black bg vanishes
+        ctx.globalCompositeOperation = 'screen';
+        ctx.drawImage(_imgWhiteOnBlack, 0, 0, size, size);
+        ctx.globalCompositeOperation = 'source-over';
+    }
+    else if (!isDark && _imgBlackOnWhite) {
+        // Draw black-on-white logo with 'multiply' blend — black tree shows, white bg vanishes
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.drawImage(_imgBlackOnWhite, 0, 0, size, size);
         ctx.globalCompositeOperation = 'source-over';
     }
     else {
-        // Fallback: canvas-drawn simplified tree
-        _drawFallbackTree(ctx, size, shirtColor);
+        // Fallback: canvas-drawn tree
+        _drawFallbackTree(ctx, size, isDark);
     }
     return new THREE.CanvasTexture(cv);
 }
 /**
- * Generate a van-roof / dark-surface logo texture.
- * Result: white tree on black background.
+ * Van roof / workshop / map surface logo.
+ * White tree on black — uses the white variant directly.
  */
 export function makeTEMRoofTexture(size = 512) {
     const cv = document.createElement('canvas');
     cv.width = cv.height = size;
     const ctx = cv.getContext('2d');
-    // Black background
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, size, size);
-    if (_rawImg) {
-        // Logo is black-on-white → invert so tree is white on black
-        const tmp = document.createElement('canvas');
-        tmp.width = tmp.height = size;
-        const tc = tmp.getContext('2d');
-        tc.drawImage(_rawImg, 0, 0, size, size);
-        const d = tc.getImageData(0, 0, size, size);
-        for (let i = 0; i < d.data.length; i += 4) {
-            d.data[i] = 255 - d.data[i];
-            d.data[i + 1] = 255 - d.data[i + 1];
-            d.data[i + 2] = 255 - d.data[i + 2];
-        }
-        tc.putImageData(d, 0, 0);
-        // Screen blend: white tree on black bg paints cleanly
-        ctx.globalCompositeOperation = 'screen';
-        ctx.drawImage(tmp, 0, 0);
-        ctx.globalCompositeOperation = 'source-over';
+    if (_imgWhiteOnBlack) {
+        ctx.drawImage(_imgWhiteOnBlack, 0, 0, size, size);
     }
     else {
-        _drawFallbackTreeWhite(ctx, size);
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.fillStyle = '#FFFFFF';
+        _drawFallbackTreeStrokes(ctx, size);
     }
     return new THREE.CanvasTexture(cv);
 }
-// ── Fallbacks (used if image fails to load) ───────────────────────────────────
-function _drawFallbackTree(ctx, size, shirtColor) {
-    const r = (shirtColor >> 16) & 0xFF;
-    const g = (shirtColor >> 8) & 0xFF;
-    const b = shirtColor & 0xFF;
-    const isDark = 0.299 * r + 0.587 * g + 0.114 * b < 128;
+// ── Fallback canvas tree (if images fail to load) ─────────────────────────────
+function _drawFallbackTree(ctx, size, isDark) {
     ctx.strokeStyle = isDark ? '#FFFFFF' : '#111111';
     ctx.fillStyle = isDark ? '#FFFFFF' : '#111111';
-    _drawTreeStrokes(ctx, size);
+    _drawFallbackTreeStrokes(ctx, size);
 }
-function _drawFallbackTreeWhite(ctx, size) {
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.fillStyle = '#FFFFFF';
-    _drawTreeStrokes(ctx, size);
-}
-function _drawTreeStrokes(ctx, size) {
+function _drawFallbackTreeStrokes(ctx, size) {
     const s = size / 256;
     ctx.save();
     ctx.scale(s, s);
     ctx.lineCap = 'round';
-    // Circle
     ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.arc(128, 128, 118, 0, Math.PI * 2);
     ctx.stroke();
-    // Trunk
     ctx.lineWidth = 11;
     ctx.beginPath();
     ctx.moveTo(128, 225);
@@ -148,17 +107,14 @@ function _drawTreeStrokes(ctx, size) {
     ctx.moveTo(128, 148);
     ctx.lineTo(128, 96);
     ctx.stroke();
-    const branches = [
-        [128, 178, 76, 152], [128, 178, 180, 152],
-        [128, 160, 64, 134], [128, 160, 192, 134],
-        [128, 142, 76, 116], [128, 142, 180, 116],
-        [128, 124, 88, 99], [128, 124, 168, 99],
-        [128, 110, 98, 84], [128, 110, 158, 84],
-        [128, 98, 110, 70], [128, 98, 146, 70],
+    const brs = [
+        [128, 178, 76, 152], [128, 178, 180, 152], [128, 160, 64, 134], [128, 160, 192, 134],
+        [128, 142, 76, 116], [128, 142, 180, 116], [128, 124, 88, 99], [128, 124, 168, 99],
+        [128, 110, 98, 84], [128, 110, 158, 84], [128, 98, 110, 70], [128, 98, 146, 70],
         [128, 88, 118, 56], [128, 88, 138, 56],
     ];
     ctx.lineWidth = 4;
-    for (const [x1, y1, x2, y2] of branches) {
+    for (const [x1, y1, x2, y2] of brs) {
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         ctx.lineTo(x2, y2);
