@@ -52,13 +52,13 @@ async function main() {
     hud.showSpillPenalty(penalty);
   };
 
-  // ── JOBS button — bottom-right, unobtrusive ─────────────────────────────────
+  // ── JOBS button — top-right, out of the way of controls ─────────────────────
   const jobsBtn = document.createElement('button');
   jobsBtn.textContent = '📋 JOBS';
   jobsBtn.style.cssText = `
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    top: 16px;
+    right: 16px;
     background: rgba(193, 102, 107, 0.9);
     color: #fff;
     border: none;
@@ -110,7 +110,7 @@ async function main() {
   photosBtn.textContent = '📸';
   photosBtn.title = 'Photo Collection';
   photosBtn.style.cssText = `
-    position: fixed; bottom: 20px; left: 20px;
+    position: fixed; top: 16px; left: 16px;
     z-index: 1000; background: rgba(70,70,70,0.9);
     color: #fff; border: none; border-radius: 50%;
     width: 52px; height: 52px; font-size: 22px;
