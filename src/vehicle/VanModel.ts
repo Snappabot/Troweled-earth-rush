@@ -135,7 +135,7 @@ export class VanModel {
     }
 
     // ── TEM tree logo on van roof (white tree, black background) ────────────
-    const treeTex  = makeTEMTreeTexture(512);
+    const treeTex  = makeTEMTreeTexture();
     const treeMat  = new THREE.MeshLambertMaterial({ map: treeTex, transparent: false });
     const treePlane = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.6), treeMat);
     treePlane.rotation.x = -Math.PI / 2;

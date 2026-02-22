@@ -1624,7 +1624,7 @@ export class Engine {
         this.addBox(group, signCol, 0.3, 2.5, 6, 15.16, 4, 0);
         this.addBox(group, textCol, 0.32, 2.0, 5.5, 15.17, 4, 0);
         // ── TEM tree logo on front face — either side of roller door ─────────────
-        const wsTex = makeTEMTreeTexture(256);
+        const wsTex = makeTEMTreeTexture();
         const wsMat = new THREE.MeshLambertMaterial({ map: wsTex, transparent: false });
         for (const lx of [-10, 10]) {
             const logo = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 2.8), wsMat.clone());
