@@ -9,7 +9,7 @@ const DIALOGUE = [
     "My brother Jarrad says I'm not qualified. He's right but I don't like it.",
     "These boots were not made for plastering. Yet here we are.",
     "Jump in? No seriously, I need a lift.",
-    "Jarrad's been tracking the cure time on that wall for six days. Six. Days.",
+    "Jarrad says he's read the TDS. He hasn't. I've lived with him.",
     "You look like you need a coffee and a toilet. In that order.",
     "Phil owes me fifty bucks. Pass it on.",
     "I plastered that wall. Don't tell Jarrad.",
