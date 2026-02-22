@@ -410,4 +410,16 @@ async function main() {
   engine.start();
 }
 
-main();
+main().catch((err) => {
+  console.error('Game init failed:', err);
+  document.body.style.background = '#000';
+  const msg = document.createElement('div');
+  msg.style.cssText = `
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    color:#fff;font-family:sans-serif;font-size:18px;text-align:center;
+    background:rgba(200,40,40,0.9);padding:24px 32px;border-radius:16px;
+    max-width:90vw;z-index:9999;
+  `;
+  msg.innerHTML = `<b>🚨 Game failed to start</b><br><br>${err?.message || String(err)}`;
+  document.body.appendChild(msg);
+});
