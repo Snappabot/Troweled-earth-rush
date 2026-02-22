@@ -98,7 +98,7 @@ export class Characters {
      * Generate a canvas texture with the TEM tree logo, "TROWELED EARTH" text,
      * and the crew member's name — used as a shirt front panel.
      */
-    createShirtTexture(name, shirtColor) {
+    createShirtTexture(name, shirtColor, logoColor = 0xFFFFFF) {
         const canvas = document.createElement('canvas');
         canvas.width = 512;
         canvas.height = 512;
@@ -106,8 +106,9 @@ export class Characters {
         // Background — shirt colour
         ctx.fillStyle = `#${shirtColor.toString(16).padStart(6, '0')}`;
         ctx.fillRect(0, 0, 512, 512);
+        const logoHex = `#${logoColor.toString(16).padStart(6, '0')}`;
         // TEM Tree logo (top half of canvas)
-        ctx.strokeStyle = '#FFFFFF';
+        ctx.strokeStyle = logoHex;
         ctx.lineWidth = 8;
         // Trunk — vertical line, bottom-centre
         ctx.beginPath();

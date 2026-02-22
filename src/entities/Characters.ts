@@ -112,7 +112,7 @@ export class Characters {
    * Generate a canvas texture with the TEM tree logo, "TROWELED EARTH" text,
    * and the crew member's name — used as a shirt front panel.
    */
-  private createShirtTexture(name: string, shirtColor: number): THREE.Texture {
+  private createShirtTexture(name: string, shirtColor: number, logoColor = 0xFFFFFF): THREE.Texture {
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 512;
@@ -122,8 +122,10 @@ export class Characters {
     ctx.fillStyle = `#${shirtColor.toString(16).padStart(6, '0')}`;
     ctx.fillRect(0, 0, 512, 512);
 
+    const logoHex = `#${logoColor.toString(16).padStart(6, '0')}`;
+
     // TEM Tree logo (top half of canvas)
-    ctx.strokeStyle = '#FFFFFF';
+    ctx.strokeStyle = logoHex;
     ctx.lineWidth = 8;
 
     // Trunk — vertical line, bottom-centre
@@ -152,7 +154,7 @@ export class Characters {
     }
 
     // Small leaf dots at branch tips
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = logoHex;
     const leafTips = [[160,240],[352,240],[180,200],[332,200],[200,170],[312,170],[230,155],[282,155],[256,145]];
     for (const [lx, ly] of leafTips) {
       ctx.beginPath();
@@ -161,7 +163,7 @@ export class Characters {
     }
 
     // "TROWELED EARTH" text — bottom of canvas
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = logoHex;
     ctx.font = 'bold 44px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -170,8 +172,10 @@ export class Characters {
 
     // Character name tag — small, above "TROWELED EARTH"
     ctx.font = '28px Arial, sans-serif';
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.fillStyle = logoHex;
+    ctx.globalAlpha = 0.6;
     ctx.fillText(name.toUpperCase(), 256, 395);
+    ctx.globalAlpha = 1.0;
 
     return new THREE.CanvasTexture(canvas);
   }

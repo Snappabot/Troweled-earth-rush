@@ -483,6 +483,36 @@ export class HUD {
     }
   }
 
+  /** Show a brief toast notification centred on screen. */
+  showToast(text: string, color = 0xffffff): void {
+    const hex = '#' + color.toString(16).padStart(6, '0');
+    const el = document.createElement('div');
+    el.textContent = text;
+    Object.assign(el.style, {
+      position: 'fixed',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      background: hex,
+      color: '#fff',
+      padding: '14px 24px',
+      borderRadius: '14px',
+      fontSize: '18px',
+      fontWeight: '800',
+      fontFamily: 'system-ui, sans-serif',
+      zIndex: '9000',
+      opacity: '1',
+      textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+      boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+      pointerEvents: 'none',
+      whiteSpace: 'nowrap',
+      transition: 'opacity 0.5s ease',
+    });
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; }, 2000);
+    setTimeout(() => el.remove(), 2600);
+  }
+
   private _showBitcoinAchievement(): void {
     const modal = document.createElement('div');
     modal.style.cssText = `

@@ -12,6 +12,8 @@ import { MiniGameManager } from './minigames/MiniGameManager';
 import { AchievementGallery } from './ui/AchievementGallery';
 import { TrafficSystem } from './entities/TrafficSystem';
 import { PedestrianSystem } from './entities/PedestrianSystem';
+import { CoffeeShop } from './entities/CoffeeShop';
+import { BladderMeter } from './gameplay/BladderMeter';
 
 async function main() {
   const engine = new Engine();
@@ -94,6 +96,10 @@ async function main() {
   const traffic = new TrafficSystem(engine.scene);
   const pedestrians = new PedestrianSystem(engine.scene);
 
+  // ── Coffee shop + Bladder mechanic ──────────────────────────────────────────
+  const coffeeShop = new CoffeeShop(engine.scene);
+  const bladderMeter = new BladderMeter();
+
   // Mini-game manager — overlays the world for plastering mini-games
   const miniGameManager = new MiniGameManager();
 
@@ -144,6 +150,26 @@ async function main() {
 
     const vanX = van.mesh.position.x;
     const vanZ = van.mesh.position.z;
+
+    // ── Coffee shop + Bladder mechanic ────────────────────────────────────────
+    coffeeShop.update(dt);
+    if (coffeeShop.tryVisit(vanX, vanZ)) {
+      spillMeter.level = Math.max(0, spillMeter.level - 0.6);
+      hud.showToast('☕ Coffee stop! Plaster calmed!', 0xD4622A);
+    }
+
+    bladderMeter.update(dt, physics.speed);
+    if (bladderMeter.tryRelief(vanX, vanZ)) {
+      hud.showToast('🚽 Ahhh relief! Back on the tools!', 0x2196F3);
+    }
+    if (bladderMeter.isUrgent) {
+      const now = Date.now();
+      if (now - bladderMeter.lastUrgentToast > 15000) {
+        bladderMeter.lastUrgentToast = now;
+        hud.showToast('🚽 Need a pee break! Find the toilet!', 0xFF5722);
+      }
+    }
+    spillMeter.spillRateMultiplier = bladderMeter.spillMultiplier;
 
     traffic.update(dt, vanX, vanZ);
     pedestrians.update(dt, vanX, vanZ);

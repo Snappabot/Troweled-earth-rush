@@ -808,6 +808,8 @@ export class Engine {
     this.collisionWorld.addBox(-140, -60, 10.0, 5.5);
     this.buildCoffeeShop(-60, -100);              // Coffee shop — St Kilda pitstop
     this.collisionWorld.addBox(-60, -100, 7.0, 5.0);
+    this.buildToiletBlock(120, 80);               // Public toilet block — Richmond park
+    this.collisionWorld.addBox(120, 80, 6.0, 5.0);
   }
 
   // ── House 1 — Marbellino Modern ──────────────────────────────────────────────
@@ -1816,6 +1818,33 @@ export class Engine {
       g.add(pendant);
     }
 
+    // ── Big billboard sign ────────────────────────────────────────────────────
+    // Tall pole (in group-local space: y-centre at 6 means it spans 0–12)
+    this.addCyl(g, 0x333333, 0.3, 0.3, 12, 8, 0, 6, -8);
+
+    // Sign board — emissive warm orange
+    const signBoard = new THREE.Mesh(
+      new THREE.BoxGeometry(10, 3, 0.4),
+      new THREE.MeshLambertMaterial({
+        color: 0xD4622A,
+        emissive: new THREE.Color(0x8B3010),
+        emissiveIntensity: 0.6,
+      })
+    );
+    signBoard.position.set(0, 13, -8);
+    signBoard.castShadow = true;
+    g.add(signBoard);
+
+    // Decorative white stripes on sign face
+    this.addBox(g, 0xFFFFFF, 8, 0.2, 0.5, 0, 14.2, -7.85);
+    this.addBox(g, 0xFFFFFF, 8, 0.2, 0.5, 0, 12.8, -7.85);
+
+    // Coffee cup shape on top — white cylinder (cup body)
+    this.addCyl(g, 0xFFFFFF, 0.8, 1.0, 1.5, 12, 0, 15.5, -8);
+
+    // Brown rim on top of cup
+    this.addCyl(g, 0x6B3A2A, 0.4, 0.4, 0.3, 8, 0, 16.4, -8);
+
     g.position.set(x, 0, z);
     this.scene.add(g);
   }
@@ -2536,6 +2565,44 @@ export class Engine {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     group.add(mesh);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // TOILET BLOCK — brutalist concrete public toilet, Richmond area (120, 80)
+  // ────────────────────────────────────────────────────────────────────────────
+  private buildToiletBlock(x: number, z: number): void {
+    const group = new THREE.Group();
+
+    // Main block: 10W × 3.5H × 8D
+    this.addBox(group, 0xB0A898, 10, 3.5, 8, 0, 1.75, 0);
+    // Roof overhang: 11W × 0.3H × 9D
+    this.addBox(group, 0x999088, 11, 0.3, 9, 0, 3.65, 0);
+    // Door openings (two stalls) — dark recessed areas front face (z=-4)
+    this.addBox(group, 0x222220, 1.6, 2.4, 0.2, -2.2, 1.2, -4.05);
+    this.addBox(group, 0x222220, 1.6, 2.4, 0.2, 2.2, 1.2, -4.05);
+    // Tiled band: bright white stripe at waist height
+    this.addBox(group, 0xE8E8E0, 10.1, 0.4, 8.1, 0, 1.8, 0);
+    // "TOILETS" sign: flat board above doors
+    this.addBox(group, 0x334455, 8, 0.8, 0.15, 0, 3.1, -4.05);
+    this.addBox(group, 0xFFFFFF, 6, 0.2, 0.1, 0, 3.2, -4.03); // white stripe on sign
+    // Tall signpost in front
+    this.addCyl(group, 0x444440, 0.15, 0.15, 8, 6, 0, 4, -5.5);
+    // Sign on top of pole: BoxGeometry 4×1.5×0.3
+    this.addBox(group, 0x2196F3, 4, 1.5, 0.3, 0, 8.75, -5.5); // blue sign
+    this.addBox(group, 0xFFFFFF, 3, 0.25, 0.1, 0, 9.0, -5.38); // white stripe
+    this.addBox(group, 0xFFFFFF, 3, 0.25, 0.1, 0, 8.5, -5.38); // white stripe
+    // 🚽 floating sphere above sign (blue tint, emissive)
+    const blobMat = new THREE.MeshLambertMaterial({
+      color: 0x64B5F6,
+      emissive: new THREE.Color(0x1565C0),
+      emissiveIntensity: 0.4,
+    });
+    const blob = new THREE.Mesh(new THREE.SphereGeometry(0.7, 8, 6), blobMat);
+    blob.position.set(0, 10.5, -5.5);
+    group.add(blob);
+
+    group.position.set(x, 0, z);
+    this.scene.add(group);
   }
 
   start() {

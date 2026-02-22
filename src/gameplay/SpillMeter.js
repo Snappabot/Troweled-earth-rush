@@ -1,6 +1,7 @@
 /** SpillMeter — tracks and displays how close the plaster is to spilling. */
 export class SpillMeter {
     level = 0; // 0.0–1.0
+    spillRateMultiplier = 1.0;
     /** Called with a penalty amount (sats) whenever the bucket spills. */
     onSpill;
     container;
@@ -110,7 +111,7 @@ export class SpillMeter {
     /** Call every frame with dt in seconds */
     update(dt) {
         // Slowly drain when not bumping
-        this.level = Math.max(0, this.level - dt * 0.05);
+        this.level = Math.max(0, this.level - dt * 0.05 / this.spillRateMultiplier);
         // Update fill bar width
         const pct = this.level * 100;
         this.fill.style.width = `${pct}%`;
