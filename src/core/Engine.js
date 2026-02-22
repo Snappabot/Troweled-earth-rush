@@ -677,8 +677,8 @@ export class Engine {
         this.collisionWorld.addBox(-140, -60, 10.0, 5.5);
         this.buildCoffeeShop(-60, -100); // Coffee shop — St Kilda pitstop
         this.collisionWorld.addBox(-60, -100, 7.0, 5.0);
-        this.buildToiletBlock(120, 80); // Public toilet block — Richmond park
-        this.collisionWorld.addBox(120, 80, 6.0, 5.0);
+        this.buildToiletBlock(100, 60); // Public toilet block — Richmond park
+        this.collisionWorld.addBox(100, 60, 6.0, 5.0);
     }
     // ── House 1 — Marbellino Modern ──────────────────────────────────────────────
     buildHouseMarbellino(x, z) {
@@ -2112,7 +2112,7 @@ export class Engine {
         group.add(mesh);
     }
     // ────────────────────────────────────────────────────────────────────────────
-    // TOILET BLOCK — brutalist concrete public toilet, Richmond area (120, 80)
+    // TOILET BLOCK — brutalist concrete public toilet, Richmond area (100, 60)
     // ────────────────────────────────────────────────────────────────────────────
     buildToiletBlock(x, z) {
         const group = new THREE.Group();

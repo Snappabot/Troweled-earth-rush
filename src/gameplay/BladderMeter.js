@@ -12,8 +12,8 @@ export class BladderMeter {
         this.isUrgent = this.level > 0.8;
     }
     tryRelief(vanX, vanZ) {
-        const dx = vanX - 120;
-        const dz = vanZ - 80;
+        const dx = vanX - 100;
+        const dz = vanZ - 60;
         if (Math.sqrt(dx * dx + dz * dz) > 14)
             return false;
         if (this.level === 0)

@@ -13,8 +13,8 @@ export class BladderMeter {
   }
 
   tryRelief(vanX: number, vanZ: number): boolean {
-    const dx = vanX - 120;
-    const dz = vanZ - 80;
+    const dx = vanX - 100;
+    const dz = vanZ - 60;
     if (Math.sqrt(dx * dx + dz * dz) > 14) return false;
     if (this.level === 0) return false;
     this.level = 0;
