@@ -147,6 +147,7 @@ async function main() {
     physics.update(dt);
     van.updateSuspension(dt);
     spillMeter.update(dt);
+    characters.updateAll(dt);
 
     const vanX = van.mesh.position.x;
     const vanZ = van.mesh.position.z;
