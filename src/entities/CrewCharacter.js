@@ -104,7 +104,7 @@ export class CrewCharacter {
         }
         // Logo panel
         const logoTex = this._makeLogo(cfg);
-        const lp = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.50), new THREE.MeshBasicMaterial({ map: logoTex }));
+        const lp = new THREE.Mesh(new THREE.PlaneGeometry(0.44, 0.50), new THREE.MeshBasicMaterial({ map: logoTex, transparent: true, depthWrite: false }));
         lp.position.set(0, 0.02, 0.145);
         spine.add(lp);
         this.logoMesh = lp;

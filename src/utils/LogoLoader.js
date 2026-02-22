@@ -26,38 +26,42 @@ export async function preloadTEMLogo() {
 }
 // ── Public texture factories ──────────────────────────────────────────────────
 /**
- * Shirt logo — automatically picks the right variant:
- * - Light shirts (Phil, Connie, Mikayla, Joe): black tree on shirt-coloured bg
- * - Dark shirts (Matt, Jose, Jarrad, Tsuyoshi, Fabio): white tree on shirt-coloured bg
+ * Shirt logo — transparent background, only the tree is opaque.
+ * - Light shirts: black tree from tem-logo.jpg (white bg → alpha 0)
+ * - Dark shirts: white tree from tem-logo-white.jpg (black bg → alpha 0)
+ * The shirt mesh colour shows through the transparent pixels naturally.
  */
 export function makeTEMShirtTexture(shirtColor) {
     const size = 256;
     const cv = document.createElement('canvas');
     cv.width = cv.height = size;
     const ctx = cv.getContext('2d');
-    // Shirt background
-    ctx.fillStyle = `#${shirtColor.toString(16).padStart(6, '0')}`;
-    ctx.fillRect(0, 0, size, size);
-    // Determine shirt brightness
+    // Canvas starts fully transparent — no background fill
     const r = (shirtColor >> 16) & 0xFF;
     const g = (shirtColor >> 8) & 0xFF;
     const b = shirtColor & 0xFF;
     const lum = 0.299 * r + 0.587 * g + 0.114 * b;
     const isDark = lum < 128;
-    if (isDark && _imgWhiteOnBlack) {
-        // Draw white-on-black logo with 'screen' blend — white tree shows, black bg vanishes
-        ctx.globalCompositeOperation = 'screen';
-        ctx.drawImage(_imgWhiteOnBlack, 0, 0, size, size);
-        ctx.globalCompositeOperation = 'source-over';
-    }
-    else if (!isDark && _imgBlackOnWhite) {
-        // Draw black-on-white logo with 'multiply' blend — black tree shows, white bg vanishes
-        ctx.globalCompositeOperation = 'multiply';
-        ctx.drawImage(_imgBlackOnWhite, 0, 0, size, size);
-        ctx.globalCompositeOperation = 'source-over';
+    const src = isDark ? _imgWhiteOnBlack : _imgBlackOnWhite;
+    if (src) {
+        ctx.drawImage(src, 0, 0, size, size);
+        const imgData = ctx.getImageData(0, 0, size, size);
+        const d = imgData.data;
+        for (let i = 0; i < d.length; i += 4) {
+            const brightness = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            if (isDark) {
+                // White-on-black: bright = tree (keep), dark = background (transparent)
+                d[i + 3] = Math.round(Math.min(255, brightness * 1.4));
+            }
+            else {
+                // Black-on-white: dark = tree (keep), bright = background (transparent)
+                d[i + 3] = Math.round(Math.min(255, (255 - brightness) * 1.4));
+            }
+        }
+        ctx.putImageData(imgData, 0, 0);
     }
     else {
-        // Fallback: canvas-drawn tree
+        // Fallback — canvas-drawn tree on transparent bg
         _drawFallbackTree(ctx, size, isDark);
     }
     return new THREE.CanvasTexture(cv);
