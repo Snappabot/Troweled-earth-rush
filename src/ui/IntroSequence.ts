@@ -63,7 +63,7 @@ const SCENES: Scene[] = [
     id: 'tsuyoshi',
     name: 'TSUYOSHI',
     role: 'The Samurai · Tadelakt Specialist',
-    line: 'Positions master. Always.',
+    line: "I no like bug. Where is... da respect!",
     accentColor: '#00DD88',
     skyTop: '#005530', skyBot: '#009958',   // bright green
     particleColor: '#60FFB0', particleKind: 'dust',
