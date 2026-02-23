@@ -159,20 +159,25 @@ export class IntroSequence {
                animation:tapPulse 3s ease-in-out infinite;"
         onerror="this.style.display='none'">
     `;
+        // Pre-create and buffer audio while user reads the splash —
+        // so it's ready to play the instant they tap.
+        const audio = new Audio();
+        audio.src = AUDIO.theme;
+        audio.volume = 0.75;
+        audio.preload = 'auto';
+        this.themeAudio = audio;
         document.body.appendChild(splash);
-        const start = (e) => {
-            e.preventDefault();
-            // ── audio.play() MUST be the very first call in the gesture handler ──
-            // Any DOM work before this risks losing the user-gesture context.
-            const audio = new Audio(AUDIO.theme);
-            audio.volume = 0.75;
-            this.themeAudio = audio;
+        let started = false;
+        const start = () => {
+            if (started)
+                return; // guard against touchend+click double-fire
+            started = true;
+            // play() must be inside the gesture handler — audio is already buffered
             audio.play().catch(() => { this.themeAudio = null; });
             splash.remove();
             this._build(onDone);
         };
-        splash.addEventListener('click', start, { once: true });
-        splash.addEventListener('touchend', start, { once: true, passive: false });
+        splash.addEventListener('pointerup', start, { once: true });
     }
     _build(onDone) {
         this.overlay = document.createElement('div');

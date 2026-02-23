@@ -4961,7 +4961,7 @@ Don't prove them wrong.`,"This isn't a wall. It's a surface waiting to breathe."
                filter:brightness(0.9) drop-shadow(0 0 20px rgba(200,168,106,0.4));
                animation:tapPulse 3s ease-in-out infinite;"
         onerror="this.style.display='none'">
-    `,document.body.appendChild(i);const s=a=>{a.preventDefault();const r=new Audio(bn.theme);r.volume=.75,this.themeAudio=r,r.play().catch(()=>{this.themeAudio=null}),i.remove(),this._build(e)};i.addEventListener("click",s,{once:!0}),i.addEventListener("touchend",s,{once:!0,passive:!1})}_build(e){this.overlay=document.createElement("div"),this.overlay.id="intro-overlay",this.overlay.style.cssText=`
+    `;const s=new Audio;s.src=bn.theme,s.volume=.75,s.preload="auto",this.themeAudio=s,document.body.appendChild(i);let a=!1;const r=()=>{a||(a=!0,s.play().catch(()=>{this.themeAudio=null}),i.remove(),this._build(e))};i.addEventListener("pointerup",r,{once:!0})}_build(e){this.overlay=document.createElement("div"),this.overlay.id="intro-overlay",this.overlay.style.cssText=`
       position:fixed; inset:0; z-index:50000; background:#000; overflow:hidden;
       font-family: system-ui, -apple-system, sans-serif;
     `,this.canvas=document.createElement("canvas"),this.canvas.style.cssText=`
@@ -5276,4 +5276,4 @@ Time to get to work. Show them what TEM does.`,()=>{s.setActiveJob(null,3),s.upd
     background:rgba(200,40,40,0.9);padding:24px 32px;border-radius:16px;
     max-width:90vw;z-index:9999;
   `,e.innerHTML=`<b>🚨 Game failed to start</b><br><br>${(o==null?void 0:o.message)||String(o)}`,document.body.appendChild(e)});
-//# sourceMappingURL=index-CKXVLWat.js.map
+//# sourceMappingURL=index-CFmME1o-.js.map
