@@ -25,6 +25,7 @@ import { preloadTEMLogo } from './utils/LogoLoader';
 import { BRAND_SLOGANS, GAME_TIPS, JOB_OPENERS, randomFrom } from './data/Slogans';
 import { isAllCollected } from './minigames/TrowelingGame';
 import { RewardScreen } from './ui/RewardScreen';
+import { TEMRadio } from './audio/TEMRadio';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -159,6 +160,7 @@ async function main() {
   // ── 📸 Photos button + Achievement Gallery + Rewards ─────────────────────────
   const achievementGallery = new AchievementGallery();
   const rewardScreen = new RewardScreen();
+  const radio = new TEMRadio();
 
   const photosBtn = document.createElement('button');
   photosBtn.textContent = '📸';
@@ -515,7 +517,9 @@ async function main() {
           () => {
             hud.setActiveJob(null, 3);
             hud.updateCrewStatus([], [], false);
+            radio.setVisible(false);
             miniGameManager.startRandom((result) => {
+              radio.setVisible(true);
               const earned = jobManager.completeJob(arrived, result.qualityPct);
               if (earned < 0) {
                 hud.showPenalty(arrived.title, Math.abs(earned));
