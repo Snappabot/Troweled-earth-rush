@@ -611,6 +611,9 @@ export class IntroSequence {
   }
 
   private _drawCharSilhouette(ctx: CanvasRenderingContext2D, W: number, H: number, sc: Scene): void {
+    // Connie gets her own Bond-girl side-on treatment
+    if (sc.id === 'connie') { this._drawConnieBond(ctx, W, H, sc); return; }
+
     const groundY = H * 0.62;
     const cx = W * 0.68;
     const fadeIn = Math.min(1, this.sceneT * 2.0);
@@ -718,6 +721,242 @@ export class IntroSequence {
     ctx.save();
     ctx.globalAlpha = 0.85;
     ctx.drawImage(this.logoImg, cx - logoW / 2, y - logoH / 2, logoW, logoH);
+    ctx.restore();
+  }
+
+  /** Connie — side-on James Bond girl profile with gun pose */
+  private _drawConnieBond(ctx: CanvasRenderingContext2D, W: number, H: number, sc: Scene): void {
+    const groundY = H * 0.62;
+    const cx = W * 0.60;          // slightly left so gun arm has space to the right
+    const fadeIn = Math.min(1, this.sceneT * 2.0);
+    const hh = Math.min(H * 0.52, 240);
+    const skin = '#F0C8A0';
+    const accent = sc.accentColor; // '#FFB030' amber
+
+    ctx.save();
+    ctx.globalAlpha = fadeIn;
+
+    // ── Glow ──────────────────────────────────────────────────────────────────
+    const glow = ctx.createRadialGradient(cx, groundY - 90, 10, cx, groundY - 90, 180);
+    glow.addColorStop(0, accent + '55');
+    glow.addColorStop(1, 'transparent');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.ellipse(cx, groundY - 90, 180, 230, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Ground shadow ─────────────────────────────────────────────────────────
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(cx, groundY + 5, 30, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const bY = groundY;            // feet level
+    const tY = bY - hh;            // top of head area
+    const midY = bY - hh * 0.5;   // waist level
+
+    // ── Long flowing hair (behind body) ──────────────────────────────────────
+    ctx.fillStyle = '#D4B840';     // wild blonde
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, tY + hh * 0.06);          // top of head, slightly back
+    ctx.bezierCurveTo(
+      cx - 40, tY + hh * 0.18,                   // swoops back
+      cx - 55, midY - hh * 0.06,                 // falls along back
+      cx - 35, bY - hh * 0.2,                    // ends at mid-back height
+    );
+    ctx.bezierCurveTo(
+      cx - 28, bY - hh * 0.18,
+      cx - 14, tY + hh * 0.30,
+      cx - 2, tY + hh * 0.12,
+    );
+    ctx.closePath();
+    ctx.fill();
+    // Hair highlight strand
+    ctx.strokeStyle = '#FFE878';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - 4, tY + hh * 0.08);
+    ctx.bezierCurveTo(cx - 30, tY + hh * 0.22, cx - 45, midY, cx - 28, bY - hh * 0.22);
+    ctx.stroke();
+
+    // ── Legs — side-on, slight stride pose ───────────────────────────────────
+    ctx.fillStyle = '#111122';  // dark pants
+    // Back leg slightly behind
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, bY - hh * 0.43);
+    ctx.lineTo(cx - 14, bY);
+    ctx.lineTo(cx - 6, bY);
+    ctx.lineTo(cx + 4, bY - hh * 0.43);
+    ctx.closePath();
+    ctx.fill();
+    // Front leg
+    ctx.beginPath();
+    ctx.moveTo(cx - 2, bY - hh * 0.43);
+    ctx.lineTo(cx + 6, bY);
+    ctx.lineTo(cx + 16, bY);
+    ctx.lineTo(cx + 10, bY - hh * 0.43);
+    ctx.closePath();
+    ctx.fill();
+
+    // ── High heels ────────────────────────────────────────────────────────────
+    ctx.fillStyle = '#111';
+    // Back heel
+    ctx.fillRect(cx - 16, bY - 4, 12, 4);
+    ctx.fillRect(cx - 13, bY - 10, 2, 10);
+    // Front heel
+    ctx.fillRect(cx + 4, bY - 4, 14, 4);
+    ctx.fillRect(cx + 15, bY - 10, 2, 10);
+
+    // ── Hourglass torso — profile curves ─────────────────────────────────────
+    ctx.fillStyle = '#111111';   // black TEM shirt (side-on)
+    ctx.beginPath();
+    // Chest front edge
+    ctx.moveTo(cx + 14, bY - hh * 0.82);    // neckline
+    // Bust (forward profile — prominent)
+    ctx.bezierCurveTo(
+      cx + 28, bY - hh * 0.76,              // upper bust forward
+      cx + 32, bY - hh * 0.68,              // bust peak
+      cx + 18, bY - hh * 0.60,              // under bust
+    );
+    // Waist nip in
+    ctx.bezierCurveTo(
+      cx + 10, bY - hh * 0.52,              // front waist
+      cx + 8,  bY - hh * 0.47,
+      cx + 14, bY - hh * 0.43,             // hip flare out
+    );
+    // Hip curve
+    ctx.bezierCurveTo(
+      cx + 18, bY - hh * 0.40,
+      cx + 14, bY - hh * 0.34,
+      cx + 6,  bY - hh * 0.28,             // upper thigh line
+    );
+    // Back edge (behind)
+    ctx.lineTo(cx - 2, bY - hh * 0.43);    // back of hip
+    ctx.bezierCurveTo(
+      cx - 6,  bY - hh * 0.50,
+      cx - 4,  bY - hh * 0.56,
+      cx + 2,  bY - hh * 0.66,             // back waist
+    );
+    ctx.bezierCurveTo(
+      cx + 4,  bY - hh * 0.72,
+      cx + 0,  bY - hh * 0.78,
+      cx + 6,  bY - hh * 0.83,             // upper back
+    );
+    ctx.closePath();
+    ctx.fill();
+
+    // ── Neck and head ─────────────────────────────────────────────────────────
+    ctx.fillStyle = skin;
+    // Neck — thin profile
+    ctx.fillRect(cx + 8, tY + hh * 0.12, 8, hh * 0.05);
+    // Head — profile circle
+    const headR = hh * 0.09;
+    ctx.beginPath();
+    ctx.arc(cx + 12, tY + hh * 0.07, headR, 0, Math.PI * 2);
+    ctx.fill();
+    // Nose bridge (slight profile bump)
+    ctx.beginPath();
+    ctx.arc(cx + 12 + headR * 0.85, tY + hh * 0.08, headR * 0.22, -0.4, 0.9);
+    ctx.fill();
+    // Chin jaw line
+    ctx.beginPath();
+    ctx.arc(cx + 12 + headR * 0.5, tY + hh * 0.10 + headR * 0.7, headR * 0.3, 0, Math.PI);
+    ctx.fill();
+
+    // Face front hair
+    ctx.fillStyle = '#D4B840';
+    ctx.beginPath();
+    ctx.arc(cx + 12, tY + hh * 0.04, headR * 1.05, Math.PI * 0.9, Math.PI * 1.9);
+    ctx.fill();
+    // Fringe
+    ctx.beginPath();
+    ctx.arc(cx + 12 + headR * 0.3, tY + hh * 0.02, headR * 0.6, Math.PI, Math.PI * 1.7);
+    ctx.fill();
+
+    // Red lips (profile)
+    ctx.fillStyle = '#CC2244';
+    ctx.beginPath();
+    ctx.ellipse(cx + 12 + headR * 0.8, tY + hh * 0.09, 4, 2.5, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Bare arm extended — Bond girl gun pose ────────────────────────────────
+    // Arm goes from shoulder, extends diagonally up-forward-right
+    const shoulderX = cx + 16;
+    const shoulderY = bY - hh * 0.78;
+    const armAngle  = -0.4;   // rad — angled slightly upward
+    const armLen    = hh * 0.36;
+    const handX = shoulderX + Math.cos(armAngle) * armLen;
+    const handY = shoulderY + Math.sin(armAngle) * armLen;
+
+    // Arm (skin)
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = hh * 0.045;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(shoulderX, shoulderY);
+    ctx.lineTo(handX, handY);
+    ctx.stroke();
+
+    // ── Gun ───────────────────────────────────────────────────────────────────
+    const gunAngle = armAngle - 0.08;
+    const gunLen   = hh * 0.14;
+    const gunX2 = handX + Math.cos(gunAngle) * gunLen;
+    const gunY2 = handY + Math.sin(gunAngle) * gunLen;
+
+    // Grip
+    ctx.fillStyle = '#1a1a1a';
+    ctx.save();
+    ctx.translate(handX, handY);
+    ctx.rotate(gunAngle);
+    ctx.fillRect(-4, -4, 10, 18);   // grip (downward)
+    ctx.restore();
+
+    // Barrel
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'square';
+    ctx.beginPath();
+    ctx.moveTo(handX, handY);
+    ctx.lineTo(gunX2, gunY2);
+    ctx.stroke();
+    // Barrel highlight
+    ctx.strokeStyle = '#666';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(handX, handY - 1);
+    ctx.lineTo(gunX2, gunY2 - 1);
+    ctx.stroke();
+
+    // Muzzle flash (subtle glow at gun tip when close to speaking)
+    if (this.sceneT > 2.5) {
+      ctx.save();
+      ctx.globalAlpha = fadeIn * 0.6 * (0.5 + Math.sin(this.sceneT * 8) * 0.5);
+      const muzzleGlow = ctx.createRadialGradient(gunX2, gunY2, 0, gunX2, gunY2, 14);
+      muzzleGlow.addColorStop(0, '#FFFF88CC');
+      muzzleGlow.addColorStop(1, 'transparent');
+      ctx.fillStyle = muzzleGlow;
+      ctx.beginPath();
+      ctx.arc(gunX2, gunY2, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // ── Gold ring (right hand on gun) ─────────────────────────────────────────
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(handX + 6, handY, 4, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // ── Accent rim light ─────────────────────────────────────────────────────
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = fadeIn * 0.7;
+    ctx.beginPath();
+    ctx.moveTo(cx - 2, bY - hh * 0.43);
+    ctx.bezierCurveTo(cx - 6, bY - hh * 0.50, cx - 4, bY - hh * 0.78, cx + 6, bY - hh * 0.83);
+    ctx.stroke();
+
     ctx.restore();
   }
 
