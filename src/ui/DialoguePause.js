@@ -4,7 +4,6 @@
  * Travel timer is paused for the full duration (handled in game loop).
  * Player can tap GAS / REV / anywhere to skip early.
  */
-import { SpeechVoice } from '../audio/SpeechVoice';
 const CHECKPOINT_SECONDS = 15;
 export class DialoguePause {
     overlay;
@@ -172,7 +171,6 @@ export class DialoguePause {
         this.hintEl.textContent = String(CHECKPOINT_SECONDS);
         this.overlay.style.display = 'flex';
         // Speak the dialogue body
-        SpeechVoice.speak(body, character ?? 'Narrator');
         // Animate progress bar draining
         this.progressBar.style.transition = 'none';
         this.progressBar.style.width = '100%';
@@ -213,7 +211,6 @@ export class DialoguePause {
         this._active = false;
         this._readyToResume = false;
         this.overlay.style.display = 'none';
-        SpeechVoice.cancel();
         this._clearTimers();
         const cb = this._resumeCallback;
         this._resumeCallback = null;

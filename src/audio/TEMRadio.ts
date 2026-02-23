@@ -5,7 +5,6 @@
  */
 
 import { AUDIO } from './AudioAssets';
-import { SpeechVoice } from './SpeechVoice';
 
 // ── Station definitions ────────────────────────────────────────────────────────
 interface Station {
@@ -638,7 +637,6 @@ export class TEMRadio {
       'connie-gold':   'Connie',
       'fabio-pizza':   'Fabio',
     };
-    SpeechVoice.speak(line, djVoice[st.id] ?? 'DJ');
   }
 
   private _tick(): void {

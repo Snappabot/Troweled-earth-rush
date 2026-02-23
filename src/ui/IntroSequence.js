@@ -4,7 +4,6 @@
  * Real theme song plays throughout.
  */
 import { AUDIO } from '../audio/AudioAssets';
-import { SpeechVoice } from '../audio/SpeechVoice';
 const BASE_URL = import.meta.env?.BASE_URL || '/';
 const WHITE_LOGO = `${BASE_URL}tem-logo-white.jpg`;
 const SCENES = [
@@ -245,8 +244,6 @@ export class IntroSequence {
         this.particles = [];
         this.camShake = scene.id === 'matt' || scene.id === 'jose' ? 0.5 : 0;
         this._updateText(scene);
-        if (scene.line)
-            SpeechVoice.speak(scene.line, scene.voiceChar);
     }
     _updateText(scene) {
         if (!this.textLayer)
@@ -379,6 +376,10 @@ export class IntroSequence {
         // ── Character silhouette ──────────────────────────────────────────────────
         if (sc.id !== 'melbourne')
             this._drawCharSilhouette(ctx, W, H, sc);
+        // ── Speech bubble ────────────────────────────────────────────────────────
+        if (sc.id !== 'melbourne' && sc.line && this.sceneT > 2.0) {
+            this._drawSpeechBubble(ctx, W, H, sc);
+        }
         // ── Vignette ─────────────────────────────────────────────────────────────
         const vig = ctx.createRadialGradient(W / 2, H / 2, H * 0.1, W / 2, H / 2, H * 0.8);
         vig.addColorStop(0, 'rgba(0,0,0,0)');
@@ -774,11 +775,87 @@ export class IntroSequence {
         }
         ctx.globalAlpha = 1;
     }
+    // ── Speech bubble ────────────────────────────────────────────────────────
+    _drawSpeechBubble(ctx, W, H, sc) {
+        const fadeIn = Math.min(1, (this.sceneT - 2.0) * 1.5); // 0→1 over 0.67s after 2s
+        if (fadeIn <= 0)
+            return;
+        // Float: gentle up/down bob
+        const bob = Math.sin(this.sceneT * 1.8) * 5;
+        // Position: left-center of screen, char is at 68% right
+        const bw = Math.min(W * 0.42, 280); // bubble width
+        const bh = 72; // bubble height
+        const bx = W * 0.04; // left edge
+        const by = H * 0.38 + bob; // vertical mid-scene
+        const r = 14; // corner radius
+        const tx = bx + bw; // tail points right toward character
+        ctx.save();
+        ctx.globalAlpha = fadeIn;
+        // ── Drop shadow ────────────────────────────────────────────────────────
+        ctx.shadowColor = 'rgba(0,0,0,0.45)';
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetY = 4;
+        // ── Bubble body ────────────────────────────────────────────────────────
+        ctx.fillStyle = 'rgba(255,255,255,0.94)';
+        ctx.beginPath();
+        ctx.moveTo(bx + r, by);
+        ctx.lineTo(bx + bw - r, by);
+        ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + r);
+        ctx.lineTo(bx + bw, by + bh - r);
+        ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - r, by + bh);
+        ctx.lineTo(bx + r, by + bh);
+        ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - r);
+        ctx.lineTo(bx, by + r);
+        ctx.quadraticCurveTo(bx, by, bx + r, by);
+        ctx.closePath();
+        ctx.fill();
+        // ── Tail pointing right toward character ──────────────────────────────
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+        ctx.beginPath();
+        ctx.moveTo(tx, by + bh * 0.42);
+        ctx.lineTo(tx + 20, by + bh * 0.55);
+        ctx.lineTo(tx, by + bh * 0.68);
+        ctx.closePath();
+        ctx.fill();
+        // ── Accent top border ─────────────────────────────────────────────────
+        ctx.fillStyle = sc.accentColor;
+        ctx.fillRect(bx + r, by, bw - r * 2, 4);
+        // ── Text ──────────────────────────────────────────────────────────────
+        ctx.shadowBlur = 0;
+        const fontSize = Math.max(12, Math.min(16, bw / 16));
+        ctx.font = `italic ${fontSize}px system-ui, sans-serif`;
+        ctx.fillStyle = '#111';
+        ctx.textBaseline = 'middle';
+        // Word-wrap text
+        const maxW = bw - 24;
+        const words = `"${sc.line}"`.split(' ');
+        const lines = [];
+        let cur = '';
+        for (const w of words) {
+            const test = cur ? `${cur} ${w}` : w;
+            if (ctx.measureText(test).width > maxW && cur) {
+                lines.push(cur);
+                cur = w;
+            }
+            else {
+                cur = test;
+            }
+        }
+        if (cur)
+            lines.push(cur);
+        const lineH = fontSize + 5;
+        const totalH = lines.length * lineH;
+        const startY = by + (bh - totalH) / 2 + lineH / 2 + 2;
+        lines.forEach((line, i) => {
+            ctx.fillText(line, bx + 12, startY + i * lineH, maxW);
+        });
+        ctx.restore();
+    }
     // ── Title card ────────────────────────────────────────────────────────────
     _showTitle(onDone) {
         if (this.done)
             return;
-        SpeechVoice.cancel();
         // Switch to title scene
         this.particles = [];
         this.currentScene = {
@@ -815,17 +892,9 @@ export class IntroSequence {
         try {
             const audio = new Audio();
             audio.src = AUDIO.theme;
-            audio.volume = 0;
-            audio.play().then(() => {
-                this.themeAudio = audio;
-                let vol = 0;
-                const fade = setInterval(() => {
-                    vol = Math.min(vol + 0.04, 0.72);
-                    audio.volume = vol;
-                    if (vol >= 0.72)
-                        clearInterval(fade);
-                }, 80);
-            }).catch(() => { });
+            audio.volume = 0.75; // start loud immediately — user already tapped
+            this.themeAudio = audio;
+            audio.play().catch(() => { this.themeAudio = null; });
         }
         catch { }
     }
@@ -835,7 +904,6 @@ export class IntroSequence {
         this.done = true;
         this.timers.forEach(clearTimeout);
         cancelAnimationFrame(this.rafId);
-        SpeechVoice.cancel();
         if (this.themeAudio) {
             const a = this.themeAudio;
             let vol = a.volume;

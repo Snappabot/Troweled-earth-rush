@@ -4,7 +4,6 @@
  * fake song titles, DJ callouts, and a sleek bottom-bar UI.
  */
 import { AUDIO } from './AudioAssets';
-import { SpeechVoice } from './SpeechVoice';
 const STATIONS = [
     {
         id: 'tem-fm',
@@ -669,7 +668,6 @@ export class TEMRadio {
             'connie-gold': 'Connie',
             'fabio-pizza': 'Fabio',
         };
-        SpeechVoice.speak(line, djVoice[st.id] ?? 'DJ');
     }
     _tick() {
         const now = performance.now();

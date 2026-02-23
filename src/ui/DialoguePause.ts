@@ -5,7 +5,6 @@
  * Player can tap GAS / REV / anywhere to skip early.
  */
 
-import { SpeechVoice } from '../audio/SpeechVoice';
 
 const CHECKPOINT_SECONDS = 15;
 
@@ -193,7 +192,6 @@ export class DialoguePause {
     this.overlay.style.display = 'flex';
 
     // Speak the dialogue body
-    SpeechVoice.speak(body, character ?? 'Narrator');
 
     // Animate progress bar draining
     this.progressBar.style.transition = 'none';
@@ -239,7 +237,6 @@ export class DialoguePause {
     this._active = false;
     this._readyToResume = false;
     this.overlay.style.display = 'none';
-    SpeechVoice.cancel();
     this._clearTimers();
     const cb = this._resumeCallback;
     this._resumeCallback = null;
