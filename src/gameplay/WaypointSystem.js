@@ -95,6 +95,10 @@ export class WaypointSystem {
     setJob(job) {
         this.setTarget(job?.position ?? null);
     }
+    /** Returns the current target position so callers can save/restore it. */
+    get currentTarget() {
+        return this.targetPos ? { ...this.targetPos } : null;
+    }
     update(dt, vanX, vanZ) {
         this.time += dt;
         if (!this.targetPos || !this.marker.visible)

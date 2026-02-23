@@ -1,5 +1,13 @@
 import * as THREE from 'three';
 const CAR_COLORS = [0xE63946, 0x2196F3, 0xFFB300, 0x4CAF50, 0x9C27B0, 0xFF6B35];
+/** Lookahead distance (units) at which a car starts braking for the van */
+const BRAKE_DISTANCE = 14;
+/** Distance at which car fully stops */
+const STOP_DISTANCE = 8;
+/** How quickly cars resume after van clears the path */
+const RESUME_RATE = 6; // speed units per second
+/** How far cars get nudged when physically hit by the van */
+const NUDGE_FORCE = 0.6;
 function createTrafficCar(color) {
     const group = new THREE.Group();
     // Body
@@ -63,33 +71,73 @@ export class TrafficSystem {
             const group = createTrafficCar(color);
             const roadPos = roadLines[Math.floor(Math.random() * roadLines.length)];
             const laneOffset = Math.random() > 0.5 ? 2 : -2;
-            const speed = 10 + Math.random() * 10;
+            const baseSpeed = 10 + Math.random() * 10;
             const dir = Math.random() > 0.5 ? 1 : -1;
             const pos = -200 + Math.random() * 400;
             group.rotation.y = rotationForCar(axis, dir);
-            const car = { group, axis, roadPos, laneOffset, speed, dir, pos };
+            const car = {
+                group, axis, roadPos, laneOffset,
+                baseSpeed, currentSpeed: baseSpeed,
+                dir, pos, nudgeVel: 0
+            };
             this.cars.push(car);
             this.scene.add(group);
             this._applyPosition(car);
         };
         for (let i = 0; i < 14; i++)
-            spawnCar('z'); // horizontal roads
+            spawnCar('z');
         for (let i = 0; i < 14; i++)
-            spawnCar('x'); // vertical roads
+            spawnCar('x');
     }
     _applyPosition(car) {
         if (car.axis === 'x') {
-            // Travels along X, road is at fixed Z
             car.group.position.set(car.pos, 0, car.roadPos + car.laneOffset);
         }
         else {
-            // axis === 'z': travels along Z, road is at fixed X
             car.group.position.set(car.roadPos + car.laneOffset, 0, car.pos);
         }
     }
-    update(dt, _vanX, _vanZ) {
+    update(dt, vanX, vanZ) {
         for (const car of this.cars) {
-            car.pos += car.dir * car.speed * dt;
+            // ── Braking logic ──────────────────────────────────────────────────────
+            // Check if the van is ahead of this car along its travel axis
+            const carX = car.group.position.x;
+            const carZ = car.group.position.z;
+            let aheadDist = Infinity;
+            let lateralDist = Infinity;
+            if (car.axis === 'x') {
+                // car travels along X; "ahead" = in direction of dir along X
+                const rawDist = (vanX - carX) * car.dir;
+                lateralDist = Math.abs(vanZ - carZ);
+                aheadDist = rawDist;
+            }
+            else {
+                // car travels along Z
+                const rawDist = (vanZ - carZ) * car.dir;
+                lateralDist = Math.abs(vanX - carX);
+                aheadDist = rawDist;
+            }
+            // Only brake if van is in the car's lane (within ~4 units laterally)
+            const vanInLane = lateralDist < 5;
+            const vanAhead = aheadDist > 0 && aheadDist < BRAKE_DISTANCE;
+            if (vanInLane && vanAhead) {
+                const t = Math.max(0, (aheadDist - STOP_DISTANCE) / (BRAKE_DISTANCE - STOP_DISTANCE));
+                car.currentSpeed = car.baseSpeed * t; // 0 at stop distance, full speed at brake distance
+            }
+            else {
+                // Resume gradually
+                car.currentSpeed = Math.min(car.baseSpeed, car.currentSpeed + RESUME_RATE * dt);
+            }
+            // ── Nudge decay ────────────────────────────────────────────────────────
+            if (Math.abs(car.nudgeVel) > 0.05) {
+                car.pos += car.nudgeVel * dt;
+                car.nudgeVel *= Math.max(0, 1 - 6 * dt); // friction
+            }
+            else {
+                car.nudgeVel = 0;
+            }
+            // ── Move ───────────────────────────────────────────────────────────────
+            car.pos += car.dir * car.currentSpeed * dt;
             // Wrap
             if (car.pos > 235)
                 car.pos = -235;
@@ -100,7 +148,7 @@ export class TrafficSystem {
     }
     /**
      * Resolve van position against all traffic cars using AABB Minkowski sum.
-     * Returns corrected {x, z} and whether a hit occurred (for speed scrub).
+     * Also nudges the car away when hit — cars aren't immovable tanks.
      */
     resolveVan(vanX, vanZ, vanRadius = 1.8) {
         let rx = vanX, rz = vanZ;
@@ -108,23 +156,32 @@ export class TrafficSystem {
         for (const car of this.cars) {
             const cx = car.group.position.x;
             const cz = car.group.position.z;
-            // Car body: 3.5W × 6.5D — axis determines which is which in world space
-            // axis='x': car length (6.5) runs along X, so hw=3.25, hd=1.75
-            // axis='z': car length (6.5) runs along Z, so hw=1.75, hd=3.25
+            // axis='x': length (6.5) runs along X → hw=3.25, hd=1.75
+            // axis='z': length (6.5) runs along Z → hw=1.75, hd=3.25
             const hw = (car.axis === 'x' ? 3.25 : 1.75) + vanRadius;
             const hd = (car.axis === 'x' ? 1.75 : 3.25) + vanRadius;
             const dx = rx - cx;
             const dz = rz - cz;
             if (Math.abs(dx) < hw && Math.abs(dz) < hd) {
-                // Inside — push out on shortest axis
                 const overlapX = hw - Math.abs(dx);
                 const overlapZ = hd - Math.abs(dz);
                 if (overlapX < overlapZ) {
-                    rx += dx < 0 ? -overlapX : overlapX;
+                    // Push van out on X axis
+                    const pushSign = dx < 0 ? -1 : 1;
+                    rx += pushSign * overlapX;
+                    // Nudge car the other way along its travel axis
+                    if (car.axis === 'x')
+                        car.nudgeVel += pushSign * NUDGE_FORCE * -1 * car.dir;
                 }
                 else {
-                    rz += dz < 0 ? -overlapZ : overlapZ;
+                    // Push van out on Z axis
+                    const pushSign = dz < 0 ? -1 : 1;
+                    rz += pushSign * overlapZ;
+                    if (car.axis === 'z')
+                        car.nudgeVel += pushSign * NUDGE_FORCE * -1 * car.dir;
                 }
+                // Stop the car dead on impact
+                car.currentSpeed = 0;
                 hit = true;
             }
         }

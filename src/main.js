@@ -21,6 +21,7 @@ import { SpeechBubble } from './ui/SpeechBubble';
 import { DialoguePause } from './ui/DialoguePause';
 import { CREW_CONFIGS } from './entities/CrewCharacter';
 import { preloadTEMLogo } from './utils/LogoLoader';
+import { BRAND_SLOGANS, GAME_TIPS, JOB_OPENERS, randomFrom } from './data/Slogans';
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS = {
     Matt: "Matt folds himself into the back. \"Took your time.\" He's already on his phone.",
@@ -61,7 +62,21 @@ async function main() {
             waypointSystem.setTarget(JobManager.WORKSHOP_POS);
             hud.setActiveJob(job, 1);
             hud.updateCrewStatus([], [], false);
-        });
+            // Schedule random breaks — can fire at any point during the job
+            jobElapsed = 0;
+            const firstAt = 20 + Math.random() * 60; // 20–80s in
+            const secondAt = firstAt + 20 + Math.random() * 50; // 20–70s later
+            if (Math.random() > 0.5) {
+                coffeeBreakAt = firstAt;
+                toiletBreakAt = secondAt;
+            }
+            else {
+                toiletBreakAt = firstAt;
+                coffeeBreakAt = secondAt;
+            }
+            breakActive = null;
+            savedWaypoint = null;
+        }, randomFrom(JOB_OPENERS));
     });
     // ── Spill penalty callback ───────────────────────────────────────────────────
     spillMeter.onSpill = (penalty) => {
@@ -147,6 +162,15 @@ async function main() {
     document.body.appendChild(photosBtn);
     // Guard to prevent job completion firing more than once per arrival
     let jobCompleting = false;
+    // ── Random break interrupt system ─────────────────────────────────────────────
+    // Breaks can fire at any point during a job — random timing each run
+    const COFFEE_POS = { x: -60, z: -100 };
+    const TOILET_POS = { x: 100, z: 60 };
+    let jobElapsed = 0;
+    let coffeeBreakAt = -1; // seconds into job when coffee urge fires (-1 = done/unused)
+    let toiletBreakAt = -1; // seconds into job when toilet urge fires
+    let breakActive = null; // which break is currently active
+    let savedWaypoint = null; // waypoint before break
     // ── Debug panel ──────────────────────────────────────────────────────────────
     const dbg = document.createElement('div');
     dbg.style.cssText = `
@@ -192,7 +216,8 @@ async function main() {
         characters.updateAll(dt);
         // ── Coffee shop + Bladder mechanic ────────────────────────────────────────
         coffeeShop.update(dt);
-        if (coffeeShop.tryVisit(vanX, vanZ)) {
+        if (coffeeShop.tryVisit(vanX, vanZ) && breakActive !== 'coffee') {
+            // Normal visit — if a coffee break waypoint is active, that handler fires instead
             spillMeter.level = Math.max(0, spillMeter.level - 0.6);
             bladderMeter.drinkCoffee();
             const urgentAfter = bladderMeter.isUrgent;
@@ -204,7 +229,8 @@ async function main() {
             }
         }
         bladderMeter.update(dt, jobManager.activeJob ? physics.speed : 0);
-        if (bladderMeter.tryRelief(vanX, vanZ)) {
+        if (bladderMeter.tryRelief(vanX, vanZ) && breakActive !== 'toilet') {
+            // Normal visit — if a toilet break waypoint is active, that handler fires instead
             hud.showToast('🚽 Ahhh! Relief! Ready for the next coffee ☕', 0x2196F3);
         }
         if (bladderMeter.isUrgent && jobManager.activeJob) {
@@ -252,6 +278,10 @@ async function main() {
             hud.updateTravelTimer(jobManager.travelTimer);
             if (result?.failed) {
                 spillMeter.level = 0;
+                breakActive = null;
+                savedWaypoint = null;
+                coffeeBreakAt = -1;
+                toiletBreakAt = -1;
                 waypointSystem.setTarget(null);
                 hud.updateTravelTimer(null);
                 hud.showTimerFail(150_000);
@@ -281,8 +311,59 @@ async function main() {
                 hud.updateJobDistance(jobManager.distanceTo(vanX, vanZ));
             }
         }
+        // ── Random break interrupts (fire any time during active job) ────────────
+        if (jobManager.activeJob && !breakActive && !jobCompleting) {
+            jobElapsed += dt;
+            // Coffee urge fires
+            if (coffeeBreakAt > 0 && jobElapsed >= coffeeBreakAt) {
+                coffeeBreakAt = -1;
+                breakActive = 'coffee';
+                savedWaypoint = waypointSystem.currentTarget;
+                waypointSystem.setTarget(COFFEE_POS);
+                hud.showToast('☕ Gagging for a coffee — hit the cafe NOW!', 0xD4622A);
+            }
+            // Toilet urge fires
+            else if (toiletBreakAt > 0 && jobElapsed >= toiletBreakAt) {
+                toiletBreakAt = -1;
+                breakActive = 'toilet';
+                bladderMeter.level = 0.88; // force urgent
+                bladderMeter.isUrgent = true;
+                savedWaypoint = waypointSystem.currentTarget;
+                waypointSystem.setTarget(TOILET_POS);
+                hud.showToast('🚽 Bursting! Find the toilet before you ruin the plastering!', 0xFF5722);
+            }
+        }
+        // ── Break arrival ─────────────────────────────────────────────────────────
+        if (jobManager.activeJob && breakActive && !jobCompleting) {
+            const breakPos = breakActive === 'coffee' ? COFFEE_POS : TOILET_POS;
+            const dx = vanX - breakPos.x;
+            const dz = vanZ - breakPos.z;
+            if (Math.sqrt(dx * dx + dz * dz) < 14) {
+                jobCompleting = true;
+                const kind = breakActive;
+                breakActive = null;
+                const restore = savedWaypoint;
+                savedWaypoint = null;
+                if (kind === 'coffee') {
+                    bladderMeter.drinkCoffee();
+                    dialoguePause.show('☕ Coffee Break!', `You grab a flat white. The barista nods — they know the order.\n\nBladder's loading... don't take too long.\n\nBack on the road.`, () => {
+                        waypointSystem.setTarget(restore);
+                        jobCompleting = false;
+                    }, randomFrom(GAME_TIPS));
+                }
+                else {
+                    bladderMeter.level = 0;
+                    bladderMeter.isUrgent = false;
+                    bladderMeter.caffeinated = false;
+                    dialoguePause.show('🚽 Phew — Crisis Averted!', `Barely made it. Not a word to the crew.\n\nBack on the road.`, () => {
+                        waypointSystem.setTarget(restore);
+                        jobCompleting = false;
+                    }, randomFrom(GAME_TIPS));
+                }
+            }
+        }
         // ── Phase 1: workshop arrival → supplies loaded ───────────────────────────
-        if (jobManager.activeJob && jobManager.activePhase === 1 && !jobCompleting) {
+        if (jobManager.activeJob && jobManager.activePhase === 1 && !breakActive && !jobCompleting) {
             if (jobManager.checkPhase1Arrival(vanX, vanZ)) {
                 jobCompleting = true;
                 spillMeter.level = 0;
@@ -299,11 +380,11 @@ async function main() {
                     hud.setActiveJob(jobManager.activeJob, 2);
                     hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
                     jobCompleting = false;
-                });
+                }, randomFrom(BRAND_SLOGANS));
             }
         }
         // ── Phase 2: crew pickup ──────────────────────────────────────────────────
-        if (jobManager.activeJob && jobManager.activePhase === 2 && !jobCompleting) {
+        if (jobManager.activeJob && jobManager.activePhase === 2 && !breakActive && !jobCompleting) {
             for (const name of jobManager.crewToPickup) {
                 if (jobManager.crewPickedUp.includes(name))
                     continue;
@@ -322,7 +403,7 @@ async function main() {
                             hud.showCrewPickup(name, null);
                             hud.setActiveJob(jobManager.activeJob, 3);
                             jobCompleting = false;
-                        });
+                        }, randomFrom(BRAND_SLOGANS));
                     }
                     else {
                         const nextCrew = jobManager.nextCrewNeeded();
@@ -337,7 +418,7 @@ async function main() {
                             }
                             hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
                             jobCompleting = false;
-                        });
+                        }, randomFrom(GAME_TIPS));
                     }
                     break;
                 }
@@ -346,6 +427,7 @@ async function main() {
         // ── Phase 3: job site arrival → briefing → mini-game ─────────────────────
         if (jobManager.activeJob &&
             jobManager.activePhase === 3 &&
+            !breakActive &&
             !jobCompleting &&
             !miniGameManager.isActive()) {
             const arrived = jobManager.checkArrival(vanX, vanZ);
@@ -360,6 +442,10 @@ async function main() {
                         hud.showJobComplete(arrived.title, earned);
                         hud.updateMoney(jobManager.money);
                         characters.showAllCrew();
+                        breakActive = null;
+                        savedWaypoint = null;
+                        coffeeBreakAt = -1;
+                        toiletBreakAt = -1;
                         jobCompleting = false;
                         setTimeout(() => {
                             const available = jobManager.getAvailableJobs();
@@ -367,7 +453,7 @@ async function main() {
                                 jobBoard.show(available);
                         }, 3500);
                     });
-                });
+                }, randomFrom(BRAND_SLOGANS));
             }
         }
         engine.camera.follow(van.mesh.position, van.velocity, van.heading);

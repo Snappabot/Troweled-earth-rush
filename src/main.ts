@@ -22,6 +22,7 @@ import { DialoguePause } from './ui/DialoguePause';
 import { CREW_CONFIGS } from './entities/CrewCharacter';
 import type { Job } from './gameplay/JobManager';
 import { preloadTEMLogo } from './utils/LogoLoader';
+import { BRAND_SLOGANS, GAME_TIPS, JOB_OPENERS, randomFrom } from './data/Slogans';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -86,7 +87,8 @@ async function main() {
         }
         breakActive = null;
         savedWaypoint = null;
-      }
+      },
+      randomFrom(JOB_OPENERS)
     );
   });
 
@@ -384,7 +386,8 @@ async function main() {
             () => {
               waypointSystem.setTarget(restore);
               jobCompleting = false;
-            }
+            },
+            randomFrom(GAME_TIPS)
           );
         } else {
           bladderMeter.level = 0;
@@ -396,7 +399,8 @@ async function main() {
             () => {
               waypointSystem.setTarget(restore);
               jobCompleting = false;
-            }
+            },
+            randomFrom(GAME_TIPS)
           );
         }
       }
@@ -424,7 +428,8 @@ async function main() {
             hud.setActiveJob(jobManager.activeJob, 2);
             hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
             jobCompleting = false;
-          }
+          },
+          randomFrom(BRAND_SLOGANS)
         );
       }
     }
@@ -460,7 +465,8 @@ async function main() {
                 hud.showCrewPickup(name, null);
                 hud.setActiveJob(jobManager.activeJob, 3);
                 jobCompleting = false;
-              }
+              },
+              randomFrom(BRAND_SLOGANS)
             );
           } else {
             const nextCrew = jobManager.nextCrewNeeded();
@@ -478,7 +484,8 @@ async function main() {
                 }
                 hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
                 jobCompleting = false;
-              }
+              },
+              randomFrom(GAME_TIPS)
             );
           }
           break;
@@ -520,7 +527,8 @@ async function main() {
                 if (available.length > 0) jobBoard.show(available);
               }, 3500);
             });
-          }
+          },
+          randomFrom(BRAND_SLOGANS)
         );
       }
     }

@@ -11,6 +11,7 @@ export class DialoguePause {
   private overlay: HTMLDivElement;
   private titleEl: HTMLDivElement;
   private bodyEl: HTMLDivElement;
+  private sloganEl: HTMLDivElement;
   private hintEl: HTMLDivElement;
   private progressBar: HTMLDivElement;
 
@@ -125,6 +126,19 @@ export class DialoguePause {
       overflow-y: auto;
     `;
 
+    // ── Slogan footer (brand voice / GTA tip) ─────────────────────────────────
+    this.sloganEl = document.createElement('div');
+    this.sloganEl.style.cssText = `
+      color: rgba(255,255,255,0.28);
+      font-size: 11.5px;
+      font-style: italic;
+      text-align: center;
+      padding: 6px 20px 2px;
+      letter-spacing: 0.2px;
+      line-height: 1.5;
+      white-space: pre-line;
+    `;
+
     // ── Tap-to-skip hint ──────────────────────────────────────────────────────
     const skipHint = document.createElement('div');
     skipHint.style.cssText = `
@@ -132,7 +146,7 @@ export class DialoguePause {
       font-size: 12px;
       font-weight: 700;
       text-align: center;
-      padding: 12px 0 16px;
+      padding: 10px 0 16px;
       letter-spacing: 0.6px;
       animation: dpBlink 1.2s ease-in-out infinite;
     `;
@@ -145,6 +159,7 @@ export class DialoguePause {
     card.appendChild(header);
     card.appendChild(progressTrack);
     card.appendChild(bodyWrap);
+    card.appendChild(this.sloganEl);
     card.appendChild(skipHint);
     this.overlay.appendChild(card);
     document.body.appendChild(this.overlay);
@@ -161,7 +176,7 @@ export class DialoguePause {
    * Show the pause dialogue with a 15-second countdown.
    * Travel timer is paused by the game loop while isActive is true.
    */
-  show(title: string, body: string, onResume: () => void): void {
+  show(title: string, body: string, onResume: () => void, slogan?: string): void {
     this._clearTimers();
     this._active = true;
     this._readyToResume = false;
@@ -170,6 +185,8 @@ export class DialoguePause {
 
     this.titleEl.textContent = title;
     this.bodyEl.textContent = body;
+    this.sloganEl.textContent = slogan ?? '';
+    this.sloganEl.style.display = slogan ? 'block' : 'none';
     this.hintEl.textContent = String(CHECKPOINT_SECONDS);
     this.overlay.style.display = 'flex';
 

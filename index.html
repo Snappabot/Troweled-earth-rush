@@ -37,6 +37,30 @@
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
+    #loading-screen .slogan {
+      max-width: 340px;
+      text-align: center;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #ccc;
+      font-style: italic;
+      letter-spacing: 0.3px;
+      opacity: 1;
+      transition: opacity 0.5s;
+      white-space: pre-line;
+      padding: 0 24px;
+    }
+    #loading-screen .tip {
+      max-width: 340px;
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #777;
+      letter-spacing: 0.2px;
+      opacity: 1;
+      transition: opacity 0.5s;
+      padding: 0 24px;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
@@ -45,10 +69,67 @@
     <div class="logo">TROWELED EARTH RUSH</div>
     <div class="spinner"></div>
     <div class="sub">Loading city...</div>
+    <div class="slogan" id="ls-slogan"></div>
+    <div class="tip" id="ls-tip"></div>
   </div>
   <script type="module" src="/src/main.ts"></script>
   <script>
-    // Hide loading screen once game canvas appears
+    // ── Loading screen slogans ─────────────────────────────────────────────────
+    const BRAND = [
+      "Our finishes don't copy the earth.\nThey breathe it.",
+      "Our surfaces don't mimic stone.\nThey become it.",
+      "Our renders don't imitate time.\nThey carry it.",
+      "Our finishes don't fake patina.\nThey earn it.",
+      "Our textures don't pretend wilderness.\nThey invite it in.",
+      "Our coatings don't replicate nature.\nThey speak its language.",
+      "Our surfaces don't borrow beauty.\nThey grow it.",
+      "Our finishes don't chase authenticity.\nThey live it.",
+      "Our plaster doesn't cover walls.\nIt tells their story.",
+      "The trowel doesn't rush.\nNeither do we.",
+      "A city of walls waiting to become something.\nWe're on our way.",
+    ];
+    const TIPS = [
+      "DRIVING TIP: The spill meter doesn't care about your excuses.",
+      "DRIVING TIP: Traffic in Melbourne has never once moved for a plastering van.",
+      "DRIVING TIP: Every bump is just the plaster finding its character.",
+      "CREW TIP: Phil will finish his tea before he gets in. Plan for this.",
+      "CREW TIP: Jarrad has been standing there fifteen minutes. He will mention it.",
+      "CLIENT TIP: Brad has never been to Europe. The wall will be 'very European' regardless.",
+      "CLIENT TIP: Patricia has read the full TDS. She's highlighted it. She will quiz you.",
+      "HEALTH TIP: Coffee steadies the trowel. What it does to the bladder is your problem.",
+      "HEALTH TIP: The barista knows your order. So does your bladder.",
+      "BUSINESS TIP: Authenticity cannot be rushed. Darren is rushing you. Do your best.",
+      "Connie has seen everything. She is still laughing.",
+      "The walls remember every hand that shaped them. The van remembers nothing.",
+      "This city has exactly one decent flat white. Find it.",
+    ];
+
+    let brandIdx = Math.floor(Math.random() * BRAND.length);
+    let tipIdx   = Math.floor(Math.random() * TIPS.length);
+    const sloganEl = document.getElementById('ls-slogan');
+    const tipEl    = document.getElementById('ls-tip');
+
+    function setSlogan(el, text) {
+      el.style.opacity = '0';
+      setTimeout(() => { el.textContent = text; el.style.opacity = '1'; }, 500);
+    }
+
+    if (sloganEl) setSlogan(sloganEl, BRAND[brandIdx]);
+    if (tipEl)    { tipEl.textContent = TIPS[tipIdx]; }
+
+    // Cycle brand slogan every 3s, tip every 4s
+    const sloganTimer = setInterval(() => {
+      if (!document.getElementById('loading-screen')) { clearInterval(sloganTimer); return; }
+      brandIdx = (brandIdx + 1) % BRAND.length;
+      if (sloganEl) setSlogan(sloganEl, BRAND[brandIdx]);
+    }, 3000);
+    const tipTimer = setInterval(() => {
+      if (!document.getElementById('loading-screen')) { clearInterval(tipTimer); return; }
+      tipIdx = (tipIdx + 1) % TIPS.length;
+      if (tipEl) setSlogan(tipEl, TIPS[tipIdx]);
+    }, 4000);
+
+    // ── Hide once game canvas appears ──────────────────────────────────────────
     const observer = new MutationObserver(() => {
       if (document.querySelector('canvas')) {
         const ls = document.getElementById('loading-screen');
