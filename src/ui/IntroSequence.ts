@@ -96,12 +96,23 @@ const SCENES: Scene[] = [
     id: 'fabio',
     name: 'FABIO',
     role: 'Plasterer · Pizza Consultant',
-    line: 'Ehhhh.',
+    line: "Come, we can have pizza. Andiamo, fa presto!",
     accentColor: '#FF7722',
     skyTop: '#883300', skyBot: '#CC5500',   // bright burnt orange
     particleColor: '#FFAa40', particleKind: 'smoke',
     buildingTint: '#441A00',  spotColor: '#FF772255',
     voiceChar: 'Fabio',
+  },
+  {
+    id: 'joe',
+    name: 'JOE',
+    role: 'The Wildcard · Knows Too Much',
+    line: "Y'all seen that Epstein list? So many chosen people! And Trump!",
+    accentColor: '#F0C000',
+    skyTop: '#3A3000', skyBot: '#887700',
+    particleColor: '#FFE040', particleKind: 'sparks',
+    buildingTint: '#1A1600', spotColor: '#F0C00055',
+    voiceChar: 'Joe',
   },
   {
     id: 'phil',
@@ -632,6 +643,7 @@ export class IntroSequence {
       connie:   '#F0C8A0',
       jarrad:   '#E0B090',
       fabio:    '#D4A070',
+      joe:      '#D4A070',
       phil:     '#D8A888',
     };
     const skin = skinTones[sc.id] ?? '#D0A080';
@@ -717,6 +729,7 @@ export class IntroSequence {
       connie:   { color: '#E8D080', kind: 'long'    },
       jarrad:   { color: '#3a2000', kind: 'topknot' },
       fabio:    { color: '#1a0800', kind: 'short'   },
+      joe:      { color: '#2a1a00', kind: 'short'   },
       phil:     { color: '#CCCCCC', kind: 'short'   },
     };
 
@@ -757,6 +770,17 @@ export class IntroSequence {
       ctx.ellipse(cx, hy - hr * 0.9, hr * 1.4, hr * 0.5, 0, Math.PI, 0);
       ctx.fill();
       ctx.fillRect(cx - hr * 1.4, hy - hr * 1.0, hr * 2.8, hr * 0.4);
+    }
+    // Joe — white helmet
+    if (sc.id === 'joe') {
+      ctx.fillStyle = '#F5F5F0';
+      ctx.beginPath();
+      ctx.ellipse(cx, hy - hr * 0.9, hr * 1.4, hr * 0.5, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(cx - hr * 1.4, hy - hr * 1.0, hr * 2.8, hr * 0.4);
+      // Hi-vis yellow band on shirt
+      ctx.fillStyle = '#F0C000';
+      ctx.fillRect(cx - 20, groundY - hh * 0.56, 40, hh * 0.07);
     }
 
     // ── Props ────────────────────────────────────────────────────────────────
