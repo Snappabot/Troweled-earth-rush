@@ -78,15 +78,14 @@ export class StartMenu {
         creditsBtn.style.border = '1.5px solid rgba(255,255,255,0.15)';
         creditsBtn.style.color = 'rgba(255,255,255,0.55)';
         creditsBtn.addEventListener('click', () => {
-            this._stopAudio();
+            this._killAudio(); // instant stop — no fade, no overlap
             this.overlay.style.opacity = '0';
             this.overlay.style.transition = 'opacity 0.3s';
             setTimeout(async () => {
                 await new ClosingCredits().show();
-                // Fade back in to start menu
                 this.overlay.style.opacity = '1';
                 this._startAudio();
-            }, 350);
+            }, 320);
         });
         btnRow.appendChild(playBtn);
         btnRow.appendChild(howBtn);
@@ -188,6 +187,22 @@ export class StartMenu {
                     this._bass(bt, 55);
                 if (beat % 8 === 0)
                     this._pad(bt, 220 * (beat % 16 < 8 ? 1 : 1.5));
+            }
+        }
+        catch { }
+    }
+    /** Instant kill — no fade. Use when switching to credits to prevent overlap. */
+    _killAudio() {
+        if (this.themeAudio) {
+            this.themeAudio.pause();
+            this.themeAudio.src = '';
+            this.themeAudio = null;
+        }
+        try {
+            if (this.ctx) {
+                this.ctx.close();
+                this.ctx = null;
+                this.masterGain = null;
             }
         }
         catch { }

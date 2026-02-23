@@ -130,6 +130,27 @@ const STATIONS: Station[] = [
     bpm: 108, rootHz: 246.94, vibe: 'italian', color: '#D4602A',
     audioFile: AUDIO.radio3,
   },
+  {
+    id: 'tem-talk',
+    name: 'TEM TALK',
+    freq: '91.1',
+    tagline: 'Conversations From the Site',
+    songs: [
+      '★ The Troweled Earth Podcast [LIVE]',
+      'Deep Dive: Blood Red Clay vs Venetian',
+      'Interview: Matt on the Warlord Method',
+      'Ask Connie — Running a Crew in Melbourne',
+      'Five Years of Tadelakt with Tsuyoshi',
+    ],
+    dj: [
+      "TEM Talk 91.1 — real conversations from the trade.",
+      "You're listening to Melbourne's only plastering podcast. TEM Talk.",
+      "That was a conversation worth replaying. 91.1 FM.",
+      "Next up: more from the TEM crew. Stick around.",
+    ],
+    bpm: 70, rootHz: 180, vibe: 'ambient', color: '#90B0C0',
+    audioFile: AUDIO.theme2,
+  },
 ];
 
 // ── Audio engine ──────────────────────────────────────────────────────────────

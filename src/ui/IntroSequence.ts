@@ -546,102 +546,252 @@ export class IntroSequence {
 
   private _drawCharSilhouette(ctx: CanvasRenderingContext2D, W: number, H: number, sc: Scene): void {
     const groundY = H * 0.62;
-    const cx = W * 0.72;
-    const fadeIn = Math.min(1, this.sceneT * 2.5);
+    const cx = W * 0.68;
+    const fadeIn = Math.min(1, this.sceneT * 2.0);
 
     ctx.save();
     ctx.globalAlpha = fadeIn;
 
     // Glow behind figure
-    const glow = ctx.createRadialGradient(cx, groundY - 60, 10, cx, groundY - 60, 120);
-    glow.addColorStop(0, sc.accentColor + '40');
+    const glow = ctx.createRadialGradient(cx, groundY - 80, 10, cx, groundY - 80, 160);
+    glow.addColorStop(0, sc.accentColor + '50');
     glow.addColorStop(1, 'transparent');
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.ellipse(cx, groundY - 60, 120, 180, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, groundY - 80, 160, 220, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Shadow on ground
-    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    // Ground shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
     ctx.beginPath();
-    ctx.ellipse(cx, groundY + 5, 35, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, groundY + 6, 40, 9, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Silhouette — tradesperson figure
-    ctx.fillStyle = '#000000E0';
-    const hh = Math.min(H * 0.48, 220); // figure height
+    const hh = Math.min(H * 0.52, 240);
 
-    // Legs
-    ctx.fillRect(cx - 16, groundY - hh * 0.42, 14, hh * 0.42);
-    ctx.fillRect(cx + 2,  groundY - hh * 0.42, 14, hh * 0.42);
+    // ── Skin tone (varies per character) ─────────────────────────────────────
+    const skinTones: Record<string, string> = {
+      jose:     '#C8856A',
+      matt:     '#E8C0A0',
+      tsuyoshi: '#F0D4B0',
+      connie:   '#F0C8A0',
+      jarrad:   '#E0B090',
+      fabio:    '#D4A070',
+      phil:     '#D8A888',
+    };
+    const skin = skinTones[sc.id] ?? '#D0A080';
 
-    // Torso
-    ctx.fillRect(cx - 18, groundY - hh * 0.78, 36, hh * 0.37);
+    // ── Uniform (TEM orange-brown shirt + dark pants) ─────────────────────────
+    const uniformCol = sc.accentColor;
+    const pantCol    = '#1a1a2a';
+
+    // Boots
+    ctx.fillStyle = '#111';
+    ctx.fillRect(cx - 19, groundY - 22, 16, 22);
+    ctx.fillRect(cx + 3,  groundY - 22, 16, 22);
+
+    // Pants
+    ctx.fillStyle = pantCol;
+    ctx.fillRect(cx - 18, groundY - hh * 0.44, 16, hh * 0.44 - 20);
+    ctx.fillRect(cx + 2,  groundY - hh * 0.44, 16, hh * 0.44 - 20);
+
+    // TEM shirt / jacket
+    ctx.fillStyle = uniformCol + 'CC';
+    ctx.fillRect(cx - 20, groundY - hh * 0.80, 40, hh * 0.37);
+
+    // Collar / neck
+    ctx.fillStyle = skin;
+    ctx.fillRect(cx - 5, groundY - hh * 0.84, 10, hh * 0.06);
+
+    // Arms
+    ctx.fillStyle = uniformCol + 'AA';
+    // Left arm
+    ctx.fillRect(cx - 32, groundY - hh * 0.78, 13, hh * 0.32);
+    // Right arm (extended for prop)
+    ctx.fillRect(cx + 19, groundY - hh * 0.78, 13, hh * 0.28);
+
+    // Hands (skin)
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.ellipse(cx - 26, groundY - hh * 0.46, 7, 9, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + 26, groundY - hh * 0.50, 7, 9, -0.2, 0, Math.PI * 2);
+    ctx.fill();
 
     // Head
+    ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.arc(cx, groundY - hh * 0.84, hh * 0.09, 0, Math.PI * 2);
+    ctx.ellipse(cx, groundY - hh * 0.87, hh * 0.075, hh * 0.09, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Character-specific props
-    this._drawProp(ctx, sc, cx, groundY, hh);
+    // Character-specific hair + prop
+    this._drawHairAndProp(ctx, sc, cx, groundY, hh, skin);
 
-    // Accent edge light on figure
-    ctx.strokeStyle = sc.accentColor + '90';
-    ctx.lineWidth = 2;
+    // Rim light — accent highlight on left edge
+    ctx.strokeStyle = sc.accentColor;
+    ctx.lineWidth = 2.5;
+    ctx.globalAlpha = fadeIn * 0.6;
     ctx.beginPath();
-    ctx.arc(cx, groundY - hh * 0.84, hh * 0.09 + 1, 0, Math.PI * 2);
+    ctx.moveTo(cx - 20, groundY - hh * 0.44);
+    ctx.lineTo(cx - 20, groundY - hh * 0.80);
+    ctx.lineTo(cx - 10, groundY - hh * 0.84);
     ctx.stroke();
 
     ctx.restore();
   }
 
-  private _drawProp(ctx: CanvasRenderingContext2D, sc: Scene, cx: number, groundY: number, hh: number): void {
-    ctx.fillStyle = '#333';
+  private _drawHairAndProp(ctx: CanvasRenderingContext2D, sc: Scene, cx: number, groundY: number, hh: number, skin: string): void {
+    const hairStyles: Record<string, {color: string; kind: string}> = {
+      jose:     { color: '#1a0800', kind: 'short'   },
+      matt:     { color: '#2a1a00', kind: 'short'   },
+      tsuyoshi: { color: '#111',    kind: 'mohawk'  },
+      connie:   { color: '#E8D080', kind: 'long'    },
+      jarrad:   { color: '#3a2000', kind: 'topknot' },
+      fabio:    { color: '#1a0800', kind: 'short'   },
+      phil:     { color: '#CCCCCC', kind: 'short'   },
+    };
+
+    const hs = hairStyles[sc.id] ?? { color: '#1a0800', kind: 'short' };
+    ctx.fillStyle = hs.color;
+
+    const hy = groundY - hh * 0.87;
+    const hr = hh * 0.075;
+
+    if (hs.kind === 'short') {
+      ctx.beginPath();
+      ctx.arc(cx, hy - hr * 0.7, hr * 1.1, Math.PI, 0);
+      ctx.fill();
+    } else if (hs.kind === 'mohawk') {
+      ctx.fillRect(cx - 4, hy - hr * 2.2, 8, hr * 1.6);
+      ctx.fillStyle = '#FF3A00';
+      ctx.fillRect(cx - 3, hy - hr * 2.4, 6, hr * 0.6);
+    } else if (hs.kind === 'long') {
+      ctx.beginPath();
+      ctx.arc(cx, hy - hr * 0.5, hr * 1.1, Math.PI, 0);
+      ctx.fill();
+      // Flowing hair
+      ctx.fillRect(cx - hr * 1.2, hy, hr * 2.4, hh * 0.18);
+    } else if (hs.kind === 'topknot') {
+      ctx.beginPath();
+      ctx.arc(cx, hy - hr * 0.5, hr, Math.PI, 0);
+      ctx.fill();
+      // Bun
+      ctx.beginPath();
+      ctx.arc(cx, hy - hr * 1.6, hr * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Hard hats for construction chars
+    if (sc.id === 'jose' || sc.id === 'matt' || sc.id === 'tsuyoshi') {
+      ctx.fillStyle = '#F5C842';
+      ctx.beginPath();
+      ctx.ellipse(cx, hy - hr * 0.9, hr * 1.4, hr * 0.5, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(cx - hr * 1.4, hy - hr * 1.0, hr * 2.8, hr * 0.4);
+    }
+
+    // ── Props ────────────────────────────────────────────────────────────────
     switch (sc.id) {
       case 'jose':
-      case 'matt':
-        // Trowel — arm out + blade
-        ctx.fillRect(cx + 18, groundY - hh * 0.62, 28, 5);  // arm
-        ctx.fillStyle = '#8899AA';
-        ctx.fillRect(cx + 44, groundY - hh * 0.64, 22, 8);  // blade
+      case 'matt': {
+        // Trowel arm extended
+        ctx.fillStyle = skin;
+        ctx.fillRect(cx + 19, groundY - hh * 0.62, 28, 8);
+        ctx.fillStyle = '#A0B8CC';
+        ctx.save();
+        ctx.translate(cx + 52, groundY - hh * 0.63);
+        ctx.rotate(-0.3);
+        ctx.fillRect(0, -4, 28, 10);
+        ctx.fillStyle = '#6A7A88';
+        ctx.fillRect(24, -5, 6, 12);
+        ctx.restore();
         break;
-      case 'tsuyoshi':
-        // Bucket
-        ctx.fillRect(cx - 30, groundY - hh * 0.30, 4, hh * 0.28); // arm down
-        ctx.strokeStyle = '#666';
+      }
+      case 'tsuyoshi': {
+        // Bucket held down
+        ctx.fillStyle = skin;
+        ctx.fillRect(cx - 33, groundY - hh * 0.44, 8, hh * 0.22);
+        ctx.fillStyle = '#446688';
+        ctx.beginPath();
+        ctx.moveTo(cx - 44, groundY - hh * 0.22);
+        ctx.lineTo(cx - 28, groundY - hh * 0.22);
+        ctx.lineTo(cx - 30, groundY - hh * 0.04);
+        ctx.lineTo(cx - 42, groundY - hh * 0.04);
+        ctx.fill();
+        ctx.strokeStyle = '#88AACC';
         ctx.lineWidth = 2;
-        ctx.strokeRect(cx - 38, groundY - hh * 0.04, 20, 16);
+        ctx.strokeRect(cx - 44, groundY - hh * 0.22, 16, 2);
         break;
-      case 'connie':
-        // Clipboard
-        ctx.fillRect(cx + 18, groundY - hh * 0.62, 4, hh * 0.18); // arm
-        ctx.fillStyle = '#DDDDAA';
-        ctx.fillRect(cx + 20, groundY - hh * 0.66, 18, 24);
+      }
+      case 'connie': {
+        // Clipboard in right hand
+        ctx.fillStyle = skin;
+        ctx.fillRect(cx + 19, groundY - hh * 0.68, 10, hh * 0.20);
+        ctx.fillStyle = '#E8E0C0';
+        ctx.fillRect(cx + 28, groundY - hh * 0.72, 26, 34);
+        ctx.fillStyle = '#C8A86A';
+        ctx.fillRect(cx + 34, groundY - hh * 0.74, 14, 6);
+        ctx.fillStyle = '#88778866';
+        for (let i = 0; i < 4; i++) {
+          ctx.fillRect(cx + 30, groundY - hh * 0.66 + i * 6, 20, 3);
+        }
         break;
-      case 'jarrad':
-        // Phone glow
-        ctx.fillRect(cx + 18, groundY - hh * 0.66, 4, hh * 0.18);
+      }
+      case 'jarrad': {
+        // Phone glow in right hand
+        ctx.fillStyle = skin;
+        ctx.fillRect(cx + 19, groundY - hh * 0.70, 10, hh * 0.22);
+        ctx.fillStyle = '#1a1a2a';
+        ctx.fillRect(cx + 28, groundY - hh * 0.73, 18, 28);
         ctx.fillStyle = '#4488FF';
         ctx.shadowColor = '#4488FF';
-        ctx.shadowBlur = 14;
-        ctx.fillRect(cx + 22, groundY - hh * 0.68, 12, 20);
+        ctx.shadowBlur = 18;
+        ctx.fillRect(cx + 30, groundY - hh * 0.71, 14, 24);
         ctx.shadowBlur = 0;
+        // Screen glow spill on face
+        ctx.fillStyle = '#4488FF18';
+        ctx.beginPath();
+        ctx.ellipse(cx + 20, groundY - hh * 0.87, 30, 40, 0, 0, Math.PI * 2);
+        ctx.fill();
         break;
-      case 'fabio':
-        // Pizza box
-        ctx.fillRect(cx + 18, groundY - hh * 0.56, 4, hh * 0.14);
-        ctx.fillStyle = '#AA8844';
-        ctx.fillRect(cx + 20, groundY - hh * 0.60, 30, 18);
-        ctx.fillStyle = '#FF4422';
-        ctx.fillRect(cx + 24, groundY - hh * 0.58, 22, 14);
+      }
+      case 'fabio': {
+        // Pizza box on shoulder
+        ctx.fillStyle = skin;
+        ctx.fillRect(cx - 32, groundY - hh * 0.78, 10, hh * 0.10);
+        ctx.fillStyle = '#B8904A';
+        ctx.fillRect(cx - 46, groundY - hh * 0.86, 38, 6);   // lid
+        ctx.fillRect(cx - 46, groundY - hh * 0.84, 38, 20);  // box
+        ctx.fillStyle = '#FF5533';
+        ctx.fillRect(cx - 43, groundY - hh * 0.82, 32, 14);  // pizza
+        ctx.fillStyle = '#FFDD44';
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          ctx.arc(cx - 38 + i * 6, groundY - hh * 0.78 + (i % 2) * 4, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
         break;
-      case 'phil':
-        // Tea cup
-        ctx.fillRect(cx - 30, groundY - hh * 0.50, 4, hh * 0.14);
-        ctx.fillStyle = '#BBDDCC';
-        ctx.beginPath(); ctx.arc(cx - 34, groundY - hh * 0.36, 8, 0, Math.PI*2); ctx.fill();
+      }
+      case 'phil': {
+        // Tea / thermos in left hand
+        ctx.fillStyle = skin;
+        ctx.fillRect(cx - 33, groundY - hh * 0.52, 8, hh * 0.10);
+        ctx.fillStyle = '#8899AA';
+        ctx.fillRect(cx - 40, groundY - hh * 0.44, 14, 20);
+        ctx.fillStyle = '#AAC0CC';
+        ctx.fillRect(cx - 39, groundY - hh * 0.46, 12, 8);
+        // Steam
+        ctx.strokeStyle = '#AAAAAA60';
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+          ctx.beginPath();
+          ctx.moveTo(cx - 36 + i * 4, groundY - hh * 0.46);
+          ctx.quadraticCurveTo(cx - 34 + i * 4, groundY - hh * 0.50, cx - 36 + i * 4, groundY - hh * 0.54);
+          ctx.stroke();
+        }
         break;
+      }
     }
   }
 
