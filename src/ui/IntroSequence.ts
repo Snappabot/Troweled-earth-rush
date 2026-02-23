@@ -974,66 +974,235 @@ export class IntroSequence {
   }
 
   private _drawHairAndProp(ctx: CanvasRenderingContext2D, sc: Scene, cx: number, groundY: number, hh: number, skin: string): void {
-    const hairStyles: Record<string, {color: string; kind: string}> = {
-      jose:     { color: '#1a0800', kind: 'short'   },
-      matt:     { color: '#2a1a00', kind: 'short'   },
-      tsuyoshi: { color: '#111',    kind: 'mohawk'  },
-      connie:   { color: '#E8D080', kind: 'long'    },
-      jarrad:   { color: '#3a2000', kind: 'topknot' },
-      fabio:    { color: '#1a0800', kind: 'short'   },
-      joe:      { color: '#2a1a00', kind: 'short'   },
-      phil:     { color: '#CCCCCC', kind: 'short'   },
-    };
-
-    const hs = hairStyles[sc.id] ?? { color: '#1a0800', kind: 'short' };
-    ctx.fillStyle = hs.color;
-
     const hy = groundY - hh * 0.87;
     const hr = hh * 0.075;
 
-    if (hs.kind === 'short') {
-      ctx.beginPath();
-      ctx.arc(cx, hy - hr * 0.7, hr * 1.1, Math.PI, 0);
-      ctx.fill();
-    } else if (hs.kind === 'mohawk') {
-      ctx.fillRect(cx - 4, hy - hr * 2.2, 8, hr * 1.6);
-      ctx.fillStyle = '#FF3A00';
-      ctx.fillRect(cx - 3, hy - hr * 2.4, 6, hr * 0.6);
-    } else if (hs.kind === 'long') {
-      ctx.beginPath();
-      ctx.arc(cx, hy - hr * 0.5, hr * 1.1, Math.PI, 0);
-      ctx.fill();
-      // Flowing hair
-      ctx.fillRect(cx - hr * 1.2, hy, hr * 2.4, hh * 0.18);
-    } else if (hs.kind === 'topknot') {
-      ctx.beginPath();
-      ctx.arc(cx, hy - hr * 0.5, hr, Math.PI, 0);
-      ctx.fill();
-      // Bun
-      ctx.beginPath();
-      ctx.arc(cx, hy - hr * 1.6, hr * 0.7, 0, Math.PI * 2);
-      ctx.fill();
+    ctx.save();
+    ctx.lineCap = 'round';
+
+    switch (sc.id) {
+
+      case 'jose': {
+        // ── Real dreadlocks: shoulder-length, dark near-black, medium thickness ──
+        const dc = '#1a0800';   // dark dread colour
+        const dl = '#2e1200';   // slightly lighter for variation
+        // Dreads hanging down both sides + back — 8 locs
+        const dreads = [
+          { dx: -12, swing: -5, len: hh * 0.22, w: 5 },
+          { dx: -8,  swing: -3, len: hh * 0.26, w: 6 },
+          { dx: -4,  swing: -1, len: hh * 0.28, w: 5 },
+          { dx:  0,  swing:  2, len: hh * 0.25, w: 6 },
+          { dx:  5,  swing:  3, len: hh * 0.23, w: 5 },
+          { dx:  9,  swing:  2, len: hh * 0.20, w: 4 },
+          { dx: -10, swing: -4, len: hh * 0.17, w: 4 }, // shorter front fringe
+          { dx:  7,  swing:  4, len: hh * 0.16, w: 4 },
+        ];
+        dreads.forEach((d, i) => {
+          ctx.strokeStyle = i % 2 === 0 ? dc : dl;
+          ctx.lineWidth = d.w;
+          ctx.beginPath();
+          ctx.moveTo(cx + d.dx, hy - hr * 0.1);
+          ctx.bezierCurveTo(
+            cx + d.dx + d.swing * 0.4, hy + d.len * 0.35,
+            cx + d.dx + d.swing * 0.9, hy + d.len * 0.68,
+            cx + d.dx + d.swing * 0.7, hy + d.len,
+          );
+          ctx.stroke();
+        });
+        // Crown cap over dreads
+        ctx.fillStyle = dc;
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.55, hr * 1.08, Math.PI, 0);
+        ctx.fill();
+        // Forehead headband / dread tie
+        ctx.strokeStyle = '#6B3A00';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.2, hr * 1.12, Math.PI * 0.8, Math.PI * 1.95);
+        ctx.stroke();
+        // Scruffy beard on chin
+        ctx.fillStyle = '#2a1000';
+        ctx.beginPath();
+        ctx.ellipse(cx, hy + hr * 0.6, hr * 0.65, hr * 0.35, 0, 0, Math.PI);
+        ctx.fill();
+        break;
+      }
+
+      case 'matt': {
+        // ── Tousled warm medium-brown, wavy, medium-length. Auburn beard. ──
+        const mc = '#5a3010';   // warm brown
+        // Wavy tousled top — slightly swept
+        ctx.fillStyle = mc;
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.7, hr * 1.15, Math.PI, 0);
+        ctx.fill();
+        // Extra volume tousle on top
+        ctx.beginPath();
+        ctx.ellipse(cx - hr * 0.3, hy - hr * 1.5, hr * 0.9, hr * 0.55, -0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + hr * 0.4, hy - hr * 1.4, hr * 0.75, hr * 0.5, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        // Side hair hangs
+        ctx.strokeStyle = mc;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(cx - hr * 1.05, hy - hr * 0.3);
+        ctx.quadraticCurveTo(cx - hr * 1.3, hy + hr * 0.3, cx - hr * 1.0, hy + hr * 0.5);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + hr * 1.05, hy - hr * 0.3);
+        ctx.quadraticCurveTo(cx + hr * 1.3, hy + hr * 0.3, cx + hr * 1.0, hy + hr * 0.5);
+        ctx.stroke();
+        // Full auburn-red beard
+        ctx.fillStyle = '#7a3010';
+        ctx.beginPath();
+        ctx.ellipse(cx, hy + hr * 0.55, hr * 0.75, hr * 0.42, 0, 0, Math.PI);
+        ctx.fill();
+        // Moustache
+        ctx.fillStyle = '#7a3010';
+        ctx.beginPath();
+        ctx.ellipse(cx, hy + hr * 0.18, hr * 0.52, hr * 0.18, 0, 0, Math.PI);
+        ctx.fill();
+        break;
+      }
+
+      case 'tsuyoshi': {
+        // ── Short straight black hair, side-swept, East Asian ──
+        const tc = '#0a0a0a';
+        // Main short hair cap
+        ctx.fillStyle = tc;
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.65, hr * 1.1, Math.PI, 0);
+        ctx.fill();
+        // Side-swept fringe falling to the right
+        ctx.beginPath();
+        ctx.moveTo(cx - hr * 0.8, hy - hr * 1.1);
+        ctx.bezierCurveTo(cx + hr * 0.2, hy - hr * 1.3, cx + hr * 0.9, hy - hr * 0.9, cx + hr * 1.0, hy - hr * 0.3);
+        ctx.lineTo(cx + hr * 0.5, hy - hr * 0.2);
+        ctx.bezierCurveTo(cx + hr * 0.4, hy - hr * 0.6, cx - hr * 0.1, hy - hr * 0.95, cx - hr * 0.8, hy - hr * 1.1);
+        ctx.fill();
+        break;
+      }
+
+      case 'jarrad': {
+        // ── Dark textured crop, short back and sides, slightly swept top.
+        //    Black rectangular glasses. ──
+        const jc = '#1a1208';
+        ctx.fillStyle = jc;
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.65, hr * 1.08, Math.PI, 0);
+        ctx.fill();
+        // Textured top — a couple of short tufts
+        ctx.beginPath();
+        ctx.ellipse(cx - hr * 0.2, hy - hr * 1.45, hr * 0.7, hr * 0.38, -0.15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.ellipse(cx + hr * 0.3, hy - hr * 1.35, hr * 0.55, hr * 0.32, 0.15, 0, Math.PI * 2);
+        ctx.fill();
+        // Short beard/stubble
+        ctx.fillStyle = '#2a1e08';
+        ctx.beginPath();
+        ctx.ellipse(cx, hy + hr * 0.52, hr * 0.65, hr * 0.30, 0, 0, Math.PI);
+        ctx.fill();
+        // Black rectangular glasses
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth   = 2.5;
+        ctx.fillStyle   = 'rgba(160,200,240,0.18)';
+        const gw = hr * 1.0; const gh = hr * 0.52; const gy = hy - hr * 0.15;
+        // Left lens
+        ctx.beginPath();
+        ctx.roundRect(cx - gw - 1, gy - gh / 2, gw, gh, 2);
+        ctx.fill(); ctx.stroke();
+        // Right lens
+        ctx.beginPath();
+        ctx.roundRect(cx + 1, gy - gh / 2, gw, gh, 2);
+        ctx.fill(); ctx.stroke();
+        // Bridge
+        ctx.beginPath();
+        ctx.moveTo(cx - 1, gy); ctx.lineTo(cx + 1, gy);
+        ctx.stroke();
+        // Arms (temple pieces)
+        ctx.beginPath();
+        ctx.moveTo(cx - gw - 1, gy); ctx.lineTo(cx - gw - hr * 0.4, gy - 1); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx + gw + 1, gy); ctx.lineTo(cx + gw + hr * 0.4, gy - 1); ctx.stroke();
+        break;
+      }
+
+      case 'fabio': {
+        // ── Short dark Italian hair, slicked/neat ──
+        ctx.fillStyle = '#1a0e00';
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.68, hr * 1.1, Math.PI, 0);
+        ctx.fill();
+        // Slight side part and wave
+        ctx.beginPath();
+        ctx.ellipse(cx - hr * 0.1, hy - hr * 1.42, hr * 0.8, hr * 0.38, 0.1, 0, Math.PI * 2);
+        ctx.fill();
+        // Light stubble/shadow beard
+        ctx.fillStyle = '#2e1800';
+        ctx.beginPath();
+        ctx.ellipse(cx, hy + hr * 0.5, hr * 0.6, hr * 0.26, 0, 0, Math.PI);
+        ctx.fill();
+        break;
+      }
+
+      case 'joe': {
+        // ── Short dark brown, no helmet — natural ──
+        ctx.fillStyle = '#2a1800';
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.68, hr * 1.1, Math.PI, 0);
+        ctx.fill();
+        // Slightly messy
+        ctx.beginPath();
+        ctx.ellipse(cx + hr * 0.2, hy - hr * 1.38, hr * 0.65, hr * 0.35, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+
+      case 'phil': {
+        // ── Receding silver/salt-pepper — thin on top, bald crown ──
+        // Sides (silver)
+        ctx.fillStyle = '#B0B0A8';
+        ctx.beginPath();
+        ctx.arc(cx - hr * 0.6, hy - hr * 0.5, hr * 0.7, Math.PI, Math.PI * 1.8);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + hr * 0.6, hy - hr * 0.5, hr * 0.7, Math.PI * 1.2, 0);
+        ctx.fill();
+        // Very thin wisp on top
+        ctx.strokeStyle = '#C8C8C0';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - hr * 0.6, hy - hr * 0.9);
+        ctx.bezierCurveTo(cx - hr * 0.2, hy - hr * 1.4, cx + hr * 0.2, hy - hr * 1.35, cx + hr * 0.7, hy - hr * 0.9);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx - hr * 0.4, hy - hr * 0.85);
+        ctx.bezierCurveTo(cx, hy - hr * 1.2, cx + hr * 0.1, hy - hr * 1.15, cx + hr * 0.5, hy - hr * 0.85);
+        ctx.stroke();
+        // Bare scalp tint at crown
+        ctx.fillStyle = skin;
+        ctx.beginPath();
+        ctx.ellipse(cx, hy - hr * 0.9, hr * 0.6, hr * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        break;
+      }
+
+      case 'connie': {
+        // ── Wild blonde, kept from existing ──
+        ctx.fillStyle = '#E8D080';
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.5, hr * 1.1, Math.PI, 0);
+        ctx.fill();
+        ctx.fillRect(cx - hr * 1.2, hy, hr * 2.4, hh * 0.18);
+        break;
+      }
     }
 
-    // Hard hats for construction chars
-    if (sc.id === 'jose' || sc.id === 'matt' || sc.id === 'tsuyoshi') {
-      ctx.fillStyle = '#F5C842';
-      ctx.beginPath();
-      ctx.ellipse(cx, hy - hr * 0.9, hr * 1.4, hr * 0.5, 0, Math.PI, 0);
-      ctx.fill();
-      ctx.fillRect(cx - hr * 1.4, hy - hr * 1.0, hr * 2.8, hr * 0.4);
-    }
-    // Joe — white helmet
-    if (sc.id === 'joe') {
-      ctx.fillStyle = '#F5F5F0';
-      ctx.beginPath();
-      ctx.ellipse(cx, hy - hr * 0.9, hr * 1.4, hr * 0.5, 0, Math.PI, 0);
-      ctx.fill();
-      ctx.fillRect(cx - hr * 1.4, hy - hr * 1.0, hr * 2.8, hr * 0.4);
-      // Hi-vis yellow band on shirt
-      ctx.fillStyle = '#F0C000';
-      ctx.fillRect(cx - 20, groundY - hh * 0.56, 40, hh * 0.07);
-    }
+    ctx.lineCap = 'butt';
+    ctx.restore();
 
     // ── Props ────────────────────────────────────────────────────────────────
     switch (sc.id) {
