@@ -85,7 +85,7 @@ const SCENES: Scene[] = [
     id: 'jarrad',
     name: 'JARRAD',
     role: 'Scaffold Specialist · Topknot Philosopher',
-    line: "I've been waiting fifteen minutes.",
+    line: "My plan is convince everyone I have a plan, tho I do not.... Did you get any of that?",
     accentColor: '#8866FF',
     skyTop: '#220066', skyBot: '#4400AA',   // bright purple
     particleColor: '#AA88FF', particleKind: 'dust',
