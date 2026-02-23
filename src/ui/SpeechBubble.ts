@@ -1,5 +1,6 @@
 import { CrewConfig } from '../entities/CrewCharacter';
 import { PortraitRenderer } from './PortraitRenderer';
+import { SpeechVoice } from '../audio/SpeechVoice';
 
 /**
  * White cloud speech bubble with character portrait.
@@ -144,10 +145,10 @@ export class SpeechBubble {
   }
 
   show(config: CrewConfig, text: string): void {
-    // Strip any emoji prefix if text already has name prefix
     this.nameEl.textContent = config.name;
     this.textEl.textContent = text;
     this.portrait.src = this.portraitRenderer.renderPortrait(config);
+    SpeechVoice.speak(text, config.name);
 
     this.container.style.display = 'flex';
     // Tiny rAF delay so transition fires

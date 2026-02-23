@@ -5,6 +5,7 @@
  */
 
 import { AUDIO } from './AudioAssets';
+import { SpeechVoice } from './SpeechVoice';
 
 // ── Station definitions ────────────────────────────────────────────────────────
 interface Station {
@@ -604,12 +605,19 @@ export class TEMRadio {
   }
 
   private _showDJ(): void {
-    const st = STATIONS[this.stationIdx];
+    const st   = STATIONS[this.stationIdx];
     const line = st.dj[this.djIdx % st.dj.length];
     this.djEl.textContent = `"${line}"`;
     this.djEl.style.opacity = '1';
     setTimeout(() => { this.djEl.style.opacity = '0'; }, 4500);
     this.djIdx++;
+
+    // Speak DJ callout — match voice to station character
+    const djVoice: Record<string, string> = {
+      'connie-gold':   'Connie',
+      'fabio-pizza':   'Fabio',
+    };
+    SpeechVoice.speak(line, djVoice[st.id] ?? 'DJ');
   }
 
   private _tick(): void {

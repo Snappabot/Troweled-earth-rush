@@ -1,4 +1,5 @@
 import { PortraitRenderer } from './PortraitRenderer';
+import { SpeechVoice } from '../audio/SpeechVoice';
 /**
  * White cloud speech bubble with character portrait.
  * Pops up above the controls when a character speaks.
@@ -133,10 +134,10 @@ export class SpeechBubble {
         document.body.appendChild(this.container);
     }
     show(config, text) {
-        // Strip any emoji prefix if text already has name prefix
         this.nameEl.textContent = config.name;
         this.textEl.textContent = text;
         this.portrait.src = this.portraitRenderer.renderPortrait(config);
+        SpeechVoice.speak(text, config.name);
         this.container.style.display = 'flex';
         // Tiny rAF delay so transition fires
         requestAnimationFrame(() => {

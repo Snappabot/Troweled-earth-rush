@@ -28,6 +28,7 @@ import { RewardScreen } from './ui/RewardScreen';
 import { TEMRadio } from './audio/TEMRadio';
 import { IntroSequence } from './ui/IntroSequence';
 import { StartMenu } from './ui/StartMenu';
+import { SpeechVoice } from './audio/SpeechVoice';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -42,6 +43,7 @@ const CREW_PICKUP_QUIPS: Record<string, string> = {
 async function main() {
   // Preload TEM logo before any game objects are created — textures ready instantly
   await preloadTEMLogo();
+  SpeechVoice.warmUp(); // preload browser TTS voices
 
   // ── Intro cinematic → Start menu ─────────────────────────────────────────────
   await new IntroSequence().play();

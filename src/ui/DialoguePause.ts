@@ -5,6 +5,8 @@
  * Player can tap GAS / REV / anywhere to skip early.
  */
 
+import { SpeechVoice } from '../audio/SpeechVoice';
+
 const CHECKPOINT_SECONDS = 15;
 
 export class DialoguePause {
@@ -176,7 +178,7 @@ export class DialoguePause {
    * Show the pause dialogue with a 15-second countdown.
    * Travel timer is paused by the game loop while isActive is true.
    */
-  show(title: string, body: string, onResume: () => void, slogan?: string): void {
+  show(title: string, body: string, onResume: () => void, slogan?: string, character?: string): void {
     this._clearTimers();
     this._active = true;
     this._readyToResume = false;
@@ -189,6 +191,9 @@ export class DialoguePause {
     this.sloganEl.style.display = slogan ? 'block' : 'none';
     this.hintEl.textContent = String(CHECKPOINT_SECONDS);
     this.overlay.style.display = 'flex';
+
+    // Speak the dialogue body
+    SpeechVoice.speak(body, character ?? 'Narrator');
 
     // Animate progress bar draining
     this.progressBar.style.transition = 'none';
@@ -234,6 +239,7 @@ export class DialoguePause {
     this._active = false;
     this._readyToResume = false;
     this.overlay.style.display = 'none';
+    SpeechVoice.cancel();
     this._clearTimers();
     const cb = this._resumeCallback;
     this._resumeCallback = null;
