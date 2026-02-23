@@ -52,7 +52,7 @@ const SCENES: Scene[] = [
     id: 'matt',
     name: 'MATT',
     role: 'The Warlord · Lead Plasterer',
-    line: 'Took your time.',
+    line: "I can be any type of Matt, but I prefer the Diplomatt!",
     accentColor: '#FF3355',
     skyTop: '#8A0010', skyBot: '#CC0030',   // bright crimson
     particleColor: '#FF5070', particleKind: 'sparks',
@@ -118,7 +118,7 @@ const SCENES: Scene[] = [
     id: 'phil',
     name: 'PHIL',
     role: 'The Quiet Legend · Renders',
-    line: "Right then. Let's go.",
+    line: "I get asked to 'fill me crack in?' I don't get it...",
     accentColor: '#44CCCC',
     skyTop: '#004444', skyBot: '#007777',   // bright teal
     particleColor: '#88FFFF', particleKind: 'dust',
