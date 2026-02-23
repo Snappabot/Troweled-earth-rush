@@ -7,7 +7,8 @@
 import { AUDIO } from '../audio/AudioAssets';
 
 const BASE_URL: string = ((import.meta as any).env?.BASE_URL as string) || '/';
-const WHITE_LOGO = `${BASE_URL}tem-logo-white.jpg`;
+const WHITE_LOGO  = `${BASE_URL}tem-logo-white.jpg`;
+const BUCKET_IMG  = `${BASE_URL}assets/tem-bucket.jpg`;
 
 // ── Scene definitions ─────────────────────────────────────────────────────────
 interface Scene {
@@ -136,6 +137,7 @@ export class IntroSequence {
   private textLayer!: HTMLDivElement;
   private themeAudio: HTMLAudioElement | null = null;
   private logoImg: HTMLImageElement | null = null;
+  private bucketImg: HTMLImageElement | null = null;
   private done = false;
   private rafId = 0;
   private timers: ReturnType<typeof setTimeout>[] = [];
@@ -156,10 +158,14 @@ export class IntroSequence {
   private _tapThenBuild(onDone: () => void): void {
     this._injectStyles();
 
-    // Preload logo image for canvas use
+    // Preload logo + bucket images for canvas use
     const img = new Image();
     img.src = WHITE_LOGO;
     img.onload = () => { this.logoImg = img; };
+
+    const bucketImg = new Image();
+    bucketImg.src = BUCKET_IMG;
+    bucketImg.onload = () => { this.bucketImg = bucketImg; };
 
     const splash = document.createElement('div');
     splash.style.cssText = `
@@ -449,6 +455,9 @@ export class IntroSequence {
 
     // ── Particles ─────────────────────────────────────────────────────────────
     this._drawParticles(ctx, sc);
+
+    // ── TEM buckets ───────────────────────────────────────────────────────────
+    this._drawBuckets(ctx, W, H, sc);
 
     // ── Character silhouette ──────────────────────────────────────────────────
     if (sc.id !== 'melbourne') this._drawCharSilhouette(ctx, W, H, sc);
@@ -876,6 +885,38 @@ export class IntroSequence {
       }
     }
     ctx.globalAlpha = 1;
+  }
+
+  // ── TEM Buckets ──────────────────────────────────────────────────────────
+  private _drawBuckets(ctx: CanvasRenderingContext2D, W: number, H: number, sc: Scene): void {
+    if (!this.bucketImg) return;
+    const groundY = H * 0.62;
+
+    const drawBucket = (x: number, y: number, w: number, alpha = 1) => {
+      const h = w * 1.15;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      // Shadow under bucket
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(x + w / 2, y + h + 2, w * 0.4, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.drawImage(this.bucketImg!, x, y, w, h);
+      ctx.restore();
+    };
+
+    if (sc.id === 'melbourne') {
+      // Opening city shot — buckets scattered on the footpath
+      drawBucket(W * 0.08,  groundY - 54,  46, 0.9);
+      drawBucket(W * 0.145, groundY - 44,  38, 0.75);
+      drawBucket(W * 0.78,  groundY - 50,  42, 0.85);
+      drawBucket(W * 0.85,  groundY - 38,  32, 0.65);
+    } else {
+      // Character scenes — 2 buckets left side near feet, fade in with the scene
+      const fadeIn = Math.min(1, this.sceneT * 1.5);
+      drawBucket(W * 0.14, groundY - 58, 48, fadeIn * 0.95);
+      drawBucket(W * 0.22, groundY - 46, 38, fadeIn * 0.80);
+    }
   }
 
   // ── Speech bubble ────────────────────────────────────────────────────────
