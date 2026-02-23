@@ -41,7 +41,7 @@ const SCENES: Scene[] = [
     id: 'jose',
     name: 'JOSE GARCIA',
     role: 'The Spaniard · Master of Clay',
-    line: 'Vámonos — I was getting bored.',
+    line: "Some people call me Wall Jesus. They're not wrong!",
     accentColor: '#FF7040',
     skyTop: '#7A1800', skyBot: '#CC3300',   // bright red-orange
     particleColor: '#FF9040', particleKind: 'sparks',
