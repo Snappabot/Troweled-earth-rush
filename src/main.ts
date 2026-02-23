@@ -31,7 +31,7 @@ const CREW_PICKUP_QUIPS: Record<string, string> = {
   Jarrad:   "Jarrad adjusts his hard hat. \"I've been standing here fifteen minutes.\" He has.",
   Phil:     "Phil sips the last of his tea, unhurried. \"Right then. Let's go.\" He fastens his seatbelt twice.",
   Tsuyoshi: "Tsuyoshi vaults in without opening the door. His mohawk grazes the roof lining.",
-  Fabio:    "Fabio loads in, trowel over his shoulder. \"You're late.\" He's smiling though.",
+  Fabio:    "Fabio loads in, trowel over his shoulder. \"You're late. Ehhhh —\" he waves it off. \"I found a pizza place nearby. Very acceptable.\"",
 };
 
 async function main() {
