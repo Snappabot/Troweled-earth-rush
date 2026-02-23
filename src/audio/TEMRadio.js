@@ -533,102 +533,146 @@ export class TEMRadio {
         this.lastUpdateTs = performance.now();
         this._tick();
     }
+    _volOpen = false;
     _buildUI() {
-        // ── Outer bar ────────────────────────────────────────────────────────────
+        // ── Outer wrapper — lives inside GameMenu dropdown ────────────────────────
         this.container = document.createElement('div');
         this.container.style.cssText = `
-      position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%);
-      z-index: 2000; font-family: system-ui, sans-serif;
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
-      pointer-events: none; user-select: none;
-      transition: opacity 0.4s;
+      z-index: 1; font-family: system-ui, sans-serif;
+      display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+      user-select: none; transition: opacity 0.4s; width: 100%;
     `;
         // ── Main bar ─────────────────────────────────────────────────────────────
         const bar = document.createElement('div');
         bar.style.cssText = `
-      display: flex; align-items: center; gap: 10px;
-      background: rgba(8,6,4,0.84); backdrop-filter: blur(10px);
-      border: 1px solid rgba(200,168,106,0.3); border-radius: 40px;
-      padding: 8px 16px 8px 12px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(200,168,106,0.2); border-radius: 12px;
+      padding: 8px 12px;
       pointer-events: auto; touch-action: manipulation;
     `;
-        // On/off toggle
+        // 📻 icon (decorative)
         this.iconEl = document.createElement('span');
         this.iconEl.textContent = '📻';
-        this.iconEl.style.cssText = `font-size:18px; cursor:pointer; opacity:0.5;`;
-        this.iconEl.addEventListener('click', () => this._togglePower());
-        // Prev station
+        this.iconEl.style.cssText = `font-size:16px; opacity:0.85; line-height:1;`;
+        // ◀ Prev station
         const prev = document.createElement('span');
         prev.textContent = '◀';
-        prev.style.cssText = `color:rgba(200,168,106,0.7); font-size:13px; cursor:pointer; padding:0 2px;`;
+        prev.style.cssText = `color:rgba(200,168,106,0.8); font-size:12px; cursor:pointer; padding:0 2px; line-height:1;`;
         prev.addEventListener('click', () => this._changeStation(-1));
-        // Station name
+        // Station name + freq
         const nameWrap = document.createElement('div');
-        nameWrap.style.cssText = `display:flex; flex-direction:column; align-items:center; min-width:130px;`;
+        nameWrap.style.cssText = `display:flex; flex-direction:column; align-items:center; min-width:120px;`;
         this.nameEl = document.createElement('span');
         this.nameEl.style.cssText = `
       color: #C8A86A; font-size: 11px; font-weight: 900;
-      letter-spacing: 1.5px; text-transform: uppercase;
+      letter-spacing: 1.5px; text-transform: uppercase; line-height:1.2;
     `;
         this.freqEl = document.createElement('span');
         this.freqEl.style.cssText = `color: rgba(200,168,106,0.5); font-size: 9px; letter-spacing: 0.5px;`;
         nameWrap.appendChild(this.nameEl);
         nameWrap.appendChild(this.freqEl);
-        // Next station
+        // ▶ Next station
         const next = document.createElement('span');
         next.textContent = '▶';
-        next.style.cssText = `color:rgba(200,168,106,0.7); font-size:13px; cursor:pointer; padding:0 2px;`;
+        next.style.cssText = `color:rgba(200,168,106,0.8); font-size:12px; cursor:pointer; padding:0 2px; line-height:1;`;
         next.addEventListener('click', () => this._changeStation(1));
-        // Volume slider
+        // 🔊 Volume button
+        const volBtn = document.createElement('span');
+        volBtn.textContent = '🔊';
+        volBtn.title = 'Volume';
+        volBtn.style.cssText = `font-size:14px; cursor:pointer; opacity:0.8; line-height:1; padding:0 1px;`;
+        volBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._volOpen = !this._volOpen;
+            volPanel.style.display = this._volOpen ? 'flex' : 'none';
+        });
+        // ⏻ Off button
+        const offBtn = document.createElement('span');
+        offBtn.textContent = '⏻';
+        offBtn.title = this.on ? 'Turn Off' : 'Turn On';
+        offBtn.style.cssText = `
+      font-size:14px; cursor:pointer; line-height:1; padding:0 1px;
+      color: rgba(200,168,106,0.8); font-weight:bold;
+    `;
+        offBtn.addEventListener('click', () => {
+            this._togglePower();
+            offBtn.title = this.on ? 'Turn Off' : 'Turn On';
+            offBtn.style.color = this.on ? '#ff6b6b' : 'rgba(200,168,106,0.8)';
+        });
+        bar.appendChild(this.iconEl);
+        bar.appendChild(prev);
+        bar.appendChild(nameWrap);
+        bar.appendChild(next);
+        bar.appendChild(volBtn);
+        bar.appendChild(offBtn);
+        // ── Volume panel (shown/hidden by volBtn) ────────────────────────────────
+        const volPanel = document.createElement('div');
+        volPanel.style.cssText = `
+      display: none; align-items: center; gap: 6px;
+      background: rgba(8,6,4,0.88); backdrop-filter: blur(12px);
+      border: 1px solid rgba(200,168,106,0.25); border-radius: 20px;
+      padding: 5px 12px;
+      pointer-events: auto; touch-action: manipulation;
+    `;
+        const volIcon = document.createElement('span');
+        volIcon.textContent = '🔈';
+        volIcon.style.cssText = `font-size:12px; opacity:0.7;`;
         this.volumeSlider = document.createElement('input');
         this.volumeSlider.type = 'range';
         this.volumeSlider.min = '0';
         this.volumeSlider.max = '100';
         this.volumeSlider.value = '55';
         this.volumeSlider.style.cssText = `
-      width: 52px; height: 3px; accent-color: #C8A86A; cursor: pointer;
-      opacity: 0.6;
+      width: 80px; height: 3px; accent-color: #C8A86A; cursor: pointer;
     `;
         this.volumeSlider.addEventListener('input', () => {
             const v = Number(this.volumeSlider.value) / 100;
             this.engine.setVolume(v * 0.18);
+            volIcon.textContent = v === 0 ? '🔇' : v < 0.4 ? '🔈' : '🔊';
         });
-        bar.appendChild(this.iconEl);
-        bar.appendChild(prev);
-        bar.appendChild(nameWrap);
-        bar.appendChild(next);
-        bar.appendChild(this.volumeSlider);
+        const volLabel = document.createElement('span');
+        volLabel.style.cssText = `color:rgba(200,168,106,0.6); font-size:9px; min-width:22px; text-align:right;`;
+        this.volumeSlider.addEventListener('input', () => {
+            volLabel.textContent = this.volumeSlider.value + '%';
+        });
+        volLabel.textContent = '55%';
+        volPanel.appendChild(volIcon);
+        volPanel.appendChild(this.volumeSlider);
+        volPanel.appendChild(volLabel);
         // ── Song ticker ───────────────────────────────────────────────────────────
         this.songEl = document.createElement('div');
         this.songEl.style.cssText = `
-      color: rgba(255,255,255,0.55); font-size: 11px;
+      color: rgba(255,255,255,0.55); font-size: 10px;
       background: rgba(0,0,0,0.5); border-radius: 20px;
       padding: 3px 12px; max-width: 280px;
       text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
-      transition: opacity 0.4s;
+      transition: opacity 0.4s; pointer-events: none;
     `;
         // ── DJ callout ────────────────────────────────────────────────────────────
         this.djEl = document.createElement('div');
         this.djEl.style.cssText = `
-      color: rgba(200,168,106,0.6); font-size: 10px; font-style: italic;
+      color: rgba(200,168,106,0.65); font-size: 10px; font-style: italic;
       text-align: center; max-width: 300px;
       opacity: 0; transition: opacity 0.6s;
       pointer-events: none;
     `;
         this.container.appendChild(bar);
+        this.container.appendChild(volPanel);
         this.container.appendChild(this.songEl);
         this.container.appendChild(this.djEl);
-        document.body.appendChild(this.container);
+        // Note: caller must mount via GameMenu.mountRadio() — do NOT self-append here
         this._renderStation();
     }
+    /** Return the radio container element for embedding in GameMenu */
+    getEl() { return this.container; }
     _renderStation() {
         const st = STATIONS[this.stationIdx];
         this.nameEl.textContent = st.name;
         this.nameEl.style.color = st.color;
         this.freqEl.textContent = `${st.freq} FM`;
         this.songEl.textContent = this.on ? `♫  ${st.songs[this.songIdx % st.songs.length]}` : '— OFF —';
-        this.iconEl.style.opacity = this.on ? '1' : '0.4';
+        this.iconEl.style.opacity = this.on ? '1' : '0.55';
     }
     _togglePower() {
         if (!this.engineReady) {

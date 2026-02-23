@@ -6,7 +6,6 @@
 import { AUDIO } from '../audio/AudioAssets';
 const BASE_URL = import.meta.env?.BASE_URL || '/';
 const WHITE_LOGO = `${BASE_URL}tem-logo-white.jpg`;
-const BUCKET_IMG = `${BASE_URL}assets/tem-bucket.jpg`;
 const SCENES = [
     {
         id: 'melbourne',
@@ -23,7 +22,7 @@ const SCENES = [
         id: 'jose',
         name: 'JOSE GARCIA',
         role: 'The Spaniard · Master of Clay',
-        line: 'Vámonos — I was getting bored.',
+        line: "Some people call me Wall Jesus. They're not wrong!",
         accentColor: '#FF7040',
         skyTop: '#7A1800', skyBot: '#CC3300', // bright red-orange
         particleColor: '#FF9040', particleKind: 'sparks',
@@ -34,7 +33,7 @@ const SCENES = [
         id: 'matt',
         name: 'MATT',
         role: 'The Warlord · Lead Plasterer',
-        line: 'Took your time.',
+        line: "I can be any type of Matt, but I prefer the Diplomatt!",
         accentColor: '#FF3355',
         skyTop: '#8A0010', skyBot: '#CC0030', // bright crimson
         particleColor: '#FF5070', particleKind: 'sparks',
@@ -45,7 +44,7 @@ const SCENES = [
         id: 'tsuyoshi',
         name: 'TSUYOSHI',
         role: 'The Samurai · Tadelakt Specialist',
-        line: 'Positions master. Always.',
+        line: "I no like bug. Where is... da respect!",
         accentColor: '#00DD88',
         skyTop: '#005530', skyBot: '#009958', // bright green
         particleColor: '#60FFB0', particleKind: 'dust',
@@ -56,7 +55,7 @@ const SCENES = [
         id: 'connie',
         name: 'CONNIE',
         role: 'Operations Queen · Born in Germany',
-        line: 'Ha ha ha ha!',
+        line: "I'll crush all of you!!! Hahahahahaha!",
         accentColor: '#FFB030',
         skyTop: '#884400', skyBot: '#CC7700', // bright amber
         particleColor: '#FFD060', particleKind: 'smoke',
@@ -67,7 +66,7 @@ const SCENES = [
         id: 'jarrad',
         name: 'JARRAD',
         role: 'Scaffold Specialist · Topknot Philosopher',
-        line: "I've been waiting fifteen minutes.",
+        line: "My plan is convince everyone I have a plan, tho I do not.... Did you get any of that?",
         accentColor: '#8866FF',
         skyTop: '#220066', skyBot: '#4400AA', // bright purple
         particleColor: '#AA88FF', particleKind: 'dust',
@@ -78,7 +77,7 @@ const SCENES = [
         id: 'fabio',
         name: 'FABIO',
         role: 'Plasterer · Pizza Consultant',
-        line: 'Ehhhh.',
+        line: "Come, we can have pizza. Andiamo, fa presto!",
         accentColor: '#FF7722',
         skyTop: '#883300', skyBot: '#CC5500', // bright burnt orange
         particleColor: '#FFAa40', particleKind: 'smoke',
@@ -86,10 +85,21 @@ const SCENES = [
         voiceChar: 'Fabio',
     },
     {
+        id: 'joe',
+        name: 'JOE',
+        role: 'The Wildcard · Knows Too Much',
+        line: "Y'all seen that Epstein list? So many chosen people! And Trump!",
+        accentColor: '#F0C000',
+        skyTop: '#3A3000', skyBot: '#887700',
+        particleColor: '#FFE040', particleKind: 'sparks',
+        buildingTint: '#1A1600', spotColor: '#F0C00055',
+        voiceChar: 'Joe',
+    },
+    {
         id: 'phil',
         name: 'PHIL',
         role: 'The Quiet Legend · Renders',
-        line: "Right then. Let's go.",
+        line: "I get asked to 'fill me crack in?' I don't get it...",
         accentColor: '#44CCCC',
         skyTop: '#004444', skyBot: '#007777', // bright teal
         particleColor: '#88FFFF', particleKind: 'dust',
@@ -108,7 +118,6 @@ export class IntroSequence {
     textLayer;
     themeAudio = null;
     logoImg = null;
-    bucketImg = null;
     done = false;
     rafId = 0;
     timers = [];
@@ -119,19 +128,17 @@ export class IntroSequence {
     currentScene = null;
     sceneT = 0; // seconds elapsed in current scene
     buildings = [];
+    /** Resolves with the already-playing HTMLAudioElement so StartMenu can adopt it seamlessly */
     play() {
         return new Promise(resolve => this._tapThenBuild(resolve));
     }
     /** Show a tap-to-begin splash — browser requires gesture before audio plays */
     _tapThenBuild(onDone) {
         this._injectStyles();
-        // Preload logo + bucket images for canvas use
+        // Preload logo image for canvas use
         const img = new Image();
         img.src = WHITE_LOGO;
         img.onload = () => { this.logoImg = img; };
-        const bucketImg = new Image();
-        bucketImg.src = BUCKET_IMG;
-        bucketImg.onload = () => { this.bucketImg = bucketImg; };
         const splash = document.createElement('div');
         splash.style.cssText = `
       position:fixed; inset:0; z-index:50001; background:#000;
@@ -164,6 +171,7 @@ export class IntroSequence {
         const audio = new Audio();
         audio.src = AUDIO.theme;
         audio.volume = 0.75;
+        audio.loop = true; // keep looping through menu
         audio.preload = 'auto';
         this.themeAudio = audio;
         document.body.appendChild(splash);
@@ -528,6 +536,11 @@ export class IntroSequence {
         ctx.restore();
     }
     _drawCharSilhouette(ctx, W, H, sc) {
+        // Connie gets her own Bond-girl side-on treatment
+        if (sc.id === 'connie') {
+            this._drawConnieBond(ctx, W, H, sc);
+            return;
+        }
         const groundY = H * 0.62;
         const cx = W * 0.68;
         const fadeIn = Math.min(1, this.sceneT * 2.0);
@@ -555,6 +568,7 @@ export class IntroSequence {
             connie: '#F0C8A0',
             jarrad: '#E0B090',
             fabio: '#D4A070',
+            joe: '#D4A070',
             phil: '#D8A888',
         };
         const skin = skinTones[sc.id] ?? '#D0A080';
@@ -619,6 +633,198 @@ export class IntroSequence {
         ctx.drawImage(this.logoImg, cx - logoW / 2, y - logoH / 2, logoW, logoH);
         ctx.restore();
     }
+    /** Connie — side-on James Bond girl profile with gun pose */
+    _drawConnieBond(ctx, W, H, sc) {
+        const groundY = H * 0.62;
+        const cx = W * 0.60; // slightly left so gun arm has space to the right
+        const fadeIn = Math.min(1, this.sceneT * 2.0);
+        const hh = Math.min(H * 0.52, 240);
+        const skin = '#F0C8A0';
+        const accent = sc.accentColor; // '#FFB030' amber
+        ctx.save();
+        ctx.globalAlpha = fadeIn;
+        // ── Glow ──────────────────────────────────────────────────────────────────
+        const glow = ctx.createRadialGradient(cx, groundY - 90, 10, cx, groundY - 90, 180);
+        glow.addColorStop(0, accent + '55');
+        glow.addColorStop(1, 'transparent');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.ellipse(cx, groundY - 90, 180, 230, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // ── Ground shadow ─────────────────────────────────────────────────────────
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath();
+        ctx.ellipse(cx, groundY + 5, 30, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const bY = groundY; // feet level
+        const tY = bY - hh; // top of head area
+        const midY = bY - hh * 0.5; // waist level
+        // ── Long flowing hair (behind body) ──────────────────────────────────────
+        ctx.fillStyle = '#D4B840'; // wild blonde
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, tY + hh * 0.06); // top of head, slightly back
+        ctx.bezierCurveTo(cx - 40, tY + hh * 0.18, // swoops back
+        cx - 55, midY - hh * 0.06, // falls along back
+        cx - 35, bY - hh * 0.2);
+        ctx.bezierCurveTo(cx - 28, bY - hh * 0.18, cx - 14, tY + hh * 0.30, cx - 2, tY + hh * 0.12);
+        ctx.closePath();
+        ctx.fill();
+        // Hair highlight strand
+        ctx.strokeStyle = '#FFE878';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx - 4, tY + hh * 0.08);
+        ctx.bezierCurveTo(cx - 30, tY + hh * 0.22, cx - 45, midY, cx - 28, bY - hh * 0.22);
+        ctx.stroke();
+        // ── Legs — side-on, slight stride pose ───────────────────────────────────
+        ctx.fillStyle = '#111122'; // dark pants
+        // Back leg slightly behind
+        ctx.beginPath();
+        ctx.moveTo(cx - 8, bY - hh * 0.43);
+        ctx.lineTo(cx - 14, bY);
+        ctx.lineTo(cx - 6, bY);
+        ctx.lineTo(cx + 4, bY - hh * 0.43);
+        ctx.closePath();
+        ctx.fill();
+        // Front leg
+        ctx.beginPath();
+        ctx.moveTo(cx - 2, bY - hh * 0.43);
+        ctx.lineTo(cx + 6, bY);
+        ctx.lineTo(cx + 16, bY);
+        ctx.lineTo(cx + 10, bY - hh * 0.43);
+        ctx.closePath();
+        ctx.fill();
+        // ── High heels ────────────────────────────────────────────────────────────
+        ctx.fillStyle = '#111';
+        // Back heel
+        ctx.fillRect(cx - 16, bY - 4, 12, 4);
+        ctx.fillRect(cx - 13, bY - 10, 2, 10);
+        // Front heel
+        ctx.fillRect(cx + 4, bY - 4, 14, 4);
+        ctx.fillRect(cx + 15, bY - 10, 2, 10);
+        // ── Hourglass torso — profile curves ─────────────────────────────────────
+        ctx.fillStyle = '#111111'; // black TEM shirt (side-on)
+        ctx.beginPath();
+        // Chest front edge
+        ctx.moveTo(cx + 14, bY - hh * 0.82); // neckline
+        // Bust (forward profile — prominent)
+        ctx.bezierCurveTo(cx + 28, bY - hh * 0.76, // upper bust forward
+        cx + 32, bY - hh * 0.68, // bust peak
+        cx + 18, bY - hh * 0.60);
+        // Waist nip in
+        ctx.bezierCurveTo(cx + 10, bY - hh * 0.52, // front waist
+        cx + 8, bY - hh * 0.47, cx + 14, bY - hh * 0.43);
+        // Hip curve
+        ctx.bezierCurveTo(cx + 18, bY - hh * 0.40, cx + 14, bY - hh * 0.34, cx + 6, bY - hh * 0.28);
+        // Back edge (behind)
+        ctx.lineTo(cx - 2, bY - hh * 0.43); // back of hip
+        ctx.bezierCurveTo(cx - 6, bY - hh * 0.50, cx - 4, bY - hh * 0.56, cx + 2, bY - hh * 0.66);
+        ctx.bezierCurveTo(cx + 4, bY - hh * 0.72, cx + 0, bY - hh * 0.78, cx + 6, bY - hh * 0.83);
+        ctx.closePath();
+        ctx.fill();
+        // ── Neck and head ─────────────────────────────────────────────────────────
+        ctx.fillStyle = skin;
+        // Neck — thin profile
+        ctx.fillRect(cx + 8, tY + hh * 0.12, 8, hh * 0.05);
+        // Head — profile circle
+        const headR = hh * 0.09;
+        ctx.beginPath();
+        ctx.arc(cx + 12, tY + hh * 0.07, headR, 0, Math.PI * 2);
+        ctx.fill();
+        // Nose bridge (slight profile bump)
+        ctx.beginPath();
+        ctx.arc(cx + 12 + headR * 0.85, tY + hh * 0.08, headR * 0.22, -0.4, 0.9);
+        ctx.fill();
+        // Chin jaw line
+        ctx.beginPath();
+        ctx.arc(cx + 12 + headR * 0.5, tY + hh * 0.10 + headR * 0.7, headR * 0.3, 0, Math.PI);
+        ctx.fill();
+        // Face front hair
+        ctx.fillStyle = '#D4B840';
+        ctx.beginPath();
+        ctx.arc(cx + 12, tY + hh * 0.04, headR * 1.05, Math.PI * 0.9, Math.PI * 1.9);
+        ctx.fill();
+        // Fringe
+        ctx.beginPath();
+        ctx.arc(cx + 12 + headR * 0.3, tY + hh * 0.02, headR * 0.6, Math.PI, Math.PI * 1.7);
+        ctx.fill();
+        // Red lips (profile)
+        ctx.fillStyle = '#CC2244';
+        ctx.beginPath();
+        ctx.ellipse(cx + 12 + headR * 0.8, tY + hh * 0.09, 4, 2.5, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        // ── Bare arm extended — Bond girl gun pose ────────────────────────────────
+        // Arm goes from shoulder, extends diagonally up-forward-right
+        const shoulderX = cx + 16;
+        const shoulderY = bY - hh * 0.78;
+        const armAngle = -0.4; // rad — angled slightly upward
+        const armLen = hh * 0.36;
+        const handX = shoulderX + Math.cos(armAngle) * armLen;
+        const handY = shoulderY + Math.sin(armAngle) * armLen;
+        // Arm (skin)
+        ctx.strokeStyle = skin;
+        ctx.lineWidth = hh * 0.045;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(shoulderX, shoulderY);
+        ctx.lineTo(handX, handY);
+        ctx.stroke();
+        // ── Gun ───────────────────────────────────────────────────────────────────
+        const gunAngle = armAngle - 0.08;
+        const gunLen = hh * 0.14;
+        const gunX2 = handX + Math.cos(gunAngle) * gunLen;
+        const gunY2 = handY + Math.sin(gunAngle) * gunLen;
+        // Grip
+        ctx.fillStyle = '#1a1a1a';
+        ctx.save();
+        ctx.translate(handX, handY);
+        ctx.rotate(gunAngle);
+        ctx.fillRect(-4, -4, 10, 18); // grip (downward)
+        ctx.restore();
+        // Barrel
+        ctx.strokeStyle = '#2a2a2a';
+        ctx.lineWidth = 5;
+        ctx.lineCap = 'square';
+        ctx.beginPath();
+        ctx.moveTo(handX, handY);
+        ctx.lineTo(gunX2, gunY2);
+        ctx.stroke();
+        // Barrel highlight
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(handX, handY - 1);
+        ctx.lineTo(gunX2, gunY2 - 1);
+        ctx.stroke();
+        // Muzzle flash (subtle glow at gun tip when close to speaking)
+        if (this.sceneT > 2.5) {
+            ctx.save();
+            ctx.globalAlpha = fadeIn * 0.6 * (0.5 + Math.sin(this.sceneT * 8) * 0.5);
+            const muzzleGlow = ctx.createRadialGradient(gunX2, gunY2, 0, gunX2, gunY2, 14);
+            muzzleGlow.addColorStop(0, '#FFFF88CC');
+            muzzleGlow.addColorStop(1, 'transparent');
+            ctx.fillStyle = muzzleGlow;
+            ctx.beginPath();
+            ctx.arc(gunX2, gunY2, 14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        // ── Gold ring (right hand on gun) ─────────────────────────────────────────
+        ctx.strokeStyle = '#FFD700';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(handX + 6, handY, 4, 0, Math.PI * 2);
+        ctx.stroke();
+        // ── Accent rim light ─────────────────────────────────────────────────────
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 3;
+        ctx.globalAlpha = fadeIn * 0.7;
+        ctx.beginPath();
+        ctx.moveTo(cx - 2, bY - hh * 0.43);
+        ctx.bezierCurveTo(cx - 6, bY - hh * 0.50, cx - 4, bY - hh * 0.78, cx + 6, bY - hh * 0.83);
+        ctx.stroke();
+        ctx.restore();
+    }
     _drawHairAndProp(ctx, sc, cx, groundY, hh, skin) {
         const hairStyles = {
             jose: { color: '#1a0800', kind: 'short' },
@@ -627,6 +833,7 @@ export class IntroSequence {
             connie: { color: '#E8D080', kind: 'long' },
             jarrad: { color: '#3a2000', kind: 'topknot' },
             fabio: { color: '#1a0800', kind: 'short' },
+            joe: { color: '#2a1a00', kind: 'short' },
             phil: { color: '#CCCCCC', kind: 'short' },
         };
         const hs = hairStyles[sc.id] ?? { color: '#1a0800', kind: 'short' };
@@ -666,6 +873,17 @@ export class IntroSequence {
             ctx.ellipse(cx, hy - hr * 0.9, hr * 1.4, hr * 0.5, 0, Math.PI, 0);
             ctx.fill();
             ctx.fillRect(cx - hr * 1.4, hy - hr * 1.0, hr * 2.8, hr * 0.4);
+        }
+        // Joe — white helmet
+        if (sc.id === 'joe') {
+            ctx.fillStyle = '#F5F5F0';
+            ctx.beginPath();
+            ctx.ellipse(cx, hy - hr * 0.9, hr * 1.4, hr * 0.5, 0, Math.PI, 0);
+            ctx.fill();
+            ctx.fillRect(cx - hr * 1.4, hy - hr * 1.0, hr * 2.8, hr * 0.4);
+            // Hi-vis yellow band on shirt
+            ctx.fillStyle = '#F0C000';
+            ctx.fillRect(cx - 20, groundY - hh * 0.56, 40, hh * 0.07);
         }
         // ── Props ────────────────────────────────────────────────────────────────
         switch (sc.id) {
@@ -794,35 +1012,84 @@ export class IntroSequence {
         }
         ctx.globalAlpha = 1;
     }
-    // ── TEM Buckets ──────────────────────────────────────────────────────────
+    // ── TEM White Buckets (canvas-drawn, TEM logo on front) ──────────────────
     _drawBuckets(ctx, W, H, sc) {
-        if (!this.bucketImg)
-            return;
         const groundY = H * 0.62;
-        const drawBucket = (x, y, w, alpha = 1) => {
-            const h = w * 1.15;
+        /** Draw one white TEM bucket at canvas position (cx, cy) with given width */
+        const drawBucket = (cx, cy, w, alpha = 1) => {
+            const h = w * 1.2;
+            const topW = w;
+            const botW = w * 0.72;
+            const tx = cx - topW / 2; // top-left x
+            const bx = cx - botW / 2; // bottom-left x
             ctx.save();
             ctx.globalAlpha = alpha;
-            // Shadow under bucket
-            ctx.fillStyle = 'rgba(0,0,0,0.35)';
+            // Drop shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
             ctx.beginPath();
-            ctx.ellipse(x + w / 2, y + h + 2, w * 0.4, 5, 0, 0, Math.PI * 2);
+            ctx.ellipse(cx, cy + h + 3, w * 0.42, 5, 0, 0, Math.PI * 2);
             ctx.fill();
-            ctx.drawImage(this.bucketImg, x, y, w, h);
+            // ── Bucket body (trapezoid) ────────────────────────────────────────────
+            ctx.beginPath();
+            ctx.moveTo(tx, cy); // top-left
+            ctx.lineTo(tx + topW, cy); // top-right
+            ctx.lineTo(bx + botW, cy + h); // bottom-right
+            ctx.lineTo(bx, cy + h); // bottom-left
+            ctx.closePath();
+            // White fill with very slight warm tint
+            ctx.fillStyle = '#F8F6F0';
+            ctx.fill();
+            // Gold border
+            ctx.strokeStyle = '#C8A86A';
+            ctx.lineWidth = Math.max(1, w * 0.04);
+            ctx.stroke();
+            // ── Rim (top ellipse) ─────────────────────────────────────────────────
+            ctx.beginPath();
+            ctx.ellipse(cx, cy, topW / 2, topW * 0.1, 0, 0, Math.PI * 2);
+            ctx.fillStyle = '#E8E4DC';
+            ctx.fill();
+            ctx.strokeStyle = '#C8A86A';
+            ctx.lineWidth = Math.max(1, w * 0.03);
+            ctx.stroke();
+            // ── Handle (arc above rim) ────────────────────────────────────────────
+            ctx.beginPath();
+            ctx.arc(cx, cy - topW * 0.06, topW * 0.3, Math.PI, 0);
+            ctx.strokeStyle = '#B0966A';
+            ctx.lineWidth = Math.max(1.5, w * 0.05);
+            ctx.stroke();
+            // ── TEM logo on bucket face ───────────────────────────────────────────
+            const logoSize = w * 0.55;
+            const logoX = cx - logoSize / 2;
+            const logoY = cy + h * 0.18;
+            if (this.logoImg) {
+                // Draw white logo — mask out the bright pixels as black tree on white bg
+                // Use composite to stamp dark version on white bucket
+                ctx.globalCompositeOperation = 'multiply';
+                ctx.globalAlpha = alpha * 0.6;
+                ctx.drawImage(this.logoImg, logoX, logoY, logoSize, logoSize * (1504 / 688));
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.globalAlpha = alpha;
+            }
+            else {
+                // Fallback: simple TEM text
+                ctx.fillStyle = '#C8A86A';
+                ctx.font = `bold ${Math.max(7, w * 0.18)}px system-ui`;
+                ctx.textAlign = 'center';
+                ctx.fillText('TEM', cx, cy + h * 0.55);
+                ctx.textAlign = 'start';
+            }
             ctx.restore();
         };
         if (sc.id === 'melbourne') {
-            // Opening city shot — buckets scattered on the footpath
-            drawBucket(W * 0.08, groundY - 54, 46, 0.9);
-            drawBucket(W * 0.145, groundY - 44, 38, 0.75);
-            drawBucket(W * 0.78, groundY - 50, 42, 0.85);
-            drawBucket(W * 0.85, groundY - 38, 32, 0.65);
+            drawBucket(W * 0.10, groundY - 48, 46, 0.92);
+            drawBucket(W * 0.165, groundY - 38, 36, 0.78);
+            drawBucket(W * 0.80, groundY - 44, 42, 0.88);
+            drawBucket(W * 0.87, groundY - 32, 30, 0.68);
         }
         else {
-            // Character scenes — 2 buckets left side near feet, fade in with the scene
             const fadeIn = Math.min(1, this.sceneT * 1.5);
-            drawBucket(W * 0.14, groundY - 58, 48, fadeIn * 0.95);
-            drawBucket(W * 0.22, groundY - 46, 38, fadeIn * 0.80);
+            drawBucket(W * 0.16, groundY - 52, 48, fadeIn * 0.95);
+            drawBucket(W * 0.25, groundY - 40, 36, fadeIn * 0.82);
         }
     }
     // ── Speech bubble ────────────────────────────────────────────────────────
@@ -954,21 +1221,11 @@ export class IntroSequence {
         this.done = true;
         this.timers.forEach(clearTimeout);
         cancelAnimationFrame(this.rafId);
-        if (this.themeAudio) {
-            const a = this.themeAudio;
-            let vol = a.volume;
-            const fade = setInterval(() => {
-                vol = Math.max(0, vol - 0.06);
-                a.volume = vol;
-                if (vol <= 0) {
-                    clearInterval(fade);
-                    a.pause();
-                    a.src = '';
-                }
-            }, 60);
-        }
+        // Do NOT stop audio — pass it to StartMenu so it flows seamlessly
+        const handoffAudio = this.themeAudio;
+        this.themeAudio = null; // IntroSequence relinquishes ownership
         this.overlay?.remove();
-        onDone();
+        onDone(handoffAudio);
     }
     _after(ms, fn) {
         this.timers.push(setTimeout(fn, ms));

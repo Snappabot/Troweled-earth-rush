@@ -28,6 +28,7 @@ import { TEMRadio } from './audio/TEMRadio';
 import { IntroSequence } from './ui/IntroSequence';
 import { StartMenu } from './ui/StartMenu';
 import { GameMenu } from './ui/GameMenu';
+import { MarbellinoMixer } from './minigames/MarbellinoMixer';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -126,7 +127,10 @@ async function main() {
   const achievementGallery = new AchievementGallery();
   const rewardScreen = new RewardScreen();
 
-  // ── Game Menu (☰) — contains radio, money, photo, jobs ───────────────────
+  // ── Marbellino Mixer mini-game ─────────────────────────────────────────────
+  const marbellinoMixer = new MarbellinoMixer();
+
+  // ── Game Menu (☰) — contains radio, money, photo, jobs, mixer ────────────
   const radio = new TEMRadio();
   const gameMenu = new GameMenu(
     () => achievementGallery.show(),
@@ -134,6 +138,13 @@ async function main() {
       if (jobBoard.isVisible()) jobBoard.hide();
       else jobBoard.show(jobManager.getAvailableJobs());
     },
+    () => marbellinoMixer.show((pts) => {
+      if (pts > 0) {
+        jobManager.money += pts * 1_000;   // reward sats per correct formula
+        hud.updateMoney(jobManager.money);
+        hud.showToast(`🎨 Formula cracked! +${(pts * 1000).toLocaleString()} sats`, 0x44DD88);
+      }
+    }),
   );
   gameMenu.mountMoneyPanel(hud.getMoneyPanel());
   gameMenu.mountRadio(radio.getEl());

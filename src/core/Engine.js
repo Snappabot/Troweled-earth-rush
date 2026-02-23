@@ -1623,12 +1623,16 @@ export class Engine {
         // ── Side signage: small TEM logo block on right side ─────────────────────
         this.addBox(group, signCol, 0.3, 2.5, 6, 15.16, 4, 0);
         this.addBox(group, textCol, 0.32, 2.0, 5.5, 15.17, 4, 0);
-        // ── TEM tree logo — single large centrepiece on front face ───────────────
+        // ── TEM tree logo on garage door ─────────────────────────────────────────
+        // Door is 12W × 5H centred at (0, 2.5, -10.15); front face at z ≈ -10.28
         const wsTex = makeTEMRoofTexture(1024);
-        const wsMat = new THREE.MeshLambertMaterial({ map: wsTex, transparent: true, depthWrite: false });
-        const bigLogo = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), wsMat);
-        bigLogo.position.set(0, 4.5, -10.40);
-        group.add(bigLogo);
+        const wsMat = new THREE.MeshBasicMaterial({
+            map: wsTex, transparent: true, depthWrite: false,
+            side: THREE.DoubleSide,
+        });
+        const doorLogo = new THREE.Mesh(new THREE.PlaneGeometry(7, 4.5), wsMat);
+        doorLogo.position.set(0, 2.5, -10.29); // centred on door face
+        group.add(doorLogo);
         group.position.set(x, 0, z);
         this.scene.add(group);
         // Workshop is 30W × 20D — register a solid AABB collider

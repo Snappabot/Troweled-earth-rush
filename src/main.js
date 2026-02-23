@@ -11,7 +11,6 @@ import { JobBoard } from './ui/JobBoard';
 import { HUD } from './ui/HUD';
 import { MiniGameManager } from './minigames/MiniGameManager';
 import { AchievementGallery } from './ui/AchievementGallery';
-import { TrafficSystem } from './entities/TrafficSystem';
 import { PedestrianSystem } from './entities/PedestrianSystem';
 import { CoffeeShop } from './entities/CoffeeShop';
 import { BladderMeter } from './gameplay/BladderMeter';
@@ -27,6 +26,8 @@ import { RewardScreen } from './ui/RewardScreen';
 import { TEMRadio } from './audio/TEMRadio';
 import { IntroSequence } from './ui/IntroSequence';
 import { StartMenu } from './ui/StartMenu';
+import { GameMenu } from './ui/GameMenu';
+import { MarbellinoMixer } from './minigames/MarbellinoMixer';
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS = {
     Matt: "Matt folds himself into the back. \"Took your time.\" He's already on his phone.",
@@ -40,8 +41,8 @@ async function main() {
     // Preload TEM logo before any game objects are created — textures ready instantly
     await preloadTEMLogo();
     // ── Intro cinematic → Start menu ─────────────────────────────────────────────
-    await new IntroSequence().play();
-    await new StartMenu().show();
+    const introAudio = await new IntroSequence().play();
+    await new StartMenu().show(introAudio);
     const engine = new Engine();
     await engine.init();
     // ── Spawn crew scattered across the city ───────────────────────────────────
@@ -92,48 +93,7 @@ async function main() {
         hud.updateMoney(jobManager.money);
         hud.showSpillPenalty(penalty);
     };
-    // ── JOBS button ──────────────────────────────────────────────────────────────
-    const jobsBtn = document.createElement('button');
-    jobsBtn.textContent = '📋 JOBS';
-    jobsBtn.style.cssText = `
-    position: fixed;
-    top: 16px;
-    right: 16px;
-    background: rgba(193, 102, 107, 0.9);
-    color: #fff;
-    border: none;
-    border-radius: 12px;
-    padding: 12px 20px;
-    font-size: 16px;
-    font-weight: 800;
-    cursor: pointer;
-    font-family: system-ui, sans-serif;
-    z-index: 1000;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    letter-spacing: 0.5px;
-    min-height: 48px;
-    transition: background 0.15s, transform 0.1s;
-    touch-action: manipulation;
-  `;
-    jobsBtn.addEventListener('pointerenter', () => {
-        jobsBtn.style.background = 'rgba(212, 120, 125, 0.95)';
-        jobsBtn.style.transform = 'translateY(-2px)';
-    });
-    jobsBtn.addEventListener('pointerleave', () => {
-        jobsBtn.style.background = 'rgba(193, 102, 107, 0.9)';
-        jobsBtn.style.transform = '';
-    });
-    jobsBtn.addEventListener('click', () => {
-        if (jobBoard.isVisible()) {
-            jobBoard.hide();
-        }
-        else {
-            jobBoard.show(jobManager.getAvailableJobs());
-        }
-    });
-    document.body.appendChild(jobsBtn);
     // ── Traffic + Pedestrian systems ────────────────────────────────────────────
-    const traffic = new TrafficSystem(engine.scene);
     const pedestrians = new PedestrianSystem(engine.scene);
     // ── Coffee shop + Bladder mechanic ──────────────────────────────────────────
     const coffeeShop = new CoffeeShop(engine.scene);
@@ -144,32 +104,27 @@ async function main() {
     const activeSpeakerPos = new THREE.Vector3(Mikayla.POS.x, 6.0, Mikayla.POS.z);
     // Mini-game manager
     const miniGameManager = new MiniGameManager();
-    // ── 📸 Photos button + Achievement Gallery + Rewards ─────────────────────────
+    // ── Achievement Gallery + Rewards ─────────────────────────────────────────
     const achievementGallery = new AchievementGallery();
     const rewardScreen = new RewardScreen();
+    // ── Marbellino Mixer mini-game ─────────────────────────────────────────────
+    const marbellinoMixer = new MarbellinoMixer();
+    // ── Game Menu (☰) — contains radio, money, photo, jobs, mixer ────────────
     const radio = new TEMRadio();
-    const photosBtn = document.createElement('button');
-    photosBtn.textContent = '📸';
-    photosBtn.title = 'Photo Collection';
-    photosBtn.style.cssText = `
-    position: fixed; top: 16px; left: 16px;
-    z-index: 1000; background: rgba(70,70,70,0.9);
-    color: #fff; border: none; border-radius: 50%;
-    width: 52px; height: 52px; font-size: 22px;
-    cursor: pointer; touch-action: manipulation;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    transition: background 0.15s, transform 0.1s;
-  `;
-    photosBtn.addEventListener('pointerenter', () => {
-        photosBtn.style.background = 'rgba(100,100,100,0.95)';
-        photosBtn.style.transform = 'scale(1.1)';
-    });
-    photosBtn.addEventListener('pointerleave', () => {
-        photosBtn.style.background = 'rgba(70,70,70,0.9)';
-        photosBtn.style.transform = '';
-    });
-    photosBtn.addEventListener('click', () => achievementGallery.show());
-    document.body.appendChild(photosBtn);
+    const gameMenu = new GameMenu(() => achievementGallery.show(), () => {
+        if (jobBoard.isVisible())
+            jobBoard.hide();
+        else
+            jobBoard.show(jobManager.getAvailableJobs());
+    }, () => marbellinoMixer.show((pts) => {
+        if (pts > 0) {
+            jobManager.money += pts * 1_000; // reward sats per correct formula
+            hud.updateMoney(jobManager.money);
+            hud.showToast(`🎨 Formula cracked! +${(pts * 1000).toLocaleString()} sats`, 0x44DD88);
+        }
+    }));
+    gameMenu.mountMoneyPanel(hud.getMoneyPanel());
+    gameMenu.mountRadio(radio.getEl());
     // Guard to prevent job completion firing more than once per arrival
     let jobCompleting = false;
     // ── Random break interrupt system ─────────────────────────────────────────────
@@ -181,15 +136,6 @@ async function main() {
     let toiletBreakAt = -1; // seconds into job when toilet urge fires
     let breakActive = null; // which break is currently active
     let savedWaypoint = null; // waypoint before break
-    // ── Debug panel ──────────────────────────────────────────────────────────────
-    const dbg = document.createElement('div');
-    dbg.style.cssText = `
-    position:fixed; top:8px; left:8px; z-index:5000;
-    background:rgba(0,0,0,0.6); color:#fff; font-size:11px;
-    font-family:monospace; padding:6px 10px; border-radius:6px;
-    pointer-events:none; line-height:1.5;
-  `;
-    document.body.appendChild(dbg);
     // ── Update loop ─────────────────────────────────────────────────────────────
     engine.onUpdate((dt) => {
         const vanX = van.mesh.position.x;
@@ -270,17 +216,7 @@ async function main() {
             const sy = (-projected.y * 0.5 + 0.5) * window.innerHeight;
             speechBubble.setScreenPosition(sx, sy);
         }
-        traffic.update(dt, vanX, vanZ);
         pedestrians.update(dt, vanX, vanZ);
-        // Traffic collision — eject van immediately
-        const trafficResolved = traffic.resolveVan(vanX, vanZ);
-        if (trafficResolved.hit) {
-            van.mesh.position.x = trafficResolved.x;
-            van.mesh.position.z = trafficResolved.z;
-            physics.applyImpulse(0, 0);
-            if (jobManager.activePhase >= 2)
-                spillMeter.triggerCrash();
-        }
         waypointSystem.update(dt, vanX, vanZ);
         // ── Travel timer ──────────────────────────────────────────────────────────
         if (jobManager.activeJob) {
@@ -481,24 +417,6 @@ async function main() {
         }
         engine.camera.follow(van.mesh.position, van.velocity, van.heading);
         hud.update(physics.speed, spillMeter.level);
-        // Debug panel
-        const job = jobManager.activeJob;
-        const phase = job ? `P${jobManager.activePhase}` : 'idle';
-        const dist = job
-            ? (jobManager.activePhase === 1
-                ? Math.round(jobManager.distanceToWorkshop(vanX, vanZ))
-                : jobManager.activePhase === 2
-                    ? Math.round(jobManager.distanceToPoint(vanX, vanZ, ...(() => {
-                        const nc = jobManager.nextCrewNeeded();
-                        if (!nc)
-                            return [vanX, vanZ];
-                        const p = characters.getCrewPosition(nc);
-                        return [p.x, p.z];
-                    })()))
-                    : Math.round(jobManager.distanceTo(vanX, vanZ)))
-            : 0;
-        const crew = job ? `crew:${jobManager.crewPickedUp.length}/${jobManager.crewToPickup.length}` : '';
-        dbg.textContent = `${phase} | dist:${dist} | ${crew} | lock:${jobCompleting} | mg:${miniGameManager.isActive()}`;
     });
     // Show job board on first load
     setTimeout(() => {

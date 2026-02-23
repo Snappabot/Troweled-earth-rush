@@ -138,7 +138,7 @@ export class AchievementGallery {
           box-shadow: 0 2px 12px rgba(0,0,0,0.5);
         `;
                 if (isCollected) {
-                    // Photo thumbnail (blurred slightly for artistic effect)
+                    // Photo thumbnail
                     const thumb = document.createElement('img');
                     thumb.src = photo.file;
                     thumb.alt = photo.name;
@@ -146,7 +146,7 @@ export class AchievementGallery {
             width: 100%; height: 100%;
             object-fit: cover;
             filter: blur(1px) brightness(0.75);
-            display: block;
+            display: block; transition: filter 0.2s;
           `;
                     card.appendChild(thumb);
                     // Name label
@@ -160,6 +160,19 @@ export class AchievementGallery {
           `;
                     nameLbl.textContent = photo.name;
                     card.appendChild(nameLbl);
+                    // Tap hint icon
+                    const tapHint = document.createElement('div');
+                    tapHint.style.cssText = `
+            position: absolute; top: 8px; right: 8px;
+            font-size: 16px; opacity: 0.6; pointer-events: none;
+          `;
+                    tapHint.textContent = '🔍';
+                    card.appendChild(tapHint);
+                    // Full-screen on tap
+                    card.style.cursor = 'pointer';
+                    card.addEventListener('click', () => this._openLightbox(photo.file, photo.name));
+                    card.addEventListener('mouseenter', () => { thumb.style.filter = 'blur(0px) brightness(0.9)'; });
+                    card.addEventListener('mouseleave', () => { thumb.style.filter = 'blur(1px) brightness(0.75)'; });
                 }
                 else {
                     // Lock placeholder
@@ -213,6 +226,53 @@ export class AchievementGallery {
                 encourage.textContent = '✨ Keep scraping to unlock all 8 TEM photos!';
             }
         }
+    }
+    _openLightbox(src, name) {
+        const lb = document.createElement('div');
+        lb.style.cssText = `
+      position: fixed; inset: 0; z-index: 30000;
+      background: rgba(0,0,0,0.97);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      cursor: pointer; touch-action: manipulation;
+      animation: lbFadeIn 0.2s ease;
+    `;
+        if (!document.getElementById('lb-styles')) {
+            const s = document.createElement('style');
+            s.id = 'lb-styles';
+            s.textContent = `
+        @keyframes lbFadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes lbImgIn  { from { transform:scale(0.92); opacity:0; } to { transform:scale(1); opacity:1; } }
+      `;
+            document.head.appendChild(s);
+        }
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = name;
+        img.style.cssText = `
+      max-width: 100vw; max-height: 85vh;
+      object-fit: contain; display: block;
+      animation: lbImgIn 0.25s ease;
+      border-radius: 4px;
+    `;
+        lb.appendChild(img);
+        const caption = document.createElement('div');
+        caption.style.cssText = `
+      color: rgba(200,184,154,0.85); font-size: 14px; font-weight: 700;
+      margin-top: 16px; letter-spacing: 0.5px;
+      font-family: system-ui, sans-serif;
+    `;
+        caption.textContent = name;
+        lb.appendChild(caption);
+        const hint = document.createElement('div');
+        hint.style.cssText = `
+      color: rgba(255,255,255,0.3); font-size: 12px;
+      margin-top: 10px; font-family: system-ui, sans-serif;
+    `;
+        hint.textContent = 'Tap anywhere to close';
+        lb.appendChild(hint);
+        lb.addEventListener('click', () => lb.remove());
+        document.body.appendChild(lb);
     }
     hide() {
         if (this.overlay) {

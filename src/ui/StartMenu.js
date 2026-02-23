@@ -13,13 +13,16 @@ export class StartMenu {
     ctx = null;
     masterGain = null;
     themeAudio = null;
-    /** Show start menu; resolves when player hits PLAY */
-    show() {
+    /**
+     * Show start menu; resolves when player hits PLAY.
+     * Pass the already-playing audio from IntroSequence to flow seamlessly.
+     */
+    show(introAudio) {
         return new Promise(resolve => {
-            this._build(resolve);
+            this._build(resolve, introAudio);
         });
     }
-    _build(onPlay) {
+    _build(onPlay, introAudio) {
         this._injectStyles();
         this.overlay = document.createElement('div');
         this.overlay.id = 'start-menu';
@@ -65,7 +68,8 @@ export class StartMenu {
         const playBtn = this._btn('▶  PLAY', '#C1666B', '#9E4A50');
         playBtn.style.fontSize = '18px';
         playBtn.style.padding = '18px 48px';
-        playBtn.addEventListener('click', () => {
+        playBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             this._stopAudio();
             this.overlay.style.transition = 'opacity 0.5s';
             this.overlay.style.opacity = '0';
@@ -73,12 +77,13 @@ export class StartMenu {
         });
         const howBtn = this._btn('📋  HOW TO PLAY', 'rgba(200,168,106,0.18)', 'rgba(200,168,106,0.28)');
         howBtn.style.border = '1.5px solid rgba(200,168,106,0.4)';
-        howBtn.addEventListener('click', () => this._showHowToPlay());
+        howBtn.addEventListener('click', (e) => { e.stopPropagation(); this._showHowToPlay(); });
         const creditsBtn = this._btn('🎬  CREDITS', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.12)');
         creditsBtn.style.border = '1.5px solid rgba(255,255,255,0.15)';
         creditsBtn.style.color = 'rgba(255,255,255,0.55)';
-        creditsBtn.addEventListener('click', () => {
-            this._killAudio(); // instant stop — no fade, no overlap
+        creditsBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // prevent bubble reaching overlay's _startAudio once-listener
+            this._killAudio();
             this.overlay.style.opacity = '0';
             this.overlay.style.transition = 'opacity 0.3s';
             setTimeout(async () => {
@@ -95,8 +100,16 @@ export class StartMenu {
         document.body.appendChild(this.overlay);
         // Start scrolling
         this._startScroll(lyricsInner, allLines.length);
-        // Start audio on first interaction
-        this.overlay.addEventListener('click', () => this._startAudio(), { once: true });
+        // Adopt intro audio if already playing — no gap, no restart
+        if (introAudio) {
+            this.themeAudio = introAudio;
+            introAudio.loop = true;
+            introAudio.volume = 0.6;
+        }
+        else {
+            // No handoff — start fresh on first tap
+            this.overlay.addEventListener('click', () => this._startAudio(), { once: true });
+        }
     }
     _btn(label, bg, hover) {
         const b = document.createElement('button');

@@ -9,11 +9,11 @@ export class GameMenu {
   private moneySlot!: HTMLDivElement;
   private _open = false;
 
-  constructor(onPhoto: () => void, onJobs: () => void) {
-    this._build(onPhoto, onJobs);
+  constructor(onPhoto: () => void, onJobs: () => void, onMixer?: () => void) {
+    this._build(onPhoto, onJobs, onMixer);
   }
 
-  private _build(onPhoto: () => void, onJobs: () => void): void {
+  private _build(onPhoto: () => void, onJobs: () => void, onMixer?: () => void): void {
     // ── Hamburger button — top-right ─────────────────────────────────────────
     this.btn = document.createElement('button');
     this.btn.textContent = '☰';
@@ -68,6 +68,20 @@ export class GameMenu {
     btnRow.appendChild(photoBtn);
     btnRow.appendChild(jobsBtn);
     this.panel.appendChild(btnRow);
+
+    // ── Mixer button (full-width, second row) ─────────────────────────────────
+    if (onMixer) {
+      const mixerBtn = this._actionBtn('🎨  MARBELLINO MIXER', 'rgba(30,50,40,0.9)', () => {
+        this._close(); onMixer();
+      });
+      mixerBtn.style.cssText += `
+        width:100%; margin-top:2px;
+        background:linear-gradient(135deg, rgba(40,70,50,0.95), rgba(20,40,30,0.95));
+        border:1px solid rgba(68,221,136,0.2);
+        color:#88FFBB; font-size:13px;
+      `;
+      this.panel.appendChild(mixerBtn);
+    }
 
     document.body.appendChild(this.panel);
 
