@@ -9,17 +9,17 @@ import { CrewCharacter, CREW_CONFIGS } from '../entities/CrewCharacter';
 import type { MiniGameResult } from './MiniGameManager';
 
 // ── World constants ───────────────────────────────────────────────────────────
-const FLOOR_H   = 7;      // vertical distance between scaffold floors
-const N_FLOORS  = 5;      // number of scaffold floors above ground
+const FLOOR_H   = 5;      // vertical distance between scaffold floors
+const N_FLOORS  = 8;      // number of scaffold floors above ground
 const GOAL_Y    = N_FLOORS * FLOOR_H;
-const POLE_XS   = [-6, 6] as const;  // vertical scaffold poles
+const POLE_XS   = [-8, 8] as const;  // outer scaffold poles
 
 // ── Physics ───────────────────────────────────────────────────────────────────
-const GRAVITY   = 26;     // units/s²
-const WALK_SPD  = 5;      // units/s horizontal
-const JUMP1     = 13;     // first jump upward velocity
-const JUMP2     = 11;     // double jump (longer, floatier)
-const CLIMB_SPD = 3.5;    // units/s on pole
+const GRAVITY   = 20;     // units/s² — reduced so jumps actually reach platforms
+const WALK_SPD  = 5.5;    // units/s horizontal
+const JUMP1     = 14;     // first jump — peak ≈ 4.9 units (clears FLOOR_H=5 with platform offset)
+const JUMP2     = 11;     // double jump floater
+const CLIMB_SPD = 4;      // units/s on pole
 const MAX_FALL  = -30;    // terminal velocity
 
 // Player AABB half-extents
@@ -72,7 +72,7 @@ export class ScaffoldGame {
 
   // Game state
   private lives = 3;
-  private timer = 90;
+  private timer = 120;
   private gameOver = false;
   private delivered = false;
 
@@ -125,8 +125,8 @@ export class ScaffoldGame {
     this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.018);
 
     // Camera — side-scroll perspective, slight 3/4 angle
-    this.camera = new THREE.PerspectiveCamera(42, W / H, 0.1, 200);
-    this.camera.position.set(0, 12, 20);
+    this.camera = new THREE.PerspectiveCamera(44, W / H, 0.1, 200);
+    this.camera.position.set(0, 12, 26);
     this.camera.lookAt(0, 10, 0);
 
     // Lighting
@@ -138,10 +138,10 @@ export class ScaffoldGame {
     sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.camera.near = 0.5;
-    sun.shadow.camera.far = 80;
-    sun.shadow.camera.left = -15;
-    sun.shadow.camera.right = 15;
-    sun.shadow.camera.top = 40;
+    sun.shadow.camera.far = 120;
+    sun.shadow.camera.left = -20;
+    sun.shadow.camera.right = 20;
+    sun.shadow.camera.top = 55;
     sun.shadow.camera.bottom = -5;
     this.scene.add(sun);
 
@@ -176,95 +176,114 @@ export class ScaffoldGame {
     }
 
     // ── Main building facade (the one being plastered) ──────────────────────
-    const totalH = GOAL_Y + 4;
-    add(new THREE.BoxGeometry(12, totalH, 0.6), 0xE8DCC0, 0, totalH/2 - 1, -1.5);
+    const totalH = GOAL_Y + 5;
+    add(new THREE.BoxGeometry(16, totalH, 0.6), 0xE8DCC0, 0, totalH/2 - 1, -1.5);
 
     // Cornice (top of facade)
-    add(new THREE.BoxGeometry(12.6, 0.5, 0.9), 0xD4C8A8, 0, totalH - 1, -1.4);
+    add(new THREE.BoxGeometry(16.6, 0.5, 0.9), 0xD4C8A8, 0, totalH - 1, -1.4);
 
     // Sill / base strip
-    add(new THREE.BoxGeometry(12, 0.4, 0.7), 0xD0C4A0, 0, 0, -1.4);
+    add(new THREE.BoxGeometry(16, 0.4, 0.7), 0xD0C4A0, 0, 0, -1.4);
 
-    // Windows (3 across × per floor)
+    // Windows (4 across × per floor)
     for (let fl = 0; fl < N_FLOORS; fl++) {
-      const wy = fl * FLOOR_H + 2.5;
-      for (const wx of [-3.5, 0, 3.5]) {
-        add(new THREE.BoxGeometry(2.2, 3.2, 0.2), 0x334466, wx, wy, -1.1);
-        add(new THREE.BoxGeometry(2.0, 0.15, 0.25), 0xBBB090, wx, wy + 1.7, -1.05);
+      const wy = fl * FLOOR_H + 2.0;
+      for (const wx of [-5.5, -1.8, 1.8, 5.5]) {
+        add(new THREE.BoxGeometry(2.0, 2.8, 0.2), 0x334466, wx, wy, -1.1);
+        add(new THREE.BoxGeometry(1.8, 0.15, 0.25), 0xBBB090, wx, wy + 1.5, -1.05);
       }
     }
 
     // Ground
-    add(new THREE.BoxGeometry(20, 0.5, 5), 0x3A3832, 0, -0.25, 0.5);
+    add(new THREE.BoxGeometry(24, 0.5, 5), 0x3A3832, 0, -0.25, 0.5);
 
     // Plaster trough (death zone visually)
-    add(new THREE.BoxGeometry(10, 0.5, 1.2), 0xC8B888, 0, 0.25, 1.0);
-    add(new THREE.BoxGeometry(10, 1.2, 0.15), 0xB8A878, 0, 0.6, 1.57);
-    add(new THREE.BoxGeometry(0.15, 1.2, 1.2), 0xB8A878, -5, 0.6, 1.0);
-    add(new THREE.BoxGeometry(0.15, 1.2, 1.2), 0xB8A878, 5, 0.6, 1.0);
+    add(new THREE.BoxGeometry(14, 0.5, 1.2), 0xC8B888, 0, 0.25, 1.0);
+    add(new THREE.BoxGeometry(14, 1.2, 0.15), 0xB8A878, 0, 0.6, 1.57);
+    add(new THREE.BoxGeometry(0.15, 1.2, 1.2), 0xB8A878, -7, 0.6, 1.0);
+    add(new THREE.BoxGeometry(0.15, 1.2, 1.2), 0xB8A878, 7, 0.6, 1.0);
   }
 
   // ── Level geometry ─────────────────────────────────────────────────────────
   private _buildLevel(): void {
+    const PX = 8; // outer pole x (matches POLE_XS)
+
     // ── Scaffold vertical poles ──────────────────────────────────────────────
     for (const px of POLE_XS) {
       this._addScaffoldPole(px, 0, GOAL_Y + 3);
       this.poles.push({ x: px, y1: 0, y2: GOAL_Y + 3 });
     }
-    // Inner poles for structure
-    this._addScaffoldPole(-2.5, 0, GOAL_Y + 3);
-    this._addScaffoldPole( 2.5, 0, GOAL_Y + 3);
+    // Inner climbable poles at ±3.5 — key for escaping ground floor
+    for (const ipx of [-3.5, 3.5]) {
+      this._addScaffoldPole(ipx, 0, GOAL_Y + 3);
+      this.poles.push({ x: ipx, y1: 0, y2: GOAL_Y + 3 });
+    }
+    // Central visual poles (not climbable, just structure)
+    this._addScaffoldPole(-1, 0, GOAL_Y + 3);
+    this._addScaffoldPole( 1, 0, GOAL_Y + 3);
 
     // ── Scaffold horizontal ledger tubes every floor ─────────────────────────
     for (let fl = 0; fl <= N_FLOORS; fl++) {
       const ty = fl * FLOOR_H;
-      this._addTube(-6, 6, ty, 0x9999AA, 0.07);
+      this._addTube(-PX, PX, ty, 0x9999AA, 0.07);
     }
 
-    // ── Diagonal cross-bracing every floor (visual only) ────────────────────
+    // ── Diagonal cross-bracing (visual only) ────────────────────────────────
     for (let fl = 0; fl < N_FLOORS; fl++) {
-      const y0 = fl * FLOOR_H;
-      const y1 = (fl + 1) * FLOOR_H;
-      this._addDiag(-6, y0, 6, y1);
-      this._addDiag(6, y0, -6, y1);
+      const y0 = fl * FLOOR_H, y1 = (fl + 1) * FLOOR_H;
+      this._addDiag(-PX, y0, PX, y1);
+      this._addDiag(PX, y0, -PX, y1);
     }
 
     // ── Wooden plank platforms ───────────────────────────────────────────────
-    // Floor 0 — full ground (start)
-    this._addPlat(-5.5, 5.5, 0, 'normal');
+    // Floor 0 — full wide ground (start), easy take-off
+    this._addPlat(-7.5, 7.5, 0, 'normal');
 
-    // Floor 1 — two sections, jump the gap
-    this._addPlat(-5.5, -0.8, FLOOR_H * 1, 'normal');
-    this._addPlat(0.8, 5.5, FLOOR_H * 1, 'normal');
+    // Floor 1 — two sections with a gap in the centre
+    this._addPlat(-7.5, -1.2, FLOOR_H * 1, 'normal');
+    this._addPlat(1.2, 7.5, FLOOR_H * 1, 'normal');
 
     // Floor 2 — left section + crumbling right
-    this._addPlat(-5.5, -1, FLOOR_H * 2, 'normal');
-    this._addPlat(1.5, 4.5, FLOOR_H * 2, 'crumble');
+    this._addPlat(-7.5, -1.0, FLOOR_H * 2, 'normal');
+    this._addPlat(2.0, 7.5, FLOOR_H * 2, 'crumble');
 
-    // Floor 3 — moving platform in centre
-    this._addPlat(-5.5, -1.8, FLOOR_H * 3, 'normal');
-    this._addPlat(1.8, 5.5, FLOOR_H * 3, 'normal');
-    this._addPlat(-1.5, 1.5, FLOOR_H * 3, 'moving');
+    // Floor 3 — three small pads + a moving platform crossing the gap
+    this._addPlat(-7.5, -3.0, FLOOR_H * 3, 'normal');
+    this._addPlat(3.0, 7.5, FLOOR_H * 3, 'normal');
+    this._addPlat(-2.0, 2.0, FLOOR_H * 3, 'moving');
 
-    // Floor 4 — three small stepping stones
-    this._addPlat(-5.5, -2.5, FLOOR_H * 4, 'normal');
-    this._addPlat(-0.8, 0.8, FLOOR_H * 4 + 1.2, 'normal'); // slightly raised centre
-    this._addPlat(2.5, 5.5, FLOOR_H * 4, 'normal');
+    // Floor 4 — full except large gap right
+    this._addPlat(-7.5, 1.5, FLOOR_H * 4, 'normal');
+    this._addPlat(4.0, 7.5, FLOOR_H * 4, 'crumble');
+
+    // Floor 5 — staggered stepping stones
+    this._addPlat(-7.5, -4.0, FLOOR_H * 5, 'normal');
+    this._addPlat(-1.5, 1.5, FLOOR_H * 5 + 0.8, 'normal');  // slight rise
+    this._addPlat(4.0, 7.5, FLOOR_H * 5, 'normal');
+
+    // Floor 6 — moving platform + narrow planks
+    this._addPlat(-7.5, -4.5, FLOOR_H * 6, 'normal');
+    this._addPlat(4.5, 7.5, FLOOR_H * 6, 'normal');
+    this._addPlat(-3.0, 3.0, FLOOR_H * 6, 'moving');
+
+    // Floor 7 — mostly open, crumble on both sides
+    this._addPlat(-7.5, -4.5, FLOOR_H * 7, 'crumble');
+    this._addPlat(-1.5, 1.5, FLOOR_H * 7, 'normal');  // safe centre
+    this._addPlat(4.5, 7.5, FLOOR_H * 7, 'crumble');
 
     // ── Swing bars (golden grab bars mid-floor) ───────────────────────────────
-    // Floor 1 → 2 swing (over the gap)
-    this._addSwingBar(0, FLOOR_H * 1 + 3.5, 2.5);
-    // Floor 3 → 4 swing
-    this._addSwingBar(0, FLOOR_H * 3 + 3.5, 2.5);
+    this._addSwingBar(0, FLOOR_H * 1 + 2.5, 2.8);   // F1→2 bridge
+    this._addSwingBar(0, FLOOR_H * 3 + 2.5, 2.8);   // F3→4
+    this._addSwingBar(-4, FLOOR_H * 5 + 2.5, 2.2);  // F5→6 left
+    this._addSwingBar( 4, FLOOR_H * 6 + 2.5, 2.2);  // F6→7 right
 
     // ── Delivery zone (win platform) ─────────────────────────────────────────
-    this._addPlat(-5.5, 5.5, GOAL_Y, 'win');
-
-    // Deliver sign
+    this._addPlat(-7.5, 7.5, GOAL_Y, 'win');
     this._addSign(0, GOAL_Y + 1.8, '⭐ DELIVER HERE ⭐', 0xFF8800);
 
-    // Bucket pickup at ground
-    this._addBucket(-3.5, 0.8);
+    // Buckets for atmosphere
+    this._addBucket(-5.0, 0.8);
+    this._addBucket(5.0, 0.8);
   }
 
   private _addScaffoldPole(x: number, y1: number, y2: number): void {
@@ -561,15 +580,14 @@ export class ScaffoldGame {
 
   // ── Platformer physics ────────────────────────────────────────────────────
   private _physicsPlatform(dt: number): void {
-    // Check pole proximity → auto-start climb on UP
-    if (!this.onGround) {
-      for (const pole of this.poles) {
-        if (Math.abs(this.px - pole.x) < 0.5 && this.py >= pole.y1 - 0.5 && this.py <= pole.y2) {
-          if (this.keys.up) {
-            this.climbPole = pole;
-            this.px = pole.x; this.vx = 0; this.vy = 0;
-            return;
-          }
+    // Check pole proximity → grab on UP (works from ground AND air)
+    for (const pole of this.poles) {
+      if (Math.abs(this.px - pole.x) < 0.6 && this.py >= pole.y1 - 0.5 && this.py <= pole.y2) {
+        if (this.keys.up) {
+          this.climbPole = pole;
+          this.px = pole.x; this.vx = 0; this.vy = 0;
+          this.onGround = false;
+          return;
         }
       }
     }
@@ -626,7 +644,7 @@ export class ScaffoldGame {
     // Move
     this.px += this.vx * dt;
     this.py += this.vy * dt;
-    this.px = Math.max(-6.2, Math.min(6.2, this.px));
+    this.px = Math.max(-8.2, Math.min(8.2, this.px));
 
     // Platform collision
     this.onGround = false;
