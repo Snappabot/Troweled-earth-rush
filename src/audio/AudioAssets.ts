@@ -3,8 +3,8 @@
 const BASE: string = ((import.meta as any).env?.BASE_URL as string) || '/';
 
 export const AUDIO = {
-  theme:   `${BASE}audio/theme.aac`,
-  theme2:  `${BASE}audio/theme2.aac`,
+  theme:   `${BASE}audio/theme.m4a`,   // 3.2-min theme song (m4a = best browser compat)
+  theme2:  `${BASE}audio/theme2.aac`,  // TEM Talk podcast
   credits: `${BASE}audio/credits.m4a`,
   radio1:  `${BASE}audio/radio1.m4a`,
   radio2:  `${BASE}audio/radio2.m4a`,
