@@ -11,7 +11,6 @@ import { JobBoard } from './ui/JobBoard';
 import { HUD } from './ui/HUD';
 import { MiniGameManager } from './minigames/MiniGameManager';
 import { AchievementGallery } from './ui/AchievementGallery';
-import { TrafficSystem } from './entities/TrafficSystem';
 import { PedestrianSystem } from './entities/PedestrianSystem';
 import { CoffeeShop } from './entities/CoffeeShop';
 import { BladderMeter } from './gameplay/BladderMeter';
@@ -149,7 +148,6 @@ async function main() {
   document.body.appendChild(jobsBtn);
 
   // ── Traffic + Pedestrian systems ────────────────────────────────────────────
-  const traffic = new TrafficSystem(engine.scene);
   const pedestrians = new PedestrianSystem(engine.scene);
 
   // ── Coffee shop + Bladder mechanic ──────────────────────────────────────────
@@ -291,17 +289,8 @@ async function main() {
       speechBubble.setScreenPosition(sx, sy);
     }
 
-    traffic.update(dt, vanX, vanZ);
     pedestrians.update(dt, vanX, vanZ);
 
-    // Traffic collision — eject van immediately
-    const trafficResolved = traffic.resolveVan(vanX, vanZ);
-    if (trafficResolved.hit) {
-      van.mesh.position.x = trafficResolved.x;
-      van.mesh.position.z = trafficResolved.z;
-      physics.applyImpulse(0, 0);
-      if (jobManager.activePhase >= 2) spillMeter.triggerCrash();
-    }
 
     waypointSystem.update(dt, vanX, vanZ);
 
