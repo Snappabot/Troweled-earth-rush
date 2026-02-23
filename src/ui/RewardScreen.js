@@ -3,7 +3,7 @@
  * Full-screen cinematic unlock shown when the player collects all 8 TEM photos.
  * Reveals:  🏆 Full collection  |  🎁 5% discount  |  📜 Certificate
  */
-import { renderCertificate } from './Certificate';
+import { renderCertificate, isBtcAchieved } from './Certificate';
 const STORE_URL = 'https://troweledearthmelbourne.com.au';
 const DISC_CODE = 'TEMRUSH5';
 const CERT_KEY = 'tem-rush-cert-unlocked';
@@ -148,9 +148,9 @@ export class RewardScreen {
         <span style="color:rgba(240,232,216,0.55); font-size:13px;">Added to your TEM licence profile in-app.</span>
       </div>
     `;
-        // Render certificate thumbnail
+        // Render certificate thumbnail (includes BTC rewards if achieved)
         try {
-            this.certDataUrl = renderCertificate();
+            this.certDataUrl = renderCertificate({ btcAchieved: isBtcAchieved() });
             const thumb = document.createElement('img');
             thumb.src = this.certDataUrl;
             thumb.style.cssText = `

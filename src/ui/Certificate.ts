@@ -7,12 +7,19 @@
 export interface CertificateOptions {
   recipientName?: string;  // defaults to "Apprentice Plasterer"
   dateStr?: string;        // defaults to today
+  btcAchieved?: boolean;   // show BTC reward tier on certificate
+}
+
+/** Check localStorage for BTC achievement */
+export function isBtcAchieved(): boolean {
+  return localStorage.getItem('tem-rush-btc-achieved') === '1';
 }
 
 export function renderCertificate(opts: CertificateOptions = {}): string {
   const name   = opts.recipientName ?? 'Apprentice Plasterer';
   const date   = opts.dateStr       ?? new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-  const W = 900, H = 640;
+  const hasBtc = opts.btcAchieved ?? isBtcAchieved();
+  const W = 900, H = hasBtc ? 820 : 640;
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -167,6 +174,64 @@ export function renderCertificate(opts: CertificateOptions = {}): string {
   ctx.rotate(-0.18);
   ctx.fillText('CERTIFIED', 0, 0);
   ctx.restore();
+
+  // ── BTC Achievement tier (only when earned) ───────────────────────────────
+  if (hasBtc) {
+    const btcY = 602;
+
+    // Divider
+    ctx.strokeStyle = 'rgba(247,147,26,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(36, btcY); ctx.lineTo(W - 36, btcY); ctx.stroke();
+
+    // ₿ badge
+    ctx.fillStyle = '#F7931A';
+    ctx.font = `900 14px monospace`;
+    ctx.letterSpacing = '2px';
+    ctx.textAlign = 'center';
+    ctx.fillText('₿  1 BITCOIN ACHIEVEMENT — BONUS REWARDS', W/2, btcY + 22);
+
+    // Two reward boxes side by side
+    const boxW = 360, boxH = 90, gap = 20;
+    const box1x = W/2 - boxW - gap/2;
+    const box2x = W/2 + gap/2;
+    const boxY  = btcY + 36;
+
+    const drawRewardBox = (bx: number, by: number, icon: string, line1: string, code: string) => {
+      ctx.fillStyle = 'rgba(247,147,26,0.10)';
+      ctx.strokeStyle = 'rgba(247,147,26,0.40)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, boxW, boxH, 8);
+      ctx.fill(); ctx.stroke();
+
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#F7931A';
+      ctx.font = `700 11px monospace`;
+      ctx.letterSpacing = '1px';
+      ctx.fillText(`${icon}  ${line1}`, bx + boxW/2, by + 22);
+
+      ctx.fillStyle = 'rgba(240,232,216,0.5)';
+      ctx.font = `400 11px system-ui`;
+      ctx.letterSpacing = '0px';
+      ctx.fillText('USE CODE AT CHECKOUT:', bx + boxW/2, by + 46);
+
+      ctx.fillStyle = '#FFD97A';
+      ctx.font = `900 18px monospace`;
+      ctx.letterSpacing = '2px';
+      ctx.fillText(code, bx + boxW/2, by + 72);
+    };
+
+    drawRewardBox(box1x, boxY, '🎽', '10% OFF TEM MERCH STORE', 'BTCPLASTER10');
+    drawRewardBox(box2x, boxY, '🪣', '5% OFF MATERIAL SALES', 'BTCMAT5');
+
+    // Footer note
+    ctx.letterSpacing = '0px';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(200,168,106,0.4)';
+    ctx.font = `400 10px monospace`;
+    ctx.fillText('Present this certificate at participating TEM retail stores', W/2, btcY + 144);
+  }
 
   return canvas.toDataURL('image/png');
 }

@@ -4,7 +4,7 @@
  * Reveals:  🏆 Full collection  |  🎁 5% discount  |  📜 Certificate
  */
 
-import { renderCertificate } from './Certificate';
+import { renderCertificate, isBtcAchieved } from './Certificate';
 
 const STORE_URL  = 'https://troweledearthmelbourne.com.au';
 const DISC_CODE  = 'TEMRUSH5';
@@ -158,9 +158,9 @@ export class RewardScreen {
       </div>
     `;
 
-    // Render certificate thumbnail
+    // Render certificate thumbnail (includes BTC rewards if achieved)
     try {
-      this.certDataUrl = renderCertificate();
+      this.certDataUrl = renderCertificate({ btcAchieved: isBtcAchieved() });
       const thumb = document.createElement('img');
       thumb.src = this.certDataUrl;
       thumb.style.cssText = `

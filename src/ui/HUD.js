@@ -539,34 +539,113 @@ export class HUD {
         setTimeout(() => el.remove(), 2600);
     }
     _showBitcoinAchievement() {
+        // Persist BTC achievement so certificate can reflect it
+        localStorage.setItem('tem-rush-btc-achieved', '1');
+        if (!document.getElementById('btc-anim-styles')) {
+            const style = document.createElement('style');
+            style.id = 'btc-anim-styles';
+            style.textContent = `
+        @keyframes btcFadeIn { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
+        @keyframes btcSpin   { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes btcGlow   { 0%,100%{text-shadow:0 0 20px #F7931A} 50%{text-shadow:0 0 60px #FFD700,0 0 80px #F7931A} }
+      `;
+            document.head.appendChild(style);
+        }
         const modal = document.createElement('div');
         modal.style.cssText = `
-      position: fixed; inset: 0; z-index: 9999;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      background: rgba(0,0,0,0.85);
-      font-family: system-ui, sans-serif;
-      animation: btcFadeIn 0.6s ease;
+      position:fixed; inset:0; z-index:29999;
+      background:rgba(5,3,0,0.96);
+      display:flex; flex-direction:column; align-items:center;
+      overflow-y:auto; font-family:system-ui,sans-serif;
+      animation:btcFadeIn 0.5s ease;
+      padding:32px 20px 60px; box-sizing:border-box;
     `;
-        const style = document.createElement('style');
-        style.textContent = `
-      @keyframes btcFadeIn { from { opacity:0; transform:scale(0.8); } to { opacity:1; transform:scale(1); } }
-      @keyframes btcSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+        const inner = document.createElement('div');
+        inner.style.cssText = 'width:100%; max-width:480px; display:flex; flex-direction:column; align-items:center; gap:18px;';
+        // Close
+        const closeRow = document.createElement('div');
+        closeRow.style.cssText = 'width:100%; display:flex; justify-content:flex-end;';
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = `background:rgba(255,255,255,0.1);border:none;color:#fff;
+      font-size:18px;width:38px;height:38px;border-radius:50%;cursor:pointer;`;
+        closeBtn.onclick = () => modal.remove();
+        closeRow.appendChild(closeBtn);
+        inner.appendChild(closeRow);
+        // Hero
+        inner.innerHTML += `
+      <div style="font-size:72px;animation:btcSpin 4s linear infinite;display:inline-block;">₿</div>
+      <div style="color:#F7931A;font-size:clamp(28px,8vw,52px);font-weight:900;
+                  animation:btcGlow 2s ease-in-out infinite;text-align:center;">1 BITCOIN</div>
+      <div style="color:#FFD700;font-size:clamp(15px,4vw,22px);font-weight:800;letter-spacing:2px;">ACHIEVED</div>
+      <div style="color:rgba(255,255,255,0.5);font-size:13px;text-align:center;line-height:1.6;max-width:360px;">
+        100,000,000 sats earned plastering Melbourne.<br>
+        <em>Jarrad wants his cut. You pretend not to hear him.</em>
+      </div>
     `;
-        document.head.appendChild(style);
-        modal.innerHTML = `
-      <div style="font-size:80px; animation: btcSpin 3s linear infinite; display:inline-block;">₿</div>
-      <div style="color:#F7931A; font-size:clamp(32px,8vw,64px); font-weight:900; margin:16px 0 8px; text-shadow:0 0 30px #F7931A;">1 BITCOIN</div>
-      <div style="color:#FFD700; font-size:clamp(16px,4vw,28px); font-weight:700; margin-bottom:8px;">ACHIEVED</div>
-      <div style="color:#aaa; font-size:14px; margin-bottom:32px;">100,000,000 sats earned plastering Melbourne</div>
-      <div style="color:#888; font-size:12px; font-style:italic;">Jarrad wants his cut. You pretend not to hear him.</div>
-      <button onclick="this.parentElement.remove()" style="
-        margin-top:40px; padding:14px 40px;
-        background:#F7931A; color:#000; border:none;
-        border-radius:50px; font-size:18px; font-weight:900;
-        cursor:pointer; letter-spacing:1px;
-      ">HODL 🚀</button>
+        // Reward 1 — Merch store
+        const r1 = _makeRewardCard('🎽  REWARD — MERCH STORE', 'rgba(247,147,26,0.18)', 'rgba(247,147,26,0.55)', '10% off all TEM merch.<br>Show this at checkout or use the code online.', 'BTCPLASTER10');
+        inner.appendChild(r1);
+        // Reward 2 — Material retail
+        const r2 = _makeRewardCard('🪣  REWARD — MATERIAL SALES', 'rgba(94,219,125,0.14)', 'rgba(94,219,125,0.45)', '5% off TEM materials at participating retail stores.<br>Present your in-app certificate.', 'BTCMAT5');
+        inner.appendChild(r2);
+        // Certificate note
+        const certNote = document.createElement('div');
+        certNote.style.cssText = `
+      width:100%; background:rgba(200,168,106,0.1);
+      border:1px solid rgba(200,168,106,0.35); border-radius:14px;
+      padding:16px 18px; color:rgba(240,232,216,0.75);
+      font-size:13px; line-height:1.6; text-align:center;
     `;
+        certNote.innerHTML = `
+      📜 Both rewards have been added to your<br>
+      <strong style="color:#C8A86A;">TEM Rush Certificate</strong> —
+      open the 📸 gallery to view &amp; save it.
+    `;
+        inner.appendChild(certNote);
+        // HODL button
+        const hodl = document.createElement('button');
+        hodl.textContent = 'HODL 🚀';
+        hodl.style.cssText = `
+      padding:14px 48px; background:#F7931A; color:#000;
+      border:none; border-radius:50px; font-size:18px; font-weight:900;
+      cursor:pointer; letter-spacing:1px; margin-top:8px;
+    `;
+        hodl.onclick = () => modal.remove();
+        inner.appendChild(hodl);
+        modal.appendChild(inner);
         document.body.appendChild(modal);
     }
+}
+// ── Helper — reward card with copy button ─────────────────────────────────────
+function _makeRewardCard(label, bg, border, desc, code) {
+    const card = document.createElement('div');
+    card.style.cssText = `
+    width:100%; background:${bg}; border:1.5px solid ${border};
+    border-radius:16px; padding:18px; display:flex; flex-direction:column; gap:10px;
+  `;
+    card.innerHTML = `
+    <div style="color:#F7931A;font-size:11px;font-weight:700;letter-spacing:2px;">${label}</div>
+    <div style="color:#F0E8D8;font-size:14px;line-height:1.6;">${desc}</div>
+    <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(247,147,26,0.3);
+                border-radius:10px;padding:12px;text-align:center;">
+      <div style="color:rgba(247,147,26,0.7);font-size:10px;letter-spacing:2px;
+                  font-family:monospace;margin-bottom:4px;">PROMO CODE</div>
+      <div style="color:#FFD97A;font-size:clamp(18px,5vw,26px);font-weight:900;
+                  letter-spacing:3px;font-family:monospace;">${code}</div>
+    </div>
+    <button data-code="${code}" style="
+      background:rgba(247,147,26,0.15);border:1px solid rgba(247,147,26,0.4);
+      color:#F7931A;font-size:13px;font-weight:700;border-radius:8px;
+      padding:10px;cursor:pointer;touch-action:manipulation;width:100%;
+    ">📋 Copy Code</button>
+  `;
+    const copyBtn = card.querySelector('button');
+    copyBtn.addEventListener('click', () => {
+        navigator.clipboard?.writeText(code).then(() => {
+            copyBtn.textContent = '✓ Copied!';
+            setTimeout(() => { copyBtn.textContent = '📋 Copy Code'; }, 2000);
+        });
+    });
+    return card;
 }
