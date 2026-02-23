@@ -944,48 +944,19 @@ export class IntroSequence {
                 break;
             }
             case 'tsuyoshi': {
-                // ── REAL MOHAWK — shaved sides, jet black center strip, tall spikes ──
-                // (This is his actual signature look — not a game invention)
-                const mohBlack = '#080808';
-                const mohW = hr * 0.52; // strip width
-                const baseY = hy - hr * 0.2; // where spikes start from
-                // Shaved sides — skin tone (no hair, drawn over skull)
-                ctx.fillStyle = skin;
+                // ── Short straight black hair, side-swept, East Asian ──
+                const tc = '#080808';
+                ctx.fillStyle = tc;
+                // Main cap
                 ctx.beginPath();
-                ctx.arc(cx - hr * 0.85, hy - hr * 0.5, hr * 0.55, 0, Math.PI * 2);
+                ctx.arc(cx, hy - hr * 0.65, hr * 1.1, Math.PI, 0);
                 ctx.fill();
+                // Side-swept fringe to the right — signature Asian street style
                 ctx.beginPath();
-                ctx.arc(cx + hr * 0.85, hy - hr * 0.5, hr * 0.55, 0, Math.PI * 2);
-                ctx.fill();
-                // Central mohawk strip base
-                ctx.fillStyle = mohBlack;
-                ctx.fillRect(cx - mohW / 2, baseY - hr * 0.3, mohW, hr * 0.55);
-                // Tall spikes standing upward — irregular heights like the real photo
-                const spikes = [
-                    { ox: -0.28, h: hr * 1.55, tw: 0.22, tilt: -0.18 },
-                    { ox: -0.10, h: hr * 2.10, tw: 0.20, tilt: -0.06 },
-                    { ox: 0.06, h: hr * 2.40, tw: 0.22, tilt: 0.04 },
-                    { ox: 0.20, h: hr * 1.90, tw: 0.19, tilt: 0.12 },
-                    { ox: 0.32, h: hr * 1.40, tw: 0.18, tilt: 0.20 },
-                ];
-                ctx.fillStyle = mohBlack;
-                spikes.forEach(s => {
-                    const sx = cx + s.ox * mohW * 3;
-                    const bw = s.tw * mohW * 2.5;
-                    ctx.beginPath();
-                    ctx.moveTo(sx - bw / 2, baseY);
-                    ctx.lineTo(sx + bw / 2, baseY);
-                    ctx.lineTo(sx + Math.sin(s.tilt) * s.h * 0.5, baseY - s.h);
-                    ctx.closePath();
-                    ctx.fill();
-                });
-                // Slight blue-black sheen highlight on center spike
-                ctx.fillStyle = 'rgba(80,80,160,0.18)';
-                ctx.beginPath();
-                ctx.moveTo(cx - 1, baseY);
-                ctx.lineTo(cx + 3, baseY);
-                ctx.lineTo(cx + 2, baseY - hr * 2.0);
-                ctx.closePath();
+                ctx.moveTo(cx - hr * 0.9, hy - hr * 1.05);
+                ctx.bezierCurveTo(cx + hr * 0.1, hy - hr * 1.25, cx + hr * 1.0, hy - hr * 0.85, cx + hr * 1.05, hy - hr * 0.25);
+                ctx.lineTo(cx + hr * 0.5, hy - hr * 0.18);
+                ctx.bezierCurveTo(cx + hr * 0.35, hy - hr * 0.7, cx - hr * 0.05, hy - hr * 1.0, cx - hr * 0.9, hy - hr * 1.05);
                 ctx.fill();
                 break;
             }
@@ -1043,19 +1014,47 @@ export class IntroSequence {
                 break;
             }
             case 'fabio': {
-                // ── Short dark Italian hair, slicked/neat ──
-                ctx.fillStyle = '#1a0e00';
+                // ── REAL MOHAWK — shaved sides, jet black center strip, tall spikes ──
+                const mohBlack = '#080808';
+                const mohW = hr * 0.52;
+                const baseY = hy - hr * 0.2;
+                // Shaved sides (skin showing)
+                ctx.fillStyle = skin;
                 ctx.beginPath();
-                ctx.arc(cx, hy - hr * 0.68, hr * 1.1, Math.PI, 0);
+                ctx.arc(cx - hr * 0.85, hy - hr * 0.5, hr * 0.55, 0, Math.PI * 2);
                 ctx.fill();
-                // Slight side part and wave
                 ctx.beginPath();
-                ctx.ellipse(cx - hr * 0.1, hy - hr * 1.42, hr * 0.8, hr * 0.38, 0.1, 0, Math.PI * 2);
+                ctx.arc(cx + hr * 0.85, hy - hr * 0.5, hr * 0.55, 0, Math.PI * 2);
                 ctx.fill();
-                // Light stubble/shadow beard
-                ctx.fillStyle = '#2e1800';
+                // Central strip base
+                ctx.fillStyle = mohBlack;
+                ctx.fillRect(cx - mohW / 2, baseY - hr * 0.3, mohW, hr * 0.55);
+                // Tall irregular spikes
+                const fabSpikes = [
+                    { ox: -0.28, h: hr * 1.55, tw: 0.22, tilt: -0.18 },
+                    { ox: -0.10, h: hr * 2.10, tw: 0.20, tilt: -0.06 },
+                    { ox: 0.06, h: hr * 2.40, tw: 0.22, tilt: 0.04 },
+                    { ox: 0.20, h: hr * 1.90, tw: 0.19, tilt: 0.12 },
+                    { ox: 0.32, h: hr * 1.40, tw: 0.18, tilt: 0.20 },
+                ];
+                ctx.fillStyle = mohBlack;
+                fabSpikes.forEach(s => {
+                    const sx = cx + s.ox * mohW * 3;
+                    const bw = s.tw * mohW * 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(sx - bw / 2, baseY);
+                    ctx.lineTo(sx + bw / 2, baseY);
+                    ctx.lineTo(sx + Math.sin(s.tilt) * s.h * 0.5, baseY - s.h);
+                    ctx.closePath();
+                    ctx.fill();
+                });
+                // Blue-black sheen on tallest spike
+                ctx.fillStyle = 'rgba(80,80,160,0.18)';
                 ctx.beginPath();
-                ctx.ellipse(cx, hy + hr * 0.5, hr * 0.6, hr * 0.26, 0, 0, Math.PI);
+                ctx.moveTo(cx - 1, baseY);
+                ctx.lineTo(cx + 3, baseY);
+                ctx.lineTo(cx + 2, baseY - hr * 2.0);
+                ctx.closePath();
                 ctx.fill();
                 break;
             }
