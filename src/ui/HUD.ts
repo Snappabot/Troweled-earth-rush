@@ -174,8 +174,8 @@ export class HUD {
     this.crewPanelEl = document.createElement('div');
     this.crewPanelEl.style.cssText = `
       position: fixed;
-      top: 16px;
-      left: 16px;
+      top: 200px;
+      left: 10px;
       display: none;
       flex-direction: column;
       gap: 6px;

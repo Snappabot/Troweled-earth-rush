@@ -112,8 +112,8 @@ async function main() {
   jobsBtn.textContent = '📋 JOBS';
   jobsBtn.style.cssText = `
     position: fixed;
-    top: 16px;
-    right: 16px;
+    top: 130px;
+    left: 10px;
     background: rgba(193, 102, 107, 0.9);
     color: #fff;
     border: none;
@@ -170,7 +170,7 @@ async function main() {
   photosBtn.textContent = '📸';
   photosBtn.title = 'Photo Collection';
   photosBtn.style.cssText = `
-    position: fixed; top: 16px; left: 16px;
+    position: fixed; top: 68px; left: 10px;
     z-index: 1000; background: rgba(70,70,70,0.9);
     color: #fff; border: none; border-radius: 50%;
     width: 52px; height: 52px; font-size: 22px;
