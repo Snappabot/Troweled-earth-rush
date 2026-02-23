@@ -22,6 +22,8 @@ import { DialoguePause } from './ui/DialoguePause';
 import { CREW_CONFIGS } from './entities/CrewCharacter';
 import { preloadTEMLogo } from './utils/LogoLoader';
 import { BRAND_SLOGANS, GAME_TIPS, JOB_OPENERS, randomFrom } from './data/Slogans';
+import { isAllCollected } from './minigames/TrowelingGame';
+import { RewardScreen } from './ui/RewardScreen';
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS = {
     Matt: "Matt folds himself into the back. \"Took your time.\" He's already on his phone.",
@@ -29,7 +31,7 @@ const CREW_PICKUP_QUIPS = {
     Jarrad: "Jarrad adjusts his hard hat. \"I've been standing here fifteen minutes.\" He has.",
     Phil: "Phil sips the last of his tea, unhurried. \"Right then. Let's go.\" He fastens his seatbelt twice.",
     Tsuyoshi: "Tsuyoshi vaults in without opening the door. His mohawk grazes the roof lining.",
-    Fabio: "Fabio loads in, trowel over his shoulder. \"You're late.\" He's smiling though.",
+    Fabio: "Fabio loads in, trowel over his shoulder. \"You're late. Ehhhh —\" he waves it off. \"I found a pizza place nearby. Very acceptable.\"",
 };
 async function main() {
     // Preload TEM logo before any game objects are created — textures ready instantly
@@ -136,8 +138,9 @@ async function main() {
     const activeSpeakerPos = new THREE.Vector3(Mikayla.POS.x, 6.0, Mikayla.POS.z);
     // Mini-game manager
     const miniGameManager = new MiniGameManager();
-    // ── 📸 Photos button + Achievement Gallery ───────────────────────────────────
+    // ── 📸 Photos button + Achievement Gallery + Rewards ─────────────────────────
     const achievementGallery = new AchievementGallery();
+    const rewardScreen = new RewardScreen();
     const photosBtn = document.createElement('button');
     photosBtn.textContent = '📸';
     photosBtn.title = 'Photo Collection';
@@ -447,11 +450,17 @@ async function main() {
                         coffeeBreakAt = -1;
                         toiletBreakAt = -1;
                         jobCompleting = false;
-                        setTimeout(() => {
-                            const available = jobManager.getAvailableJobs();
-                            if (available.length > 0)
-                                jobBoard.show(available);
-                        }, 3500);
+                        // 🏆 Reward trigger — fires once when all photos collected
+                        if (isAllCollected() && !RewardScreen.isUnlocked()) {
+                            setTimeout(() => rewardScreen.trigger(), 2000);
+                        }
+                        else {
+                            setTimeout(() => {
+                                const available = jobManager.getAvailableJobs();
+                                if (available.length > 0)
+                                    jobBoard.show(available);
+                            }, 3500);
+                        }
                     });
                 }, randomFrom(BRAND_SLOGANS));
             }

@@ -23,6 +23,8 @@ import { CREW_CONFIGS } from './entities/CrewCharacter';
 import type { Job } from './gameplay/JobManager';
 import { preloadTEMLogo } from './utils/LogoLoader';
 import { BRAND_SLOGANS, GAME_TIPS, JOB_OPENERS, randomFrom } from './data/Slogans';
+import { isAllCollected } from './minigames/TrowelingGame';
+import { RewardScreen } from './ui/RewardScreen';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -154,8 +156,9 @@ async function main() {
   // Mini-game manager
   const miniGameManager = new MiniGameManager();
 
-  // ── 📸 Photos button + Achievement Gallery ───────────────────────────────────
+  // ── 📸 Photos button + Achievement Gallery + Rewards ─────────────────────────
   const achievementGallery = new AchievementGallery();
+  const rewardScreen = new RewardScreen();
 
   const photosBtn = document.createElement('button');
   photosBtn.textContent = '📸';
@@ -522,10 +525,15 @@ async function main() {
               coffeeBreakAt = -1;
               toiletBreakAt = -1;
               jobCompleting = false;
-              setTimeout(() => {
-                const available = jobManager.getAvailableJobs();
-                if (available.length > 0) jobBoard.show(available);
-              }, 3500);
+              // 🏆 Reward trigger — fires once when all photos collected
+              if (isAllCollected() && !RewardScreen.isUnlocked()) {
+                setTimeout(() => rewardScreen.trigger(), 2000);
+              } else {
+                setTimeout(() => {
+                  const available = jobManager.getAvailableJobs();
+                  if (available.length > 0) jobBoard.show(available);
+                }, 3500);
+              }
             });
           },
           randomFrom(BRAND_SLOGANS)

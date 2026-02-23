@@ -1,7 +1,9 @@
 import { PHOTO_ACHIEVEMENTS, getCollected } from '../minigames/TrowelingGame';
+import { RewardScreen } from './RewardScreen';
 
 export class AchievementGallery {
   private overlay: HTMLDivElement | null = null;
+  private rewardScreen = new RewardScreen();
 
   show(): void {
     if (this.overlay) {
@@ -200,7 +202,22 @@ export class AchievementGallery {
     const encourage = this.overlay.querySelector('#gallery-encourage') as HTMLDivElement;
     if (encourage) {
       if (count >= total) {
-        encourage.textContent = '🏆 You\'ve scraped them all. Matt\'s proud. Sort of.';
+        encourage.innerHTML = `
+          <div style="margin-bottom:12px;">🏆 You've scraped them all. Matt's proud. Sort of.</div>
+          <button id="gallery-rewards-btn" style="
+            background: linear-gradient(135deg,#C8A86A,#A07840);
+            color:#0D0B08; border:none; border-radius:12px;
+            padding:14px 28px; font-size:15px; font-weight:900;
+            cursor:pointer; touch-action:manipulation;
+            letter-spacing:0.5px; box-shadow:0 4px 16px rgba(200,168,106,0.35);
+          ">🎁 View Rewards &amp; Certificate</button>
+        `;
+        setTimeout(() => {
+          document.getElementById('gallery-rewards-btn')?.addEventListener('click', () => {
+            this.hide();
+            this.rewardScreen.open();
+          });
+        }, 0);
       } else if (count >= 6) {
         encourage.textContent = '🔥 Almost there — keep scraping!';
       } else if (count >= 3) {
