@@ -1,8 +1,9 @@
 /**
  * TEMRadio — Troweled Earth Radio
- * GTA-style in-game radio with 5 stations, Web Audio API generative music,
+ * GTA-style in-game radio with 5 stations, real audio + Web Audio API fallback,
  * fake song titles, DJ callouts, and a sleek bottom-bar UI.
  */
+import { AUDIO } from './AudioAssets';
 const STATIONS = [
     {
         id: 'tem-fm',
@@ -26,6 +27,7 @@ const STATIONS = [
             "Blood red clay to concrete's cold embrace... TEM FM.",
         ],
         bpm: 68, rootHz: 220, vibe: 'ambient', color: '#C8A86A',
+        audioFile: AUDIO.theme,
     },
     {
         id: 'connie-gold',
@@ -46,6 +48,7 @@ const STATIONS = [
             "Next up: another classic. Just like our Antique Stucco. Ha!",
         ],
         bpm: 92, rootHz: 261.63, vibe: 'italian', color: '#E8A050',
+        audioFile: AUDIO.radio1,
     },
     {
         id: 'brunswick-beats',
@@ -66,6 +69,7 @@ const STATIONS = [
             "Jarrad submitted this playlist. He says it slaps. It does.",
         ],
         bpm: 80, rootHz: 196.00, vibe: 'lofi', color: '#8B9EC8',
+        audioFile: AUDIO.radio2,
     },
     {
         id: 'the-scaffold',
@@ -106,6 +110,7 @@ const STATIONS = [
             "Fabio's Pizza Radio. For men with trowels and good taste.",
         ],
         bpm: 108, rootHz: 246.94, vibe: 'italian', color: '#D4602A',
+        audioFile: AUDIO.radio3,
     },
 ];
 // ── Audio engine ──────────────────────────────────────────────────────────────
@@ -120,6 +125,8 @@ class RadioAudioEngine {
     nodes = [];
     schedulerTimer = 0;
     compressor;
+    realAudioEl = null;
+    realAudioActive = false;
     init() {
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -139,6 +146,8 @@ class RadioAudioEngine {
     setVolume(v) {
         if (this.masterGain)
             this.masterGain.gain.value = v;
+        if (this.realAudioEl)
+            this.realAudioEl.volume = Math.min(1, v * 4); // scale up from synth level
     }
     play(station) {
         if (!this.ctx)
@@ -146,6 +155,29 @@ class RadioAudioEngine {
         this.stop();
         this.currentStation = station;
         this.beatCount = 0;
+        // Try real audio file first
+        if (station.audioFile) {
+            const audio = new Audio();
+            audio.src = station.audioFile;
+            audio.loop = true;
+            audio.volume = (this.masterGain?.gain.value ?? 0.18) * 4;
+            audio.volume = Math.min(1, audio.volume);
+            audio.play().then(() => {
+                this.realAudioEl = audio;
+                this.realAudioActive = true;
+            }).catch(() => {
+                // Fall back to generative synth
+                this.realAudioActive = false;
+                this._startGenerative();
+            });
+        }
+        else {
+            this._startGenerative();
+        }
+    }
+    _startGenerative() {
+        if (!this.ctx || !this.currentStation)
+            return;
         if (this.ctx.state === 'suspended')
             this.ctx.resume();
         this.nextBeatTime = this.ctx.currentTime + 0.05;
@@ -160,6 +192,13 @@ class RadioAudioEngine {
         catch { } });
         this.nodes = [];
         this.currentStation = null;
+        // Stop real audio
+        if (this.realAudioEl) {
+            this.realAudioEl.pause();
+            this.realAudioEl.src = '';
+            this.realAudioEl = null;
+        }
+        this.realAudioActive = false;
     }
     _schedule() {
         if (!this.ctx || !this.currentStation)

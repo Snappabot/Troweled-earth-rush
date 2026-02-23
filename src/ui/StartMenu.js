@@ -1,13 +1,16 @@
 /**
  * StartMenu — main menu with scrolling anthem lyrics, nav buttons,
- * HOW TO PLAY modal, and background anthem beat.
+ * HOW TO PLAY modal, and real theme song audio.
  */
 import { ANTHEM_ALL_LINES } from '../data/Anthem';
+import { AUDIO } from '../audio/AudioAssets';
+import { ClosingCredits } from './ClosingCredits';
 export class StartMenu {
     overlay;
     scrollTimer = 0;
     ctx = null;
     masterGain = null;
+    themeAudio = null;
     /** Show start menu; resolves when player hits PLAY */
     show() {
         return new Promise(resolve => {
@@ -68,8 +71,23 @@ export class StartMenu {
         const howBtn = this._btn('📋  HOW TO PLAY', 'rgba(200,168,106,0.18)', 'rgba(200,168,106,0.28)');
         howBtn.style.border = '1.5px solid rgba(200,168,106,0.4)';
         howBtn.addEventListener('click', () => this._showHowToPlay());
+        const creditsBtn = this._btn('🎬  CREDITS', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.12)');
+        creditsBtn.style.border = '1.5px solid rgba(255,255,255,0.15)';
+        creditsBtn.style.color = 'rgba(255,255,255,0.55)';
+        creditsBtn.addEventListener('click', () => {
+            this._stopAudio();
+            this.overlay.style.opacity = '0';
+            this.overlay.style.transition = 'opacity 0.3s';
+            setTimeout(async () => {
+                await new ClosingCredits().show();
+                // Fade back in to start menu
+                this.overlay.style.opacity = '1';
+                this._startAudio();
+            }, 350);
+        });
         btnRow.appendChild(playBtn);
         btnRow.appendChild(howBtn);
+        btnRow.appendChild(creditsBtn);
         content.appendChild(btnRow);
         this.overlay.appendChild(content);
         document.body.appendChild(this.overlay);
@@ -108,6 +126,29 @@ export class StartMenu {
         this.scrollTimer = requestAnimationFrame(tick);
     }
     _startAudio() {
+        // Try real theme audio first
+        try {
+            const audio = new Audio();
+            audio.src = AUDIO.theme;
+            audio.volume = 0;
+            audio.loop = true;
+            audio.play().then(() => {
+                this.themeAudio = audio;
+                let vol = 0;
+                const fadeIn = setInterval(() => {
+                    vol = Math.min(vol + 0.02, 0.6);
+                    audio.volume = vol;
+                    if (vol >= 0.6)
+                        clearInterval(fadeIn);
+                }, 100);
+                return; // real audio playing — skip synth
+            }).catch(() => this._startSynthAudio());
+            return;
+        }
+        catch { }
+        this._startSynthAudio();
+    }
+    _startSynthAudio() {
         try {
             this.ctx = new (window.AudioContext || window.webkitAudioContext)();
             this.masterGain = this.ctx.createGain();
@@ -149,6 +190,21 @@ export class StartMenu {
         catch { }
     }
     _stopAudio() {
+        // Stop real audio
+        if (this.themeAudio) {
+            const audio = this.themeAudio;
+            let vol = audio.volume;
+            const fadeOut = setInterval(() => {
+                vol = Math.max(0, vol - 0.05);
+                audio.volume = vol;
+                if (vol <= 0) {
+                    clearInterval(fadeOut);
+                    audio.pause();
+                    audio.src = '';
+                }
+            }, 50);
+        }
+        // Stop synth fallback
         try {
             if (this.masterGain && this.ctx) {
                 this.masterGain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.5);

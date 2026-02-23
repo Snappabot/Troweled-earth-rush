@@ -1,9 +1,10 @@
 /**
  * IntroSequence — GTA-style cinematic intro
- * Character reveals with verse overlays, anthem audio, skip button.
+ * Character reveals with verse overlays, real theme song audio, skip button.
  */
 
 import { ANTHEM, type AnthemVerse } from '../data/Anthem';
+import { AUDIO } from '../audio/AudioAssets';
 
 // Each beat step in seconds per character reveal
 const REVEAL_DURATION = 3.2;
@@ -13,6 +14,8 @@ export class IntroSequence {
   private overlay!: HTMLDivElement;
   private ctx!: AudioContext;
   private masterGain!: GainNode;
+  private themeAudio: HTMLAudioElement | null = null;
+  private useRealAudio = false;
   private done = false;
   private rafId = 0;
   private timers: ReturnType<typeof setTimeout>[] = [];
@@ -134,18 +137,43 @@ export class IntroSequence {
     onDone();
   }
 
-  // ── Anthem audio (dark cinematic) ─────────────────────────────────────────
+  // ── Theme song (real audio) ────────────────────────────────────────────────
   private _startAudio(): void {
+    // Try real audio file first
     try {
-      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.12;
-      this.masterGain.connect(this.ctx.destination);
-      this._scheduleAnthem();
-    } catch { /* audio fails silently */ }
+      const audio = new Audio();
+      audio.src = AUDIO.theme;
+      audio.volume = 0.72;
+      audio.loop = false;
+      // Fade in over 2s
+      audio.volume = 0;
+      audio.play().then(() => {
+        this.useRealAudio = true;
+        this.themeAudio = audio;
+        let vol = 0;
+        const fadeIn = setInterval(() => {
+          vol = Math.min(vol + 0.04, 0.72);
+          audio.volume = vol;
+          if (vol >= 0.72) clearInterval(fadeIn);
+        }, 80);
+      }).catch(() => {
+        this._startSynthAudio();
+      });
+    } catch {
+      this._startSynthAudio();
+    }
   }
 
   private _stopAudio(): void {
+    if (this.themeAudio) {
+      const audio = this.themeAudio;
+      let vol = audio.volume;
+      const fadeOut = setInterval(() => {
+        vol = Math.max(0, vol - 0.06);
+        audio.volume = vol;
+        if (vol <= 0) { clearInterval(fadeOut); audio.pause(); audio.src = ''; }
+      }, 60);
+    }
     try {
       if (this.ctx) {
         this.masterGain?.gain.setValueAtTime(this.masterGain.gain.value, this.ctx.currentTime);
@@ -153,6 +181,17 @@ export class IntroSequence {
         setTimeout(() => { try { this.ctx.close(); } catch {} }, 600);
       }
     } catch {}
+  }
+
+  // ── Synth fallback ─────────────────────────────────────────────────────────
+  private _startSynthAudio(): void {
+    try {
+      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.value = 0.12;
+      this.masterGain.connect(this.ctx.destination);
+      this._scheduleAnthem();
+    } catch { /* audio fails silently */ }
   }
 
   private _scheduleAnthem(): void {
