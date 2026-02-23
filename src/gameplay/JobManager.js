@@ -289,14 +289,20 @@ export class JobManager {
         }
         return null;
     }
+    /**
+     * Complete a job and apply payment.
+     * qualityPct >= 0 → add earnings.
+     * qualityPct <  0 → deduct penalty (e.g. -0.3 = lose 30% of job pay).
+     * Money floor: 0 (can't go negative).
+     */
     completeJob(job, qualityPct = 1.0) {
-        const earned = Math.round(job.pay * qualityPct);
-        this.money += earned;
+        const earned = Math.round(job.pay * qualityPct); // negative if penalty
+        this.money = Math.max(0, this.money + earned);
         this.completedJobIds.add(job.id);
         this.activeJob = null;
         this.crewToPickup = [];
         this.crewPickedUp = [];
-        return earned;
+        return earned; // caller checks sign to determine penalty vs pay
     }
     /** Distance from van to the active job site (for Phase 3 HUD display). */
     distanceTo(vanX, vanZ) {

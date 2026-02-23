@@ -24,6 +24,8 @@ export class HUD {
   private btcAchieved = false;
   private speedText: HTMLDivElement;
   private moneyEl: HTMLDivElement;
+  private btcBarFill: HTMLDivElement;
+  private btcLabelEl: HTMLDivElement;
   private jobStripEl: HTMLDivElement;
   private travelTimerEl: HTMLDivElement;
   private flashOverlay: HTMLDivElement;
@@ -109,6 +111,32 @@ export class HUD {
     `;
     this.moneyEl.textContent = '500K sats';
     infoPanel.appendChild(this.moneyEl);
+
+    // ── BTC goal progress bar ─────────────────────────────────────────────────
+    const btcWrap = document.createElement('div');
+    btcWrap.style.cssText = `
+      width: 160px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+    `;
+    this.btcLabelEl = document.createElement('div');
+    this.btcLabelEl.style.cssText = `
+      color: rgba(247,147,26,0.85); font-size: 11px; font-weight: 700;
+      letter-spacing: 0.5px; font-family: monospace;
+    `;
+    this.btcLabelEl.textContent = '₿ GOAL: 0%';
+    const btcTrack = document.createElement('div');
+    btcTrack.style.cssText = `
+      width: 100%; height: 5px; background: rgba(247,147,26,0.18);
+      border-radius: 3px; overflow: hidden;
+    `;
+    this.btcBarFill = document.createElement('div');
+    this.btcBarFill.style.cssText = `
+      height: 100%; background: #F7931A; width: 0%;
+      border-radius: 3px; transition: width 0.6s ease;
+    `;
+    btcTrack.appendChild(this.btcBarFill);
+    btcWrap.appendChild(this.btcLabelEl);
+    btcWrap.appendChild(btcTrack);
+    infoPanel.appendChild(btcWrap);
 
     // Active job strip
     this.jobStripEl = document.createElement('div');
@@ -477,10 +505,35 @@ export class HUD {
       this.moneyEl.style.color = '#5EDB7D';
       this.moneyEl.textContent = formatSats(amount);
     }
+    // BTC progress bar
+    const pct = Math.min(1, amount / ONE_BTC);
+    this.btcBarFill.style.width = `${(pct * 100).toFixed(1)}%`;
+    if (pct >= 1) {
+      this.btcLabelEl.textContent = '₿ GOAL: ACHIEVED! 🚀';
+      this.btcBarFill.style.background = '#FFD700';
+    } else {
+      this.btcLabelEl.textContent = `₿ GOAL: ${(pct * 100).toFixed(1)}%`;
+    }
     if (!this.btcAchieved && amount >= ONE_BTC) {
       this.btcAchieved = true;
       this._showBitcoinAchievement();
     }
+  }
+
+  /** Show a penalty flash (scaffold fail, etc.) */
+  showPenalty(jobTitle: string, penaltyAmt: number): void {
+    if (this.flashTimeout) clearTimeout(this.flashTimeout);
+    this.flashOverlay.style.display = 'block';
+    const flashMsg = this.flashOverlay.querySelector('div') as HTMLDivElement;
+    if (flashMsg) {
+      flashMsg.innerHTML = `⚠️ SCAFFOLD FAIL<br><span style="font-size:0.7em">−${formatSats(penaltyAmt)} penalty — ${jobTitle}</span>`;
+    }
+    this.flashOverlay.style.animation = 'none';
+    void this.flashOverlay.offsetWidth;
+    this.flashOverlay.style.animation = 'hudRedFlash 2.5s ease forwards';
+    this.flashTimeout = setTimeout(() => {
+      this.flashOverlay.style.display = 'none';
+    }, 2600);
   }
 
   /** Show a brief toast notification centred on screen. */

@@ -442,7 +442,12 @@ async function main() {
                     hud.updateCrewStatus([], [], false);
                     miniGameManager.startRandom((result) => {
                         const earned = jobManager.completeJob(arrived, result.qualityPct);
-                        hud.showJobComplete(arrived.title, earned);
+                        if (earned < 0) {
+                            hud.showPenalty(arrived.title, Math.abs(earned));
+                        }
+                        else {
+                            hud.showJobComplete(arrived.title, earned);
+                        }
                         hud.updateMoney(jobManager.money);
                         characters.showAllCrew();
                         breakActive = null;

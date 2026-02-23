@@ -690,24 +690,29 @@ export class ScaffoldGame {
             return;
         this.gameOver = true;
         cancelAnimationFrame(this.rafId);
-        const qualityPct = success
-            ? Math.max(0.55, 0.55 + (this.timer / 90) * 0.45)
-            : 0.25 + (this.lives / 3) * 0.2;
+        // Win = full job pay. Fail = -30% penalty (negative qualityPct signals deduction).
+        const qualityPct = success ? 1.0 : -0.3;
         const banner = document.createElement('div');
         banner.style.cssText = `
       position:absolute; top:50%; left:50%; transform:translate(-50%,-55%);
-      background:rgba(0,0,0,0.82); color:#fff; padding:32px 40px;
+      background:rgba(0,0,0,0.88); padding:32px 40px;
       border-radius:22px; font-size:26px; font-weight:900; text-align:center;
       font-family:system-ui,sans-serif; z-index:200;
       box-shadow:0 8px 32px rgba(0,0,0,0.6);
+      border:2px solid ${success ? '#FFD700' : '#C1666B'};
+      color: ${success ? '#FFD97A' : '#FF6B6B'};
     `;
         banner.innerHTML = success
-            ? `🏆 DELIVERED!<br><small style="font-size:15px;font-weight:500">Quality: ${Math.round(qualityPct * 100)}%</small>`
-            : `💀 FAILED<br><small style="font-size:15px;font-weight:500">Better luck next time...</small>`;
+            ? `🏆 DELIVERED!<br><small style="font-size:15px;font-weight:500;color:#ccc;">Full pay — nice work, Jarrad.</small>`
+            : `💀 SCAFFOLD FAIL<br><small style="font-size:15px;font-weight:500;color:#ccc;">−30% penalty. Jarrad's blaming his phone.</small>`;
         this.overlay.appendChild(banner);
         setTimeout(() => {
             this._cleanup();
-            this.onCompleteFn({ score: Math.round(qualityPct * 100), qualityPct, message: success ? 'Scaffold conquered!' : 'Try again!' });
+            this.onCompleteFn({
+                score: success ? 100 : 0,
+                qualityPct,
+                message: success ? 'Scaffold conquered!' : 'Scaffold failed — 30% deducted.',
+            });
         }, success ? 1800 : 2200);
     }
     _cleanup() {
