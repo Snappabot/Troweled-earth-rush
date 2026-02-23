@@ -810,38 +810,51 @@ export class IntroSequence {
     // ── Hourglass torso — profile curves ─────────────────────────────────────
     ctx.fillStyle = '#111111';   // black TEM shirt (side-on)
     ctx.beginPath();
-    // Chest front edge
-    ctx.moveTo(cx + 14, bY - hh * 0.82);    // neckline
-    // Bust (forward profile — prominent)
+    // Chest front edge — low-cut neckline for Bond-girl style
+    ctx.moveTo(cx + 16, bY - hh * 0.80);    // neckline (lower cut)
+    // Bust — implant profile: high projection, round, firm
     ctx.bezierCurveTo(
-      cx + 28, bY - hh * 0.76,              // upper bust forward
-      cx + 32, bY - hh * 0.68,              // bust peak
-      cx + 18, bY - hh * 0.60,              // under bust
+      cx + 44, bY - hh * 0.79,              // upper bust — shoots way out
+      cx + 58, bY - hh * 0.70,              // bust peak — implant projection
+      cx + 26, bY - hh * 0.58,              // under bust — rounds back under
     );
     // Waist nip in
     ctx.bezierCurveTo(
-      cx + 10, bY - hh * 0.52,              // front waist
-      cx + 8,  bY - hh * 0.47,
-      cx + 14, bY - hh * 0.43,             // hip flare out
+      cx + 12, bY - hh * 0.51,              // front waist tight
+      cx + 8,  bY - hh * 0.46,
+      cx + 15, bY - hh * 0.42,             // hip flare out
     );
     // Hip curve
     ctx.bezierCurveTo(
-      cx + 18, bY - hh * 0.40,
-      cx + 14, bY - hh * 0.34,
-      cx + 6,  bY - hh * 0.28,             // upper thigh line
+      cx + 20, bY - hh * 0.39,
+      cx + 15, bY - hh * 0.33,
+      cx + 6,  bY - hh * 0.27,             // upper thigh line
     );
     // Back edge (behind)
-    ctx.lineTo(cx - 2, bY - hh * 0.43);    // back of hip
+    ctx.lineTo(cx - 2, bY - hh * 0.42);    // back of hip
     ctx.bezierCurveTo(
       cx - 6,  bY - hh * 0.50,
       cx - 4,  bY - hh * 0.56,
       cx + 2,  bY - hh * 0.66,             // back waist
     );
     ctx.bezierCurveTo(
-      cx + 4,  bY - hh * 0.72,
+      cx + 4,  bY - hh * 0.73,
       cx + 0,  bY - hh * 0.78,
-      cx + 6,  bY - hh * 0.83,             // upper back
+      cx + 6,  bY - hh * 0.82,             // upper back
     );
+    ctx.closePath();
+    ctx.fill();
+
+    // ── Exposed décolletage (skin visible above shirt line) ───────────────────
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.moveTo(cx + 10, bY - hh * 0.84);   // base of neck
+    ctx.bezierCurveTo(
+      cx + 30, bY - hh * 0.82,
+      cx + 50, bY - hh * 0.79,
+      cx + 44, bY - hh * 0.79,             // top of bust swell
+    );
+    ctx.lineTo(cx + 16, bY - hh * 0.80);
     ctx.closePath();
     ctx.fill();
 
@@ -881,9 +894,9 @@ export class IntroSequence {
 
     // ── Bare arm extended — Bond girl gun pose ────────────────────────────────
     // Arm goes from shoulder, extends diagonally up-forward-right
-    const shoulderX = cx + 16;
-    const shoulderY = bY - hh * 0.78;
-    const armAngle  = -0.4;   // rad — angled slightly upward
+    const shoulderX = cx + 22;
+    const shoulderY = bY - hh * 0.76;
+    const armAngle  = -0.38;   // rad — angled slightly upward
     const armLen    = hh * 0.36;
     const handX = shoulderX + Math.cos(armAngle) * armLen;
     const handY = shoulderY + Math.sin(armAngle) * armLen;
