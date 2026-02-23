@@ -11,16 +11,17 @@ export interface CrewConfig {
   shirtLogoColor: number;
   pantsColor: number;
   hairColor: number;
-  hairStyle: 'short' | 'dreadlocks' | 'mohawk' | 'silver' | 'bun' | 'wildblonde';
+  hairStyle: 'short' | 'dreadlocks' | 'mohawk' | 'silver' | 'bun' | 'wildblonde' | 'topknot';
   helmetColor?: number;
   glassesColor?: number;
   hiVisBands?: boolean;
+  hasPhone?: boolean;   // holds phone in right hand, arm bent
 }
 
 export const CREW_CONFIGS: Record<string, CrewConfig> = {
   Matt:     { name: 'Matt',     skinColor: 0xD4A880, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x2A2A2A, hairColor: 0x5C3A1E, hairStyle: 'short' },
   Jose:     { name: 'Jose',     skinColor: 0xC49A70, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x2A2A2A, hairColor: 0x0A0A0A, hairStyle: 'dreadlocks' },
-  Jarrad:   { name: 'Jarrad',   skinColor: 0xD4A880, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x222230, hairColor: 0x1A1A1A, hairStyle: 'short', glassesColor: 0x222222 },
+  Jarrad:   { name: 'Jarrad',   skinColor: 0xD4A880, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x222230, hairColor: 0x1A1A1A, hairStyle: 'topknot', glassesColor: 0x222222, hasPhone: true },
   Phil:     { name: 'Phil',     skinColor: 0xD4A880, shirtColor: 0xF0EDE8, shirtLogoColor: 0x111111, pantsColor: 0x3A5080, hairColor: 0xC0C0B8, hairStyle: 'silver', glassesColor: 0xA8A8A0 },
   Tsuyoshi: { name: 'Tsuyoshi', skinColor: 0xB88858, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x222220, hairColor: 0x0A0A0A, hairStyle: 'mohawk' },
   Fabio:    { name: 'Fabio',    skinColor: 0xBE8E60, shirtColor: 0x1B7EC4, shirtLogoColor: 0xFFFFFF, pantsColor: 0x282830, hairColor: 0x1A1008, hairStyle: 'bun', glassesColor: 0x2A1A08 },
@@ -118,6 +119,18 @@ export class CrewCharacter {
     addBox(lForeArm, cfg.skinColor, 0.13, 0.11, 0.09, 0, -0.32, 0);
     addBox(rForeArm, cfg.skinColor, 0.13, 0.11, 0.09, 0, -0.32, 0);
 
+    // Phone prop — only for characters with hasPhone flag
+    if (cfg.hasPhone) {
+      const phoneMat = new THREE.MeshLambertMaterial({ color: 0x111114 });
+      const phone = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.19, 0.013), phoneMat);
+      phone.position.set(0.01, -0.38, 0.05);
+      rForeArm.add(phone);
+      // Screen glow — slightly lighter inset face
+      const screenMat = new THREE.MeshLambertMaterial({ color: 0x2A3A55, emissive: 0x1A2A44 });
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.085, 0.15), screenMat);
+      screen.position.set(0, 0, 0.008); phone.add(screen);
+    }
+
     // Upper legs
     addCyl(lHip, cfg.pantsColor, 0.11, 0.46, 0, -0.23, 0);
     addCyl(rHip, cfg.pantsColor, 0.11, 0.46, 0, -0.23, 0);
@@ -177,6 +190,19 @@ export class CrewCharacter {
         add(new THREE.SphereGeometry(0.215, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.5), 0, 0.10, 0);
         add(new THREE.SphereGeometry(0.09, 7, 6), 0, 0.05, -0.19);
         break;
+      case 'topknot': {
+        // Short cropped sides — flat cap
+        add(new THREE.SphereGeometry(0.215, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.45), 0, 0.08, 0);
+        // Raised knot on top — cylinder base + sphere top
+        const knot = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.18, 7), hm);
+        knot.position.set(0, 0.30, 0); head.add(knot);
+        add(new THREE.SphereGeometry(0.085, 7, 6), 0, 0.41, 0);
+        // Hair tie — dark band around the knot base
+        const tieMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+        const tie = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.018, 6, 10), tieMat);
+        tie.rotation.x = Math.PI / 2; tie.position.set(0, 0.29, 0); head.add(tie);
+        break;
+      }
       case 'wildblonde': {
         // Cap
         add(new THREE.SphereGeometry(0.225, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.55), 0, 0.10, 0);
