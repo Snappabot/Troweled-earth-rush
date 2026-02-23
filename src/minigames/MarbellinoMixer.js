@@ -463,7 +463,7 @@ export class MarbellinoMixer {
         // Connie yells
         const shout = document.getElementById('mmv3-hint');
         if (shout) {
-            const lines = ['JOSE!!! 😤', 'WATCH IT!!! 😡', 'OMG!!! 🤬', 'JOSE YOU IDIOT! 😤', 'HEY! THAT\'S MY UNIFORM!'];
+            const lines = ['JOSE!!! 😤', 'WATCH IT!!! 😡', 'OMG!!! 🤬', 'JOSE YOU IDIOT! 😤', 'HEY! THAT\'S MY UNIFORM!', 'YOU GOT IT ON MY TITS!!! 😤'];
             shout.textContent = lines[Math.floor(Math.random() * lines.length)];
             shout.style.color = '#FF6644';
             setTimeout(() => { if (shout) {
