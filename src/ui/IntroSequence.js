@@ -105,9 +105,9 @@ const SCENES = [
         voiceChar: 'Phil',
     },
 ];
-const SCENE_MS = 5000; // ms per character scene
-const OPEN_MS = 5000; // opening city shot
-const TITLE_MS = 4000; // title hold
+const SCENE_MS = 8000; // ms per character scene
+const OPEN_MS = 8000; // opening city shot
+const TITLE_MS = 5000; // title hold
 const FADE_MS = 350;
 export class IntroSequence {
     overlay;
