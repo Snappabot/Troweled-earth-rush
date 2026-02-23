@@ -59,7 +59,7 @@ export class GameMenu {
     const btnRow = document.createElement('div');
     btnRow.style.cssText = `display: flex; gap: 10px;`;
 
-    const photoBtn = this._actionBtn('📸  Photos', 'rgba(70,70,70,0.9)', () => {
+    const photoBtn = this._actionBtn('🪣  Collection', 'rgba(70,60,30,0.9)', () => {
       this._close(); onPhoto();
     });
     const jobsBtn = this._actionBtn('📋  JOBS', 'rgba(193,102,107,0.9)', () => {

@@ -8,7 +8,6 @@ import { AUDIO } from '../audio/AudioAssets';
 
 const BASE_URL: string = ((import.meta as any).env?.BASE_URL as string) || '/';
 const WHITE_LOGO  = `${BASE_URL}tem-logo-white.jpg`;
-const BUCKET_IMG  = `${BASE_URL}assets/tem-bucket.jpg`;
 
 // ── Scene definitions ─────────────────────────────────────────────────────────
 interface Scene {
@@ -137,7 +136,6 @@ export class IntroSequence {
   private textLayer!: HTMLDivElement;
   private themeAudio: HTMLAudioElement | null = null;
   private logoImg: HTMLImageElement | null = null;
-  private bucketImg: HTMLImageElement | null = null;
   private done = false;
   private rafId = 0;
   private timers: ReturnType<typeof setTimeout>[] = [];
@@ -159,14 +157,10 @@ export class IntroSequence {
   private _tapThenBuild(onDone: (audio: HTMLAudioElement | null) => void): void {
     this._injectStyles();
 
-    // Preload logo + bucket images for canvas use
+    // Preload logo image for canvas use
     const img = new Image();
     img.src = WHITE_LOGO;
     img.onload = () => { this.logoImg = img; };
-
-    const bucketImg = new Image();
-    bucketImg.src = BUCKET_IMG;
-    bucketImg.onload = () => { this.bucketImg = bucketImg; };
 
     const splash = document.createElement('div');
     splash.style.cssText = `
@@ -893,35 +887,91 @@ export class IntroSequence {
     ctx.globalAlpha = 1;
   }
 
-  // ── TEM Buckets ──────────────────────────────────────────────────────────
+  // ── TEM White Buckets (canvas-drawn, TEM logo on front) ──────────────────
   private _drawBuckets(ctx: CanvasRenderingContext2D, W: number, H: number, sc: Scene): void {
-    if (!this.bucketImg) return;
     const groundY = H * 0.62;
 
-    const drawBucket = (x: number, y: number, w: number, alpha = 1) => {
-      const h = w * 1.15;
+    /** Draw one white TEM bucket at canvas position (cx, cy) with given width */
+    const drawBucket = (cx: number, cy: number, w: number, alpha = 1) => {
+      const h = w * 1.2;
+      const topW  = w;
+      const botW  = w * 0.72;
+      const tx = cx - topW / 2;   // top-left x
+      const bx = cx - botW / 2;   // bottom-left x
+
       ctx.save();
       ctx.globalAlpha = alpha;
-      // Shadow under bucket
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+
+      // Drop shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.beginPath();
-      ctx.ellipse(x + w / 2, y + h + 2, w * 0.4, 5, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy + h + 3, w * 0.42, 5, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.drawImage(this.bucketImg!, x, y, w, h);
+
+      // ── Bucket body (trapezoid) ────────────────────────────────────────────
+      ctx.beginPath();
+      ctx.moveTo(tx,       cy);          // top-left
+      ctx.lineTo(tx + topW, cy);         // top-right
+      ctx.lineTo(bx + botW, cy + h);     // bottom-right
+      ctx.lineTo(bx,        cy + h);     // bottom-left
+      ctx.closePath();
+      // White fill with very slight warm tint
+      ctx.fillStyle = '#F8F6F0';
+      ctx.fill();
+      // Gold border
+      ctx.strokeStyle = '#C8A86A';
+      ctx.lineWidth = Math.max(1, w * 0.04);
+      ctx.stroke();
+
+      // ── Rim (top ellipse) ─────────────────────────────────────────────────
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, topW / 2, topW * 0.1, 0, 0, Math.PI * 2);
+      ctx.fillStyle = '#E8E4DC';
+      ctx.fill();
+      ctx.strokeStyle = '#C8A86A';
+      ctx.lineWidth = Math.max(1, w * 0.03);
+      ctx.stroke();
+
+      // ── Handle (arc above rim) ────────────────────────────────────────────
+      ctx.beginPath();
+      ctx.arc(cx, cy - topW * 0.06, topW * 0.3, Math.PI, 0);
+      ctx.strokeStyle = '#B0966A';
+      ctx.lineWidth = Math.max(1.5, w * 0.05);
+      ctx.stroke();
+
+      // ── TEM logo on bucket face ───────────────────────────────────────────
+      const logoSize = w * 0.55;
+      const logoX = cx - logoSize / 2;
+      const logoY = cy + h * 0.18;
+      if (this.logoImg) {
+        // Draw white logo — mask out the bright pixels as black tree on white bg
+        // Use composite to stamp dark version on white bucket
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalAlpha = alpha * 0.6;
+        ctx.drawImage(this.logoImg, logoX, logoY, logoSize, logoSize * (1504 / 688));
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = alpha;
+      } else {
+        // Fallback: simple TEM text
+        ctx.fillStyle = '#C8A86A';
+        ctx.font = `bold ${Math.max(7, w * 0.18)}px system-ui`;
+        ctx.textAlign = 'center';
+        ctx.fillText('TEM', cx, cy + h * 0.55);
+        ctx.textAlign = 'start';
+      }
+
       ctx.restore();
     };
 
     if (sc.id === 'melbourne') {
-      // Opening city shot — buckets scattered on the footpath
-      drawBucket(W * 0.08,  groundY - 54,  46, 0.9);
-      drawBucket(W * 0.145, groundY - 44,  38, 0.75);
-      drawBucket(W * 0.78,  groundY - 50,  42, 0.85);
-      drawBucket(W * 0.85,  groundY - 38,  32, 0.65);
+      drawBucket(W * 0.10,  groundY - 48,  46, 0.92);
+      drawBucket(W * 0.165, groundY - 38,  36, 0.78);
+      drawBucket(W * 0.80,  groundY - 44,  42, 0.88);
+      drawBucket(W * 0.87,  groundY - 32,  30, 0.68);
     } else {
-      // Character scenes — 2 buckets left side near feet, fade in with the scene
       const fadeIn = Math.min(1, this.sceneT * 1.5);
-      drawBucket(W * 0.14, groundY - 58, 48, fadeIn * 0.95);
-      drawBucket(W * 0.22, groundY - 46, 38, fadeIn * 0.80);
+      drawBucket(W * 0.16, groundY - 52, 48, fadeIn * 0.95);
+      drawBucket(W * 0.25, groundY - 40, 36, fadeIn * 0.82);
     }
   }
 
