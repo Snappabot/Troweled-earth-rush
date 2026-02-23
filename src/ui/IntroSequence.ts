@@ -125,9 +125,9 @@ const SCENES: Scene[] = [
   },
 ];
 
-const SCENE_MS   = 3000;   // ms per character scene
-const OPEN_MS    = 2800;   // opening city shot
-const TITLE_MS   = 3000;   // title hold
+const SCENE_MS   = 5000;   // ms per character scene
+const OPEN_MS    = 5000;   // opening city shot
+const TITLE_MS   = 4000;   // title hold
 const FADE_MS    = 350;
 
 // ── Particle ──────────────────────────────────────────────────────────────────
