@@ -175,12 +175,22 @@ export class IntroSequence {
       </div>
     `;
     document.body.appendChild(splash);
-    const start = () => {
+
+    const start = (e: Event) => {
+      e.preventDefault();
+      // ── audio.play() MUST be the very first call in the gesture handler ──
+      // Any DOM work before this risks losing the user-gesture context.
+      const audio = new Audio(AUDIO.theme);
+      audio.volume = 0.75;
+      this.themeAudio = audio;
+      audio.play().catch(() => { this.themeAudio = null; });
+
       splash.remove();
       this._build(onDone);
     };
+
     splash.addEventListener('click',      start, { once: true });
-    splash.addEventListener('touchstart', start, { once: true, passive: true });
+    splash.addEventListener('touchend',   start, { once: true, passive: false });
   }
 
   private _build(onDone: () => void): void {
@@ -250,9 +260,6 @@ export class IntroSequence {
 
     // Generate buildings for city skyline
     this._genBuildings();
-
-    // Start audio
-    this._startAudio();
 
     // ── Scene schedule ────────────────────────────────────────────────────────
     this._startScene(SCENES[0]);   // Opening city shot
