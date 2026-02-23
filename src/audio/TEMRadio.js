@@ -10,6 +10,7 @@ const STATIONS = [
         freq: '88.3',
         tagline: "Melbourne's Most Refined",
         songs: [
+            '★ Troweled Earth (The Anthem) [LIVE]',
             'Fresh Plaster Dreams',
             'Tadelakt Sunrise',
             'Ochre & Ochre',
@@ -17,10 +18,12 @@ const STATIONS = [
             'Render Slowly (feat. Phil)',
         ],
         dj: [
-            "TEM FM — where the walls breathe and so do you.",
+            "TEM FM — opening tonight with the anthem. Turn it up.",
+            "That was Troweled Earth — The Anthem. Written on site, finished in the van.",
             "You're listening to TEM FM. Don't spill.",
             "Smooth surfaces. Smoother sounds. TEM FM 88.3.",
             "That was a certified classic. Like a three-coat stucco system.",
+            "Blood red clay to concrete's cold embrace... TEM FM.",
         ],
         bpm: 68, rootHz: 220, vibe: 'ambient', color: '#C8A86A',
     },

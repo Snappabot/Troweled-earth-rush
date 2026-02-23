@@ -26,6 +26,8 @@ import { BRAND_SLOGANS, GAME_TIPS, JOB_OPENERS, randomFrom } from './data/Slogan
 import { isAllCollected } from './minigames/TrowelingGame';
 import { RewardScreen } from './ui/RewardScreen';
 import { TEMRadio } from './audio/TEMRadio';
+import { IntroSequence } from './ui/IntroSequence';
+import { StartMenu } from './ui/StartMenu';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -40,6 +42,10 @@ const CREW_PICKUP_QUIPS: Record<string, string> = {
 async function main() {
   // Preload TEM logo before any game objects are created — textures ready instantly
   await preloadTEMLogo();
+
+  // ── Intro cinematic → Start menu ─────────────────────────────────────────────
+  await new IntroSequence().play();
+  await new StartMenu().show();
 
   const engine = new Engine();
   await engine.init();
