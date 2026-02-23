@@ -74,7 +74,7 @@ const SCENES: Scene[] = [
     id: 'connie',
     name: 'CONNIE',
     role: 'Operations Queen · Born in Germany',
-    line: 'Ha ha ha ha!',
+    line: "I'll crush all of you!!! Hahahahahaha!",
     accentColor: '#FFB030',
     skyTop: '#884400', skyBot: '#CC7700',   // bright amber
     particleColor: '#FFD060', particleKind: 'smoke',
