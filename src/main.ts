@@ -44,8 +44,8 @@ async function main() {
   await preloadTEMLogo();
 
   // ── Intro cinematic → Start menu ─────────────────────────────────────────────
-  await new IntroSequence().play();
-  await new StartMenu().show();
+  const introAudio = await new IntroSequence().play();
+  await new StartMenu().show(introAudio);
 
   const engine = new Engine();
   await engine.init();

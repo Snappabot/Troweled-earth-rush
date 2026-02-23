@@ -17,14 +17,17 @@ export class StartMenu {
   private masterGain: GainNode | null = null;
   private themeAudio: HTMLAudioElement | null = null;
 
-  /** Show start menu; resolves when player hits PLAY */
-  show(): Promise<void> {
+  /**
+   * Show start menu; resolves when player hits PLAY.
+   * Pass the already-playing audio from IntroSequence to flow seamlessly.
+   */
+  show(introAudio?: HTMLAudioElement | null): Promise<void> {
     return new Promise(resolve => {
-      this._build(resolve);
+      this._build(resolve, introAudio);
     });
   }
 
-  private _build(onPlay: () => void): void {
+  private _build(onPlay: () => void, introAudio?: HTMLAudioElement | null): void {
     this._injectStyles();
 
     this.overlay = document.createElement('div');
@@ -112,8 +115,16 @@ export class StartMenu {
 
     // Start scrolling
     this._startScroll(lyricsInner, allLines.length);
-    // Start audio on first interaction
-    this.overlay.addEventListener('click', () => this._startAudio(), { once: true });
+
+    // Adopt intro audio if already playing — no gap, no restart
+    if (introAudio) {
+      this.themeAudio = introAudio;
+      introAudio.loop = true;
+      introAudio.volume = 0.6;
+    } else {
+      // No handoff — start fresh on first tap
+      this.overlay.addEventListener('click', () => this._startAudio(), { once: true });
+    }
   }
 
   private _btn(label: string, bg: string, hover: string): HTMLButtonElement {

@@ -150,12 +150,13 @@ export class IntroSequence {
   private sceneT = 0;  // seconds elapsed in current scene
   private buildings: {x:number,w:number,h:number}[] = [];
 
-  play(): Promise<void> {
+  /** Resolves with the already-playing HTMLAudioElement so StartMenu can adopt it seamlessly */
+  play(): Promise<HTMLAudioElement | null> {
     return new Promise(resolve => this._tapThenBuild(resolve));
   }
 
   /** Show a tap-to-begin splash — browser requires gesture before audio plays */
-  private _tapThenBuild(onDone: () => void): void {
+  private _tapThenBuild(onDone: (audio: HTMLAudioElement | null) => void): void {
     this._injectStyles();
 
     // Preload logo + bucket images for canvas use
@@ -197,8 +198,9 @@ export class IntroSequence {
     // Pre-create and buffer audio while user reads the splash —
     // so it's ready to play the instant they tap.
     const audio = new Audio();
-    audio.src   = AUDIO.theme;
+    audio.src    = AUDIO.theme;
     audio.volume = 0.75;
+    audio.loop   = true;   // keep looping through menu
     audio.preload = 'auto';
     this.themeAudio = audio;
 
@@ -217,7 +219,7 @@ export class IntroSequence {
     splash.addEventListener('pointerup', start, { once: true });
   }
 
-  private _build(onDone: () => void): void {
+  private _build(onDone: (audio: HTMLAudioElement | null) => void): void {
     this.overlay = document.createElement('div');
     this.overlay.id = 'intro-overlay';
     this.overlay.style.cssText = `
@@ -1010,7 +1012,7 @@ export class IntroSequence {
   }
 
   // ── Title card ────────────────────────────────────────────────────────────
-  private _showTitle(onDone: () => void): void {
+  private _showTitle(onDone: (audio: HTMLAudioElement | null) => void): void {
     if (this.done) return;
 
     // Switch to title scene
@@ -1058,22 +1060,16 @@ export class IntroSequence {
     } catch {}
   }
 
-  private _finish(onDone: () => void): void {
+  private _finish(onDone: (audio: HTMLAudioElement | null) => void): void {
     if (this.done) return;
     this.done = true;
     this.timers.forEach(clearTimeout);
     cancelAnimationFrame(this.rafId);
-    if (this.themeAudio) {
-      const a = this.themeAudio;
-      let vol = a.volume;
-      const fade = setInterval(() => {
-        vol = Math.max(0, vol - 0.06);
-        a.volume = vol;
-        if (vol <= 0) { clearInterval(fade); a.pause(); a.src = ''; }
-      }, 60);
-    }
+    // Do NOT stop audio — pass it to StartMenu so it flows seamlessly
+    const handoffAudio = this.themeAudio;
+    this.themeAudio = null; // IntroSequence relinquishes ownership
     this.overlay?.remove();
-    onDone();
+    onDone(handoffAudio);
   }
 
   private _after(ms: number, fn: () => void): void {
