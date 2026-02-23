@@ -490,24 +490,21 @@ export class TEMRadio {
   private _volOpen = false;
 
   private _buildUI(): void {
-    // ── Outer wrapper — top centre ────────────────────────────────────────────
+    // ── Outer wrapper — lives inside GameMenu dropdown ────────────────────────
     this.container = document.createElement('div');
     this.container.style.cssText = `
-      position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
-      z-index: 2000; font-family: system-ui, sans-serif;
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-      pointer-events: none; user-select: none;
-      transition: opacity 0.4s;
+      z-index: 1; font-family: system-ui, sans-serif;
+      display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+      user-select: none; transition: opacity 0.4s; width: 100%;
     `;
 
     // ── Main bar ─────────────────────────────────────────────────────────────
     const bar = document.createElement('div');
     bar.style.cssText = `
       display: flex; align-items: center; gap: 8px;
-      background: rgba(8,6,4,0.88); backdrop-filter: blur(12px);
-      border: 1px solid rgba(200,168,106,0.35); border-radius: 40px;
-      padding: 7px 14px 7px 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.65);
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(200,168,106,0.2); border-radius: 12px;
+      padding: 8px 12px;
       pointer-events: auto; touch-action: manipulation;
     `;
 
@@ -636,10 +633,13 @@ export class TEMRadio {
     this.container.appendChild(volPanel);
     this.container.appendChild(this.songEl);
     this.container.appendChild(this.djEl);
-    document.body.appendChild(this.container);
+    // Note: caller must mount via GameMenu.mountRadio() — do NOT self-append here
 
     this._renderStation();
   }
+
+  /** Return the radio container element for embedding in GameMenu */
+  getEl(): HTMLDivElement { return this.container; }
 
   private _renderStation(): void {
     const st = STATIONS[this.stationIdx];

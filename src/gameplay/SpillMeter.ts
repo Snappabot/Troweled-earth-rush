@@ -9,6 +9,7 @@ export class SpillMeter {
   private container: HTMLDivElement;
   private fill: HTMLDivElement;
   private bucketEl: HTMLSpanElement;
+  private _warningIcon!: HTMLDivElement;
   private isShaking = false;
   private spillFlashing = false;
 
@@ -42,76 +43,71 @@ export class SpillMeter {
       document.head.appendChild(style);
     }
 
-    // ── Outer container — top-centre overlay ─────────────────────────────────
+    // ── Outer container — left side, vertical ────────────────────────────────
     this.container = document.createElement('div');
     Object.assign(this.container.style, {
-      position:        'fixed',
-      top:             '16px',
-      left:            '50%',
-      transform:       'translateX(-50%)',
-      display:         'flex',
-      flexDirection:   'column',
-      alignItems:      'center',
-      gap:             '4px',
-      zIndex:          '999',
-      userSelect:      'none',
-      pointerEvents:   'none',
+      position:      'fixed',
+      left:          '10px',
+      top:           '50%',
+      transform:     'translateY(-50%)',
+      display:       'flex',
+      flexDirection: 'column',
+      alignItems:    'center',
+      gap:           '6px',
+      zIndex:        '999',
+      userSelect:    'none',
+      pointerEvents: 'none',
     });
 
-    // ── Bucket emoji + bar row ────────────────────────────────────────────────
-    const row = document.createElement('div');
-    Object.assign(row.style, {
-      display:     'flex',
-      alignItems:  'center',
-      gap:         '8px',
-    });
-
+    // ── Bucket emoji ──────────────────────────────────────────────────────────
     this.bucketEl = document.createElement('span');
     this.bucketEl.textContent = '🪣';
     Object.assign(this.bucketEl.style, {
-      fontSize:   '28px',
+      fontSize:   '26px',
       lineHeight: '1',
     });
-    row.appendChild(this.bucketEl);
+    this.container.appendChild(this.bucketEl);
 
-    // Bar track
+    // ── Vertical bar track ────────────────────────────────────────────────────
     const track = document.createElement('div');
     Object.assign(track.style, {
-      width:        '160px',
-      height:       '18px',
-      background:   '#333',
-      borderRadius: '9px',
+      position:     'relative',
+      width:        '16px',
+      height:       '130px',
+      background:   'rgba(40,40,40,0.85)',
+      borderRadius: '8px',
       overflow:     'hidden',
-      border:       '2px solid rgba(255,255,255,0.25)',
-      boxShadow:    '0 2px 6px rgba(0,0,0,0.6)',
+      border:       '1.5px solid rgba(255,255,255,0.2)',
+      boxShadow:    '0 2px 8px rgba(0,0,0,0.6)',
     });
 
-    // Filled portion — colour will be updated every frame
+    // Fill rises from bottom
     this.fill = document.createElement('div');
     Object.assign(this.fill.style, {
-      height:       '100%',
-      width:        '0%',
-      borderRadius: '9px',
-      transition:   'width 0.05s linear',
-      background:   'linear-gradient(to right, #4caf50, #ffeb3b)',
+      position:     'absolute',
+      bottom:       '0',
+      left:         '0',
+      width:        '100%',
+      height:       '0%',
+      borderRadius: '8px',
+      transition:   'height 0.05s linear',
+      background:   '#4caf50',
     });
     track.appendChild(this.fill);
-    row.appendChild(track);
+    this.container.appendChild(track);
 
-    this.container.appendChild(row);
-
-    // ── Label below ───────────────────────────────────────────────────────────
+    // ── Label (rotated) ───────────────────────────────────────────────────────
     const label = document.createElement('div');
-    label.textContent = "DON'T SPILL THE PLASTER!";
+    label.textContent = '🚨';
     Object.assign(label.style, {
-      color:      '#fff',
-      fontSize:   '11px',
-      fontWeight: '700',
-      fontFamily: 'system-ui, sans-serif',
-      textShadow: '0 1px 4px rgba(0,0,0,0.9)',
-      letterSpacing: '0.5px',
+      fontSize:   '16px',
+      lineHeight: '1',
+      opacity:    '0',
+      transition: 'opacity 0.3s',
     });
+    (label as any)._isWarning = true;
     this.container.appendChild(label);
+    this._warningIcon = label;
 
     document.body.appendChild(this.container);
     this.container.style.display = 'none'; // hidden until job starts
@@ -132,9 +128,9 @@ export class SpillMeter {
     // Slowly drain when not bumping
     // No passive drain — only bumps and crashes affect the meter
 
-    // Update fill bar width
+    // Update fill bar height (vertical — rises from bottom)
     const pct = this.level * 100;
-    this.fill.style.width = `${pct}%`;
+    this.fill.style.height = `${pct}%`;
 
     // Update fill colour: green → yellow → red
     if (this.level < 0.5) {
@@ -151,12 +147,14 @@ export class SpillMeter {
       this.fill.style.background = `linear-gradient(to right, rgb(${r},${g},50), rgb(${r},${Math.round(g * 0.4)},20))`;
     }
 
-    // Shake bucket when near full
+    // Shake bucket + show warning icon when near full
     if (this.level > 0.8 && !this.isShaking) {
       this.bucketEl.classList.add('bucket-shake');
+      this._warningIcon.style.opacity = '1';
       this.isShaking = true;
     } else if (this.level <= 0.8 && this.isShaking) {
       this.bucketEl.classList.remove('bucket-shake');
+      this._warningIcon.style.opacity = '0';
       this.isShaking = false;
     }
 

@@ -27,6 +27,7 @@ import { RewardScreen } from './ui/RewardScreen';
 import { TEMRadio } from './audio/TEMRadio';
 import { IntroSequence } from './ui/IntroSequence';
 import { StartMenu } from './ui/StartMenu';
+import { GameMenu } from './ui/GameMenu';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -107,46 +108,6 @@ async function main() {
     hud.showSpillPenalty(penalty);
   };
 
-  // ── JOBS button ──────────────────────────────────────────────────────────────
-  const jobsBtn = document.createElement('button');
-  jobsBtn.textContent = '📋 JOBS';
-  jobsBtn.style.cssText = `
-    position: fixed;
-    top: 130px;
-    left: 10px;
-    background: rgba(193, 102, 107, 0.9);
-    color: #fff;
-    border: none;
-    border-radius: 12px;
-    padding: 12px 20px;
-    font-size: 16px;
-    font-weight: 800;
-    cursor: pointer;
-    font-family: system-ui, sans-serif;
-    z-index: 1000;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    letter-spacing: 0.5px;
-    min-height: 48px;
-    transition: background 0.15s, transform 0.1s;
-    touch-action: manipulation;
-  `;
-  jobsBtn.addEventListener('pointerenter', () => {
-    jobsBtn.style.background = 'rgba(212, 120, 125, 0.95)';
-    jobsBtn.style.transform = 'translateY(-2px)';
-  });
-  jobsBtn.addEventListener('pointerleave', () => {
-    jobsBtn.style.background = 'rgba(193, 102, 107, 0.9)';
-    jobsBtn.style.transform = '';
-  });
-  jobsBtn.addEventListener('click', () => {
-    if (jobBoard.isVisible()) {
-      jobBoard.hide();
-    } else {
-      jobBoard.show(jobManager.getAvailableJobs());
-    }
-  });
-  document.body.appendChild(jobsBtn);
-
   // ── Traffic + Pedestrian systems ────────────────────────────────────────────
   const pedestrians = new PedestrianSystem(engine.scene);
 
@@ -161,33 +122,21 @@ async function main() {
   // Mini-game manager
   const miniGameManager = new MiniGameManager();
 
-  // ── 📸 Photos button + Achievement Gallery + Rewards ─────────────────────────
+  // ── Achievement Gallery + Rewards ─────────────────────────────────────────
   const achievementGallery = new AchievementGallery();
   const rewardScreen = new RewardScreen();
-  const radio = new TEMRadio();
 
-  const photosBtn = document.createElement('button');
-  photosBtn.textContent = '📸';
-  photosBtn.title = 'Photo Collection';
-  photosBtn.style.cssText = `
-    position: fixed; top: 68px; left: 10px;
-    z-index: 1000; background: rgba(70,70,70,0.9);
-    color: #fff; border: none; border-radius: 50%;
-    width: 52px; height: 52px; font-size: 22px;
-    cursor: pointer; touch-action: manipulation;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-    transition: background 0.15s, transform 0.1s;
-  `;
-  photosBtn.addEventListener('pointerenter', () => {
-    photosBtn.style.background = 'rgba(100,100,100,0.95)';
-    photosBtn.style.transform = 'scale(1.1)';
-  });
-  photosBtn.addEventListener('pointerleave', () => {
-    photosBtn.style.background = 'rgba(70,70,70,0.9)';
-    photosBtn.style.transform = '';
-  });
-  photosBtn.addEventListener('click', () => achievementGallery.show());
-  document.body.appendChild(photosBtn);
+  // ── Game Menu (☰) — contains radio, money, photo, jobs ───────────────────
+  const radio = new TEMRadio();
+  const gameMenu = new GameMenu(
+    () => achievementGallery.show(),
+    () => {
+      if (jobBoard.isVisible()) jobBoard.hide();
+      else jobBoard.show(jobManager.getAvailableJobs());
+    },
+  );
+  gameMenu.mountMoneyPanel(hud.getMoneyPanel());
+  gameMenu.mountRadio(radio.getEl());
 
   // Guard to prevent job completion firing more than once per arrival
   let jobCompleting = false;

@@ -22,15 +22,16 @@ function initials(name: string): string {
 
 export class HUD {
   private btcAchieved = false;
-  private speedText: HTMLDivElement;
-  private moneyEl: HTMLDivElement;
-  private btcBarFill: HTMLDivElement;
-  private btcLabelEl: HTMLDivElement;
-  private jobStripEl: HTMLDivElement;
-  private travelTimerEl: HTMLDivElement;
-  private flashOverlay: HTMLDivElement;
-  private timerFailOverlay: HTMLDivElement;
-  private crewPanelEl: HTMLDivElement;
+  private speedText!: HTMLDivElement;
+  private moneyEl!: HTMLDivElement;
+  private btcBarFill!: HTMLDivElement;
+  private btcLabelEl!: HTMLDivElement;
+  private jobStripEl!: HTMLDivElement;
+  private travelTimerEl!: HTMLDivElement;
+  private flashOverlay!: HTMLDivElement;
+  private timerFailOverlay!: HTMLDivElement;
+  private crewPanelEl!: HTMLDivElement;
+  private moneyPanel!: HTMLDivElement;  // exposed to GameMenu
   private activeJob: Job | null = null;
   private activePhase: 1 | 2 | 3 = 1;
   private flashTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -83,40 +84,24 @@ export class HUD {
     speedContainer.appendChild(this.speedText);
     document.body.appendChild(speedContainer);
 
-    // ── Money + job strip — top-right ────────────────────────────────────────
-    const infoPanel = document.createElement('div');
-    infoPanel.style.cssText = `
-      position: fixed;
-      top: 16px;
-      right: 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 6px;
-      pointer-events: none;
-      font-family: system-ui, sans-serif;
-      z-index: 1000;
-      max-width: 300px;
+    // ── Money + BTC panel — lives inside GameMenu (not appended to body here) ─
+    this.moneyPanel = document.createElement('div');
+    this.moneyPanel.style.cssText = `
+      display: flex; flex-direction: column; align-items: flex-start;
+      gap: 6px; font-family: system-ui, sans-serif; width: 100%;
     `;
 
-    // Money counter
     this.moneyEl = document.createElement('div');
     this.moneyEl.style.cssText = `
-      color: #5EDB7D;
-      font-size: 26px;
-      font-weight: 900;
+      color: #5EDB7D; font-size: 22px; font-weight: 900;
       text-shadow: 0 1px 6px rgba(0,0,0,0.8);
-      letter-spacing: 1px;
-      transition: color 0.2s;
+      letter-spacing: 1px; transition: color 0.2s;
     `;
     this.moneyEl.textContent = '500K sats';
-    infoPanel.appendChild(this.moneyEl);
+    this.moneyPanel.appendChild(this.moneyEl);
 
-    // ── BTC goal progress bar ─────────────────────────────────────────────────
     const btcWrap = document.createElement('div');
-    btcWrap.style.cssText = `
-      width: 160px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
-    `;
+    btcWrap.style.cssText = `width:100%; display:flex; flex-direction:column; gap:3px;`;
     this.btcLabelEl = document.createElement('div');
     this.btcLabelEl.style.cssText = `
       color: rgba(247,147,26,0.85); font-size: 11px; font-weight: 700;
@@ -136,39 +121,37 @@ export class HUD {
     btcTrack.appendChild(this.btcBarFill);
     btcWrap.appendChild(this.btcLabelEl);
     btcWrap.appendChild(btcTrack);
-    infoPanel.appendChild(btcWrap);
+    this.moneyPanel.appendChild(btcWrap);
 
-    // Active job strip
+    // ── Job strip + travel timer — fixed top-right, always visible ───────────
+    const jobPanel = document.createElement('div');
+    jobPanel.style.cssText = `
+      position: fixed; top: 16px; right: 64px;
+      display: flex; flex-direction: column; align-items: flex-end;
+      gap: 6px; pointer-events: none;
+      font-family: system-ui, sans-serif; z-index: 1000; max-width: 240px;
+    `;
+
     this.jobStripEl = document.createElement('div');
     this.jobStripEl.style.cssText = `
-      display: none;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 2px;
-      background: rgba(0,0,0,0.55);
-      border-radius: 10px;
-      padding: 8px 12px;
+      display: none; flex-direction: column; align-items: flex-end;
+      gap: 2px; background: rgba(0,0,0,0.55);
+      border-radius: 10px; padding: 8px 12px;
       border-left: 3px solid #C1666B;
     `;
-    infoPanel.appendChild(this.jobStripEl);
+    jobPanel.appendChild(this.jobStripEl);
 
-    // Travel timer — below job strip
     this.travelTimerEl = document.createElement('div');
     this.travelTimerEl.style.cssText = `
-      display: none;
-      text-align: right;
-      font-size: 20px;
-      font-weight: 900;
+      display: none; text-align: right;
+      font-size: 20px; font-weight: 900;
       font-family: system-ui, monospace;
-      text-shadow: 0 1px 6px rgba(0,0,0,0.9);
-      letter-spacing: 1px;
-      background: rgba(0,0,0,0.5);
-      border-radius: 8px;
-      padding: 4px 10px;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.9); letter-spacing: 1px;
+      background: rgba(0,0,0,0.5); border-radius: 8px; padding: 4px 10px;
     `;
-    infoPanel.appendChild(this.travelTimerEl);
+    jobPanel.appendChild(this.travelTimerEl);
 
-    document.body.appendChild(infoPanel);
+    document.body.appendChild(jobPanel);
 
     // ── Crew status panel — top-left ──────────────────────────────────────────
     this.crewPanelEl = document.createElement('div');
@@ -242,6 +225,9 @@ export class HUD {
     this.timerFailOverlay.appendChild(timerFailMsg);
     document.body.appendChild(this.timerFailOverlay);
   }
+
+  /** Return the money/BTC panel element for mounting in GameMenu */
+  getMoneyPanel(): HTMLDivElement { return this.moneyPanel; }
 
   /** Called every frame with speed (m/s) and spill level */
   update(speed: number, _spillPct: number): void {
