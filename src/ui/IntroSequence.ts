@@ -135,6 +135,7 @@ export class IntroSequence {
   private ctx2d!: CanvasRenderingContext2D;
   private textLayer!: HTMLDivElement;
   private themeAudio: HTMLAudioElement | null = null;
+  private logoImg: HTMLImageElement | null = null;
   private done = false;
   private rafId = 0;
   private timers: ReturnType<typeof setTimeout>[] = [];
@@ -154,25 +155,38 @@ export class IntroSequence {
   /** Show a tap-to-begin splash — browser requires gesture before audio plays */
   private _tapThenBuild(onDone: () => void): void {
     this._injectStyles();
+
+    // Preload logo image for canvas use
+    const img = new Image();
+    img.src = WHITE_LOGO;
+    img.onload = () => { this.logoImg = img; };
+
     const splash = document.createElement('div');
     splash.style.cssText = `
       position:fixed; inset:0; z-index:50001; background:#000;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      display:flex; flex-direction:column; align-items:center; justify-content:space-between;
+      padding: clamp(40px,8vh,80px) 0;
       font-family:system-ui,sans-serif; cursor:pointer; touch-action:manipulation;
     `;
     splash.innerHTML = `
+      <div></div>
+
+      <div style="text-align:center;">
+        <div style="color:#C8A86A; font-size:clamp(18px,5vw,28px); font-weight:900;
+                    letter-spacing:4px; text-shadow:0 0 40px rgba(200,168,106,0.5);">
+          TROWELED EARTH RUSH
+        </div>
+        <div style="color:rgba(200,168,106,0.55); font-size:clamp(12px,3vw,16px);
+                    margin-top:36px; letter-spacing:3px; animation:tapPulse 1.4s ease-in-out infinite;">
+          TAP TO BEGIN
+        </div>
+      </div>
+
       <img src="${WHITE_LOGO}" alt="TEM"
-        style="height:clamp(60px,14vw,100px); width:auto; object-fit:contain;
-               filter:brightness(0.85); margin-bottom:24px;"
+        style="height:clamp(80px,18vw,130px); width:auto; object-fit:contain;
+               filter:brightness(0.9) drop-shadow(0 0 20px rgba(200,168,106,0.4));
+               animation:tapPulse 3s ease-in-out infinite;"
         onerror="this.style.display='none'">
-      <div style="color:#C8A86A; font-size:clamp(18px,5vw,28px); font-weight:900;
-                  letter-spacing:4px; text-shadow:0 0 40px rgba(200,168,106,0.5);">
-        TROWELED EARTH RUSH
-      </div>
-      <div style="color:rgba(200,168,106,0.55); font-size:clamp(12px,3vw,16px);
-                  margin-top:36px; letter-spacing:3px; animation:tapPulse 1.4s ease-in-out infinite;">
-        TAP TO BEGIN
-      </div>
     `;
     document.body.appendChild(splash);
 
@@ -674,29 +688,15 @@ export class IntroSequence {
     ctx.restore();
   }
 
-  /** Draw a small white TEM tree logo on the shirt chest */
+  /** Draw the real TEM white tree logo on the shirt chest */
   private _drawTEMLogoOnShirt(ctx: CanvasRenderingContext2D, cx: number, y: number): void {
+    if (!this.logoImg) return; // not loaded yet — skip silently
+    const logoW = 20;
+    // Logo is 688×1504 portrait — scale to logoW wide
+    const logoH = logoW * (1504 / 688);
     ctx.save();
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    const s = 0.6; // scale
-
-    // Trunk
-    ctx.fillRect(cx - 2*s, y + 8*s, 4*s, 8*s);
-
-    // Tree layers (3 triangles, bottom to top)
-    const tri = (tx: number, ty: number, w: number, h: number) => {
-      ctx.beginPath();
-      ctx.moveTo(tx, ty + h);
-      ctx.lineTo(tx - w/2, ty + h);
-      ctx.lineTo(tx, ty);
-      ctx.lineTo(tx + w/2, ty + h);
-      ctx.closePath();
-      ctx.fill();
-    };
-    tri(cx, y + 8*s, 18*s, 9*s);
-    tri(cx, y + 2*s, 14*s, 8*s);
-    tri(cx, y - 3*s, 10*s, 7*s);
-
+    ctx.globalAlpha = 0.85;
+    ctx.drawImage(this.logoImg, cx - logoW / 2, y - logoH / 2, logoW, logoH);
     ctx.restore();
   }
 
