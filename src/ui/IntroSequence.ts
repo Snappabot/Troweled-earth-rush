@@ -16,111 +16,103 @@ interface Scene {
   name: string;
   role: string;
   line: string;
-  accentColor: string;       // hex
-  skyTop: string;            // gradient top
-  skyBot: string;            // gradient bottom
-  particleColor: string;     // spark / dust color
+  accentColor: string;
+  skyTop: string;
+  skyBot: string;
+  particleColor: string;
   particleKind: 'sparks' | 'dust' | 'smoke' | 'none';
-  buildingTint: string;      // building silhouette color
-  spotColor: string;         // spotlight / ground color
-  voiceChar: string;         // for SpeechVoice
+  buildingTint: string;
+  spotColor: string;
+  voiceChar: string;
 }
 
 const SCENES: Scene[] = [
-  // ── Opening: Melbourne ──────────────────────────────────────────────────
   {
     id: 'melbourne',
     name: 'TROWELED EARTH MELBOURNE',
     role: 'presents',
     line: '',
     accentColor: '#C8A86A',
-    skyTop: '#020408', skyBot: '#0a1020',
+    skyTop: '#040810', skyBot: '#102040',
     particleColor: '#C8A86A', particleKind: 'dust',
-    buildingTint: '#0d1824',  spotColor: '#C8A86A22',
+    buildingTint: '#182840',  spotColor: '#C8A86A33',
     voiceChar: 'Narrator',
   },
-  // ── Jose ──────────────────────────────────────────────────────────────
   {
     id: 'jose',
     name: 'JOSE GARCIA',
     role: 'The Spaniard · Master of Clay',
     line: 'Vámonos — I was getting bored.',
-    accentColor: '#8B6A3A',
-    skyTop: '#1a0400', skyBot: '#2d0a00',
-    particleColor: '#FF6030', particleKind: 'sparks',
-    buildingTint: '#1a0800',  spotColor: '#8B3A1A44',
+    accentColor: '#FF7040',
+    skyTop: '#7A1800', skyBot: '#CC3300',   // bright red-orange
+    particleColor: '#FF9040', particleKind: 'sparks',
+    buildingTint: '#3A0C00',  spotColor: '#FF704055',
     voiceChar: 'Jose',
   },
-  // ── Matt ──────────────────────────────────────────────────────────────
   {
     id: 'matt',
     name: 'MATT',
     role: 'The Warlord · Lead Plasterer',
     line: 'Took your time.',
-    accentColor: '#C1666B',
-    skyTop: '#1a0002', skyBot: '#380008',
-    particleColor: '#FF4050', particleKind: 'sparks',
-    buildingTint: '#200008',  spotColor: '#C1666B33',
+    accentColor: '#FF3355',
+    skyTop: '#8A0010', skyBot: '#CC0030',   // bright crimson
+    particleColor: '#FF5070', particleKind: 'sparks',
+    buildingTint: '#440010',  spotColor: '#FF335555',
     voiceChar: 'Matt',
   },
-  // ── Tsuyoshi ──────────────────────────────────────────────────────────
   {
     id: 'tsuyoshi',
     name: 'TSUYOSHI',
     role: 'The Samurai · Tadelakt Specialist',
     line: 'Positions master. Always.',
-    accentColor: '#4A8A6A',
-    skyTop: '#00100a', skyBot: '#001a10',
-    particleColor: '#40FFB0', particleKind: 'dust',
-    buildingTint: '#002010',  spotColor: '#4A8A6A33',
+    accentColor: '#00DD88',
+    skyTop: '#005530', skyBot: '#009958',   // bright green
+    particleColor: '#60FFB0', particleKind: 'dust',
+    buildingTint: '#003322',  spotColor: '#00DD8855',
     voiceChar: 'Tsuyoshi',
   },
-  // ── Connie ────────────────────────────────────────────────────────────
   {
     id: 'connie',
     name: 'CONNIE',
     role: 'Operations Queen · Born in Germany',
     line: 'Ha ha ha ha!',
-    accentColor: '#E8A050',
-    skyTop: '#1a0e00', skyBot: '#2d1800',
-    particleColor: '#FFD080', particleKind: 'smoke',
-    buildingTint: '#1a0c00',  spotColor: '#E8A05033',
+    accentColor: '#FFB030',
+    skyTop: '#884400', skyBot: '#CC7700',   // bright amber
+    particleColor: '#FFD060', particleKind: 'smoke',
+    buildingTint: '#442200',  spotColor: '#FFB03055',
     voiceChar: 'Connie',
   },
-  // ── Jarrad ────────────────────────────────────────────────────────────
   {
     id: 'jarrad',
     name: 'JARRAD',
     role: 'Scaffold Specialist · Topknot Philosopher',
     line: "I've been waiting fifteen minutes.",
-    accentColor: '#8080C0',
-    skyTop: '#04000f', skyBot: '#08001e',
-    particleColor: '#8080FF', particleKind: 'dust',
-    buildingTint: '#08001a',  spotColor: '#8080C033',
+    accentColor: '#8866FF',
+    skyTop: '#220066', skyBot: '#4400AA',   // bright purple
+    particleColor: '#AA88FF', particleKind: 'dust',
+    buildingTint: '#110033',  spotColor: '#8866FF55',
     voiceChar: 'Jarrad',
   },
-  // ── Fabio ─────────────────────────────────────────────────────────────
   {
     id: 'fabio',
     name: 'FABIO',
     role: 'Plasterer · Pizza Consultant',
     line: 'Ehhhh.',
-    accentColor: '#D4602A',
-    skyTop: '#150400', skyBot: '#290800',
-    particleColor: '#FF8840', particleKind: 'smoke',
-    buildingTint: '#180600',  spotColor: '#D4602A33',
+    accentColor: '#FF7722',
+    skyTop: '#883300', skyBot: '#CC5500',   // bright burnt orange
+    particleColor: '#FFAa40', particleKind: 'smoke',
+    buildingTint: '#441A00',  spotColor: '#FF772255',
     voiceChar: 'Fabio',
   },
-  // ── Phil ──────────────────────────────────────────────────────────────
   {
     id: 'phil',
     name: 'PHIL',
     role: 'The Quiet Legend · Renders',
     line: "Right then. Let's go.",
-    accentColor: '#A0B8A0',
-    skyTop: '#040a04', skyBot: '#081408',
-    particleColor: '#80C080', particleKind: 'dust',
-    buildingTint: '#060e06',  spotColor: '#A0B8A033',
+    accentColor: '#44CCCC',
+    skyTop: '#004444', skyBot: '#007777',   // bright teal
+    particleColor: '#88FFFF', particleKind: 'dust',
+    buildingTint: '#002222',  spotColor: '#44CCCC55',
     voiceChar: 'Phil',
   },
 ];
@@ -157,12 +149,42 @@ export class IntroSequence {
   private buildings: {x:number,w:number,h:number}[] = [];
 
   play(): Promise<void> {
-    return new Promise(resolve => this._build(resolve));
+    return new Promise(resolve => this._tapThenBuild(resolve));
+  }
+
+  /** Show a tap-to-begin splash — browser requires gesture before audio plays */
+  private _tapThenBuild(onDone: () => void): void {
+    this._injectStyles();
+    const splash = document.createElement('div');
+    splash.style.cssText = `
+      position:fixed; inset:0; z-index:50001; background:#000;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      font-family:system-ui,sans-serif; cursor:pointer; touch-action:manipulation;
+    `;
+    splash.innerHTML = `
+      <img src="${WHITE_LOGO}" alt="TEM"
+        style="height:clamp(60px,14vw,100px); width:auto; object-fit:contain;
+               filter:brightness(0.85); margin-bottom:24px;"
+        onerror="this.style.display='none'">
+      <div style="color:#C8A86A; font-size:clamp(18px,5vw,28px); font-weight:900;
+                  letter-spacing:4px; text-shadow:0 0 40px rgba(200,168,106,0.5);">
+        TROWELED EARTH RUSH
+      </div>
+      <div style="color:rgba(200,168,106,0.55); font-size:clamp(12px,3vw,16px);
+                  margin-top:36px; letter-spacing:3px; animation:tapPulse 1.4s ease-in-out infinite;">
+        TAP TO BEGIN
+      </div>
+    `;
+    document.body.appendChild(splash);
+    const start = () => {
+      splash.remove();
+      this._build(onDone);
+    };
+    splash.addEventListener('click',      start, { once: true });
+    splash.addEventListener('touchstart', start, { once: true, passive: true });
   }
 
   private _build(onDone: () => void): void {
-    this._injectStyles();
-
     this.overlay = document.createElement('div');
     this.overlay.id = 'intro-overlay';
     this.overlay.style.cssText = `
@@ -581,12 +603,12 @@ export class IntroSequence {
     };
     const skin = skinTones[sc.id] ?? '#D0A080';
 
-    // ── Uniform (TEM orange-brown shirt + dark pants) ─────────────────────────
-    const uniformCol = sc.accentColor;
-    const pantCol    = '#1a1a2a';
+    // ── TEM black uniform ─────────────────────────────────────────────────────
+    const shirtCol = '#111111';  // black TEM shirt
+    const pantCol  = '#1a1a2a';
 
     // Boots
-    ctx.fillStyle = '#111';
+    ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(cx - 19, groundY - 22, 16, 22);
     ctx.fillRect(cx + 3,  groundY - 22, 16, 22);
 
@@ -595,19 +617,20 @@ export class IntroSequence {
     ctx.fillRect(cx - 18, groundY - hh * 0.44, 16, hh * 0.44 - 20);
     ctx.fillRect(cx + 2,  groundY - hh * 0.44, 16, hh * 0.44 - 20);
 
-    // TEM shirt / jacket
-    ctx.fillStyle = uniformCol + 'CC';
+    // Black TEM shirt
+    ctx.fillStyle = shirtCol;
     ctx.fillRect(cx - 20, groundY - hh * 0.80, 40, hh * 0.37);
+
+    // TEM logo on chest — white tree
+    this._drawTEMLogoOnShirt(ctx, cx, groundY - hh * 0.70);
 
     // Collar / neck
     ctx.fillStyle = skin;
     ctx.fillRect(cx - 5, groundY - hh * 0.84, 10, hh * 0.06);
 
-    // Arms
-    ctx.fillStyle = uniformCol + 'AA';
-    // Left arm
+    // Arms — black sleeves
+    ctx.fillStyle = shirtCol;
     ctx.fillRect(cx - 32, groundY - hh * 0.78, 13, hh * 0.32);
-    // Right arm (extended for prop)
     ctx.fillRect(cx + 19, groundY - hh * 0.78, 13, hh * 0.28);
 
     // Hands (skin)
@@ -628,15 +651,41 @@ export class IntroSequence {
     // Character-specific hair + prop
     this._drawHairAndProp(ctx, sc, cx, groundY, hh, skin);
 
-    // Rim light — accent highlight on left edge
+    // Accent rim light on left edge
     ctx.strokeStyle = sc.accentColor;
-    ctx.lineWidth = 2.5;
-    ctx.globalAlpha = fadeIn * 0.6;
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = fadeIn * 0.8;
     ctx.beginPath();
     ctx.moveTo(cx - 20, groundY - hh * 0.44);
     ctx.lineTo(cx - 20, groundY - hh * 0.80);
     ctx.lineTo(cx - 10, groundY - hh * 0.84);
     ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /** Draw a small white TEM tree logo on the shirt chest */
+  private _drawTEMLogoOnShirt(ctx: CanvasRenderingContext2D, cx: number, y: number): void {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    const s = 0.6; // scale
+
+    // Trunk
+    ctx.fillRect(cx - 2*s, y + 8*s, 4*s, 8*s);
+
+    // Tree layers (3 triangles, bottom to top)
+    const tri = (tx: number, ty: number, w: number, h: number) => {
+      ctx.beginPath();
+      ctx.moveTo(tx, ty + h);
+      ctx.lineTo(tx - w/2, ty + h);
+      ctx.lineTo(tx, ty);
+      ctx.lineTo(tx + w/2, ty + h);
+      ctx.closePath();
+      ctx.fill();
+    };
+    tri(cx, y + 8*s, 18*s, 9*s);
+    tri(cx, y + 2*s, 14*s, 8*s);
+    tri(cx, y - 3*s, 10*s, 7*s);
 
     ctx.restore();
   }
@@ -944,6 +993,10 @@ export class IntroSequence {
       @keyframes logoPulse {
         0%,100% { transform:scale(1); filter:drop-shadow(0 0 30px rgba(200,168,106,0.4)) brightness(0.9) }
         50%     { transform:scale(1.04); filter:drop-shadow(0 0 50px rgba(200,168,106,0.6)) brightness(1.0) }
+      }
+      @keyframes tapPulse {
+        0%,100% { opacity:0.4; transform:scale(1) }
+        50%     { opacity:1.0; transform:scale(1.06) }
       }
     `;
     document.head.appendChild(s);

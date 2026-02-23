@@ -154,16 +154,19 @@ export class StartMenu {
       audio.src = AUDIO.theme;
       audio.volume = 0;
       audio.loop = true;
+      this.themeAudio = audio; // store ref immediately so _killAudio() can always reach it
       audio.play().then(() => {
-        this.themeAudio = audio;
         let vol = 0;
         const fadeIn = setInterval(() => {
+          if (!this.themeAudio) { clearInterval(fadeIn); return; } // killed mid-fade
           vol = Math.min(vol + 0.02, 0.6);
           audio.volume = vol;
           if (vol >= 0.6) clearInterval(fadeIn);
         }, 100);
-        return; // real audio playing — skip synth
-      }).catch(() => this._startSynthAudio());
+      }).catch(() => {
+        this.themeAudio = null;
+        this._startSynthAudio();
+      });
       return;
     } catch {}
     this._startSynthAudio();
