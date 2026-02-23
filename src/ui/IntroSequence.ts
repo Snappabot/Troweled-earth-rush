@@ -983,48 +983,64 @@ export class IntroSequence {
     switch (sc.id) {
 
       case 'jose': {
-        // ── Real dreadlocks: shoulder-length, dark near-black, medium thickness ──
-        const dc = '#1a0800';   // dark dread colour
-        const dl = '#2e1200';   // slightly lighter for variation
-        // Dreads hanging down both sides + back — 8 locs
+        // ── Shoulder-length+ dreadlocks. Dark brown/caramel. Clear-frame glasses. ──
+        const dc  = '#1e0d00';   // dark dread colour
+        const dl  = '#3a1e00';   // medium brown variation
+        const dca = '#5a3500';   // caramel sun-bleached tips on some locs
+        // Dreads — longer, past shoulder, with caramel highlights on outer locs
         const dreads = [
-          { dx: -12, swing: -5, len: hh * 0.22, w: 5 },
-          { dx: -8,  swing: -3, len: hh * 0.26, w: 6 },
-          { dx: -4,  swing: -1, len: hh * 0.28, w: 5 },
-          { dx:  0,  swing:  2, len: hh * 0.25, w: 6 },
-          { dx:  5,  swing:  3, len: hh * 0.23, w: 5 },
-          { dx:  9,  swing:  2, len: hh * 0.20, w: 4 },
-          { dx: -10, swing: -4, len: hh * 0.17, w: 4 }, // shorter front fringe
-          { dx:  7,  swing:  4, len: hh * 0.16, w: 4 },
+          { dx: -14, swing: -7,  len: hh * 0.30, w: 6, color: dc  },
+          { dx: -9,  swing: -4,  len: hh * 0.35, w: 7, color: dl  },
+          { dx: -4,  swing: -1,  len: hh * 0.38, w: 6, color: dc  },
+          { dx:  1,  swing:  2,  len: hh * 0.36, w: 7, color: dl  },
+          { dx:  6,  swing:  4,  len: hh * 0.33, w: 6, color: dca },
+          { dx: 11,  swing:  5,  len: hh * 0.28, w: 5, color: dca },
+          { dx: -12, swing: -5,  len: hh * 0.22, w: 4, color: dl  }, // front fringe
+          { dx:  8,  swing:  3,  len: hh * 0.20, w: 4, color: dc  },
         ];
-        dreads.forEach((d, i) => {
-          ctx.strokeStyle = i % 2 === 0 ? dc : dl;
+        dreads.forEach(d => {
+          ctx.strokeStyle = d.color;
           ctx.lineWidth = d.w;
           ctx.beginPath();
-          ctx.moveTo(cx + d.dx, hy - hr * 0.1);
+          ctx.moveTo(cx + d.dx, hy - hr * 0.05);
           ctx.bezierCurveTo(
-            cx + d.dx + d.swing * 0.4, hy + d.len * 0.35,
-            cx + d.dx + d.swing * 0.9, hy + d.len * 0.68,
-            cx + d.dx + d.swing * 0.7, hy + d.len,
+            cx + d.dx + d.swing * 0.35, hy + d.len * 0.32,
+            cx + d.dx + d.swing * 0.85, hy + d.len * 0.65,
+            cx + d.dx + d.swing * 0.65, hy + d.len,
           );
           ctx.stroke();
+          // Knobby dread tip
+          ctx.beginPath();
+          ctx.arc(cx + d.dx + d.swing * 0.65, hy + d.len, d.w * 0.6, 0, Math.PI * 2);
+          ctx.fillStyle = d.color;
+          ctx.fill();
         });
-        // Crown cap over dreads
+        // Crown cap
         ctx.fillStyle = dc;
         ctx.beginPath();
         ctx.arc(cx, hy - hr * 0.55, hr * 1.08, Math.PI, 0);
         ctx.fill();
-        // Forehead headband / dread tie
-        ctx.strokeStyle = '#6B3A00';
+        // Dread tie / headband
+        ctx.strokeStyle = '#7B4A10';
         ctx.lineWidth = 3.5;
         ctx.beginPath();
-        ctx.arc(cx, hy - hr * 0.2, hr * 1.12, Math.PI * 0.8, Math.PI * 1.95);
+        ctx.arc(cx, hy - hr * 0.15, hr * 1.14, Math.PI * 0.75, Math.PI * 1.95);
         ctx.stroke();
-        // Scruffy beard on chin
+        // Scruffy beard
         ctx.fillStyle = '#2a1000';
         ctx.beginPath();
         ctx.ellipse(cx, hy + hr * 0.6, hr * 0.65, hr * 0.35, 0, 0, Math.PI);
         ctx.fill();
+        // ── Clear/light rectangular glasses (signature Jose look) ──────────
+        ctx.strokeStyle = 'rgba(210,210,210,0.85)';
+        ctx.lineWidth = 2.2;
+        ctx.fillStyle = 'rgba(180,220,255,0.12)';
+        const jgw = hr * 0.95; const jgh = hr * 0.50; const jgy = hy - hr * 0.12;
+        ctx.beginPath(); ctx.roundRect(cx - jgw - 1, jgy - jgh / 2, jgw, jgh, 2);
+        ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(cx + 1, jgy - jgh / 2, jgw, jgh, 2);
+        ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - 1, jgy); ctx.lineTo(cx + 1, jgy); ctx.stroke();
         break;
       }
 
@@ -1054,13 +1070,13 @@ export class IntroSequence {
         ctx.moveTo(cx + hr * 1.05, hy - hr * 0.3);
         ctx.quadraticCurveTo(cx + hr * 1.3, hy + hr * 0.3, cx + hr * 1.0, hy + hr * 0.5);
         ctx.stroke();
-        // Full auburn-red beard
-        ctx.fillStyle = '#7a3010';
+        // Full dark brown beard (slight warm tone, not heavily auburn)
+        ctx.fillStyle = '#3a1a08';
         ctx.beginPath();
         ctx.ellipse(cx, hy + hr * 0.55, hr * 0.75, hr * 0.42, 0, 0, Math.PI);
         ctx.fill();
         // Moustache
-        ctx.fillStyle = '#7a3010';
+        ctx.fillStyle = '#3a1a08';
         ctx.beginPath();
         ctx.ellipse(cx, hy + hr * 0.18, hr * 0.52, hr * 0.18, 0, 0, Math.PI);
         ctx.fill();
@@ -1068,19 +1084,52 @@ export class IntroSequence {
       }
 
       case 'tsuyoshi': {
-        // ── Short straight black hair, side-swept, East Asian ──
-        const tc = '#0a0a0a';
-        // Main short hair cap
-        ctx.fillStyle = tc;
+        // ── REAL MOHAWK — shaved sides, jet black center strip, tall spikes ──
+        // (This is his actual signature look — not a game invention)
+        const mohBlack = '#080808';
+        const mohW = hr * 0.52;   // strip width
+        const baseY = hy - hr * 0.2;   // where spikes start from
+
+        // Shaved sides — skin tone (no hair, drawn over skull)
+        ctx.fillStyle = skin;
         ctx.beginPath();
-        ctx.arc(cx, hy - hr * 0.65, hr * 1.1, Math.PI, 0);
+        ctx.arc(cx - hr * 0.85, hy - hr * 0.5, hr * 0.55, 0, Math.PI * 2);
         ctx.fill();
-        // Side-swept fringe falling to the right
         ctx.beginPath();
-        ctx.moveTo(cx - hr * 0.8, hy - hr * 1.1);
-        ctx.bezierCurveTo(cx + hr * 0.2, hy - hr * 1.3, cx + hr * 0.9, hy - hr * 0.9, cx + hr * 1.0, hy - hr * 0.3);
-        ctx.lineTo(cx + hr * 0.5, hy - hr * 0.2);
-        ctx.bezierCurveTo(cx + hr * 0.4, hy - hr * 0.6, cx - hr * 0.1, hy - hr * 0.95, cx - hr * 0.8, hy - hr * 1.1);
+        ctx.arc(cx + hr * 0.85, hy - hr * 0.5, hr * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Central mohawk strip base
+        ctx.fillStyle = mohBlack;
+        ctx.fillRect(cx - mohW / 2, baseY - hr * 0.3, mohW, hr * 0.55);
+
+        // Tall spikes standing upward — irregular heights like the real photo
+        const spikes = [
+          { ox: -0.28, h: hr * 1.55, tw: 0.22, tilt: -0.18 },
+          { ox: -0.10, h: hr * 2.10, tw: 0.20, tilt: -0.06 },
+          { ox:  0.06, h: hr * 2.40, tw: 0.22, tilt:  0.04 },
+          { ox:  0.20, h: hr * 1.90, tw: 0.19, tilt:  0.12 },
+          { ox:  0.32, h: hr * 1.40, tw: 0.18, tilt:  0.20 },
+        ];
+        ctx.fillStyle = mohBlack;
+        spikes.forEach(s => {
+          const sx = cx + s.ox * mohW * 3;
+          const bw = s.tw * mohW * 2.5;
+          ctx.beginPath();
+          ctx.moveTo(sx - bw / 2, baseY);
+          ctx.lineTo(sx + bw / 2, baseY);
+          ctx.lineTo(sx + Math.sin(s.tilt) * s.h * 0.5, baseY - s.h);
+          ctx.closePath();
+          ctx.fill();
+        });
+
+        // Slight blue-black sheen highlight on center spike
+        ctx.fillStyle = 'rgba(80,80,160,0.18)';
+        ctx.beginPath();
+        ctx.moveTo(cx - 1, baseY);
+        ctx.lineTo(cx + 3, baseY);
+        ctx.lineTo(cx + 2, baseY - hr * 2.0);
+        ctx.closePath();
         ctx.fill();
         break;
       }
@@ -1162,31 +1211,37 @@ export class IntroSequence {
       }
 
       case 'phil': {
-        // ── Receding silver/salt-pepper — thin on top, bald crown ──
-        // Sides (silver)
-        ctx.fillStyle = '#B0B0A8';
+        // ── Short white/silver hair — full head, neatly cut, older gent ──
+        // (Phil is stocky, older, full silver hair — not receding bald)
+        const ph = '#C8C8C4';   // warm silver
+        const phd = '#A8A8A2';  // slightly darker silver
+        // Full hair cap — short but covers the whole head
+        ctx.fillStyle = ph;
         ctx.beginPath();
-        ctx.arc(cx - hr * 0.6, hy - hr * 0.5, hr * 0.7, Math.PI, Math.PI * 1.8);
+        ctx.arc(cx, hy - hr * 0.72, hr * 1.12, Math.PI, 0);
         ctx.fill();
+        // Sides fill
+        ctx.fillStyle = phd;
         ctx.beginPath();
-        ctx.arc(cx + hr * 0.6, hy - hr * 0.5, hr * 0.7, Math.PI * 1.2, 0);
+        ctx.arc(cx, hy - hr * 0.5, hr * 1.08, Math.PI * 0.85, Math.PI * 1.15);
         ctx.fill();
-        // Very thin wisp on top
-        ctx.strokeStyle = '#C8C8C0';
-        ctx.lineWidth = 2;
+        // Slight lighter highlight on top
+        ctx.fillStyle = '#DDDDD8';
         ctx.beginPath();
-        ctx.moveTo(cx - hr * 0.6, hy - hr * 0.9);
-        ctx.bezierCurveTo(cx - hr * 0.2, hy - hr * 1.4, cx + hr * 0.2, hy - hr * 1.35, cx + hr * 0.7, hy - hr * 0.9);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(cx - hr * 0.4, hy - hr * 0.85);
-        ctx.bezierCurveTo(cx, hy - hr * 1.2, cx + hr * 0.1, hy - hr * 1.15, cx + hr * 0.5, hy - hr * 0.85);
-        ctx.stroke();
-        // Bare scalp tint at crown
-        ctx.fillStyle = skin;
-        ctx.beginPath();
-        ctx.ellipse(cx, hy - hr * 0.9, hr * 0.6, hr * 0.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx, hy - hr * 1.1, hr * 0.7, hr * 0.35, 0, 0, Math.PI * 2);
         ctx.fill();
+        // Glasses (Phil has glasses in the real photo)
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 2.2;
+        ctx.fillStyle = 'rgba(160,200,240,0.15)';
+        const pgw = hr * 0.95; const pgh = hr * 0.48; const pgy = hy - hr * 0.12;
+        ctx.beginPath(); ctx.roundRect(cx - pgw - 1, pgy - pgh / 2, pgw, pgh, 2);
+        ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.roundRect(cx + 1, pgy - pgh / 2, pgw, pgh, 2);
+        ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - 1, pgy); ctx.lineTo(cx + 1, pgy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx - pgw - 1, pgy); ctx.lineTo(cx - pgw - hr * 0.4, pgy - 1); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx + pgw + 1, pgy); ctx.lineTo(cx + pgw + hr * 0.4, pgy - 1); ctx.stroke();
         break;
       }
 
