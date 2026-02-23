@@ -7,6 +7,9 @@ import { ANTHEM_ALL_LINES } from '../data/Anthem';
 import { AUDIO } from '../audio/AudioAssets';
 import { ClosingCredits } from './ClosingCredits';
 
+const BASE_URL: string = ((import.meta as any).env?.BASE_URL as string) || '/';
+const WHITE_LOGO = `${BASE_URL}tem-logo-white.jpg`;
+
 export class StartMenu {
   private overlay!: HTMLDivElement;
   private scrollTimer = 0;
@@ -61,7 +64,8 @@ export class StartMenu {
     content.className = 'sm-content';
 
     content.innerHTML = `
-      <div class="sm-logo">🌳</div>
+      <img src="${WHITE_LOGO}" alt="Troweled Earth" class="sm-logo-img"
+        onerror="this.outerHTML='<div class=sm-logo>🌳</div>'">
       <div class="sm-title">TROWELED EARTH RUSH</div>
       <div class="sm-tagline">"The walls remember every hand that shaped them."</div>
     `;
@@ -366,6 +370,11 @@ export class StartMenu {
         padding:0 24px;
       }
       .sm-logo { font-size:clamp(48px,14vw,80px); animation:smPulse 3s ease-in-out infinite; }
+      .sm-logo-img {
+        height:clamp(80px,18vw,130px); width:auto; object-fit:contain;
+        filter:brightness(0.9) drop-shadow(0 0 20px rgba(200,168,106,0.35));
+        animation:smPulse 3s ease-in-out infinite;
+      }
       .sm-title {
         color:#C8A86A; font-size:clamp(22px,7vw,48px); font-weight:900;
         letter-spacing:4px; text-shadow:0 0 40px rgba(200,168,106,0.4);

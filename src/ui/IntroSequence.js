@@ -1,138 +1,233 @@
 /**
  * IntroSequence — GTA-style cinematic intro
- * Character reveals with verse overlays, real theme song audio, skip button.
+ * Character card reveals, real theme song, skip button.
  */
-import { ANTHEM } from '../data/Anthem';
 import { AUDIO } from '../audio/AudioAssets';
-// Each beat step in seconds per character reveal
-const REVEAL_DURATION = 3.2;
-const FADE_MS = 600;
+const BASE_URL = import.meta.env?.BASE_URL || '/';
+const WHITE_LOGO = `${BASE_URL}tem-logo-white.jpg`;
+// ── Character reveal cards ────────────────────────────────────────────────────
+const CARDS = [
+    {
+        name: 'JOSE GARCIA',
+        role: 'The Spaniard',
+        sub: 'Master of Blood Red Clay',
+        line: '"From blood red clay to concrete\'s cold embrace."',
+        color: '#8B6A3A',
+        bg: 'linear-gradient(135deg, #1a0e06 0%, #2d1a0a 60%, #0d0804 100%)',
+    },
+    {
+        name: 'MATT',
+        role: 'The Warlord',
+        sub: 'Lead Plasterer',
+        line: '"Unyielding strokes cut deep and true."',
+        color: '#C1666B',
+        bg: 'linear-gradient(135deg, #1a0608 0%, #2d0a0c 60%, #0d0406 100%)',
+    },
+    {
+        name: 'TSUYOSHI',
+        role: 'The Samurai',
+        sub: 'Tadelakt Specialist',
+        line: '"The future written in shadows he\'s claimed as his own."',
+        color: '#4A8A6A',
+        bg: 'linear-gradient(135deg, #060f0a 0%, #0a2018 60%, #040d08 100%)',
+    },
+    {
+        name: 'CONNIE',
+        role: 'Operations Queen',
+        sub: 'Born in Germany. Raised on plaster.',
+        line: '"Ha ha ha ha!"',
+        color: '#E8A050',
+        bg: 'linear-gradient(135deg, #160c02 0%, #2a1804 60%, #0e0801 100%)',
+    },
+    {
+        name: 'JARRAD',
+        role: 'Scaffold Specialist',
+        sub: 'Topknot. Phone in hand. No hard hat.',
+        line: '"I\'ve been waiting fifteen minutes."',
+        color: '#8080C0',
+        bg: 'linear-gradient(135deg, #06060f 0%, #0c0c24 60%, #040408 100%)',
+    },
+    {
+        name: 'FABIO',
+        role: 'Plasterer',
+        sub: 'Pizza Consultant',
+        line: '"Ehhhh."',
+        color: '#D4602A',
+        bg: 'linear-gradient(135deg, #150802 0%, #291004 60%, #0c0601 100%)',
+    },
+    {
+        name: 'PHIL',
+        role: 'The Quiet Legend',
+        sub: 'Renders. Doesn\'t talk much.',
+        line: '"Right then. Let\'s go."',
+        color: '#A0B8A0',
+        bg: 'linear-gradient(135deg, #080f08 0%, #101e10 60%, #060c06 100%)',
+    },
+];
+const CARD_MS = 2600; // time per card
+const FADE_MS = 400;
 export class IntroSequence {
     overlay;
-    ctx;
-    masterGain;
     themeAudio = null;
-    useRealAudio = false;
     done = false;
-    rafId = 0;
     timers = [];
-    /** Returns a promise that resolves when the intro finishes or is skipped */
     play() {
-        return new Promise(resolve => {
-            this._build(resolve);
-        });
+        return new Promise(resolve => this._build(resolve));
     }
     _build(onDone) {
         this._injectStyles();
-        this._startAudio();
         this.overlay = document.createElement('div');
         this.overlay.id = 'intro-overlay';
         this.overlay.style.cssText = `
-      position:fixed; inset:0; z-index:50000;
-      background:#000; overflow:hidden;
+      position:fixed; inset:0; z-index:50000; background:#000; overflow:hidden;
       font-family: system-ui, -apple-system, sans-serif;
-      display:flex; flex-direction:column;
-      align-items:center; justify-content:center;
     `;
-        // Skip button
+        // Letterbox bars
+        const topBar = document.createElement('div');
+        topBar.className = 'intro-bar intro-bar-top';
+        const botBar = document.createElement('div');
+        botBar.className = 'intro-bar intro-bar-bot';
+        // Skip
         const skip = document.createElement('button');
         skip.textContent = 'SKIP ▶';
         skip.style.cssText = `
-      position:absolute; top:20px; right:20px; z-index:10;
-      background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25);
-      color:rgba(255,255,255,0.6); font-size:12px; font-weight:700;
-      padding:8px 16px; border-radius:20px; cursor:pointer;
+      position:absolute; bottom:30px; right:24px; z-index:20;
+      background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
+      color:rgba(255,255,255,0.5); font-size:11px; font-weight:700;
+      padding:7px 14px; border-radius:20px; cursor:pointer;
       letter-spacing:1px; touch-action:manipulation;
     `;
         skip.addEventListener('click', () => this._finish(onDone));
+        // Card stage
+        const stage = document.createElement('div');
+        stage.id = 'intro-stage';
+        stage.style.cssText = `
+      position:absolute; inset:0; z-index:5;
+      display:flex; align-items:center; justify-content:center;
+    `;
+        this.overlay.appendChild(topBar);
+        this.overlay.appendChild(botBar);
+        this.overlay.appendChild(stage);
         this.overlay.appendChild(skip);
-        // City background (CSS layers)
-        const city = document.createElement('div');
-        city.className = 'intro-city';
-        this.overlay.appendChild(city);
-        // Content area
-        const content = document.createElement('div');
-        content.id = 'intro-content';
-        content.style.cssText = `
-      position:relative; z-index:5; text-align:center;
-      width:100%; max-width:640px; padding:0 32px; box-sizing:border-box;
-    `;
-        this.overlay.appendChild(content);
         document.body.appendChild(this.overlay);
-        // ── Phase 1: Logo intro (0–3s) ─────────────────────────────────────────
-        this._after(200, () => this._showLogo(content));
-        // ── Phase 2: Character reveals (3s+) ──────────────────────────────────
-        let t = 3200;
-        for (const verse of ANTHEM) {
-            const verseSnap = verse;
-            this._after(t, () => this._showVerse(content, verseSnap));
-            t += REVEAL_DURATION * 1000;
+        // Start audio
+        this._startAudio();
+        // ── Phase 1: Studio logo (0–2s) ───────────────────────────────────────
+        this._showStudio(stage);
+        // ── Phase 2: Character cards ───────────────────────────────────────────
+        let t = 2000;
+        for (const card of CARDS) {
+            const snap = card;
+            this._after(t, () => this._showCard(stage, snap));
+            t += CARD_MS;
         }
-        // ── Phase 3: Final outro + launch ─────────────────────────────────────
-        this._after(t, () => this._showOutro(content, onDone));
+        // ── Phase 3: Title card ────────────────────────────────────────────────
+        this._after(t, () => this._showTitle(stage, onDone));
     }
-    _showLogo(content) {
-        content.innerHTML = `
-      <div class="intro-logo-wrap">
-        <div class="intro-tree">🌳</div>
-        <div class="intro-brand">TROWELED EARTH</div>
-        <div class="intro-sub">MELBOURNE</div>
+    _showStudio(stage) {
+        stage.innerHTML = `
+      <div class="intro-studio" style="animation:introFadeIn 0.8s ease both; text-align:center;">
+        <img src="${WHITE_LOGO}" onerror="this.style.display='none'" alt="TEM"
+          style="height:clamp(60px,12vw,90px); width:auto; object-fit:contain; filter:brightness(0.85);">
+        <div style="color:rgba(200,168,106,0.55); font-size:10px; letter-spacing:4px; margin-top:14px; font-weight:700;">
+          TROWELED EARTH MELBOURNE PRESENTS
+        </div>
       </div>
     `;
     }
-    _showVerse(content, verse) {
+    _showCard(stage, card) {
         if (this.done)
             return;
-        const isChorus = !verse.character;
-        const lineHTML = verse.lines
-            .map((l, i) => `<div class="intro-line" style="animation-delay:${i * 0.18}s">${l}</div>`)
-            .join('');
-        content.innerHTML = `
-      <div class="intro-verse ${isChorus ? 'chorus' : ''}">
-        <div class="intro-char-name" style="color:${verse.color}">${verse.label}</div>
-        <div class="intro-lines">${lineHTML}</div>
+        const wrap = document.createElement('div');
+        wrap.className = 'intro-card-wrap';
+        wrap.style.cssText = `
+      position:absolute; inset:0; animation:introCardIn ${FADE_MS}ms ease both;
+      display:flex; align-items:center; justify-content:flex-start;
+      background: ${card.bg};
+    `;
+        // Accent stripe
+        const stripe = document.createElement('div');
+        stripe.style.cssText = `
+      position:absolute; left:0; top:0; bottom:0; width:4px;
+      background:${card.color}; opacity:0.9;
+    `;
+        // Diagonal accent
+        const diag = document.createElement('div');
+        diag.style.cssText = `
+      position:absolute; right:0; top:0; bottom:0; width:40%;
+      background:linear-gradient(to left, rgba(0,0,0,0) 0%, rgba(255,255,255,0.02) 100%);
+      clip-path: polygon(20% 0%, 100% 0%, 100% 100%, 0% 100%);
+    `;
+        const text = document.createElement('div');
+        text.style.cssText = `
+      position:relative; z-index:2;
+      padding: 0 0 0 clamp(24px, 6vw, 60px);
+      animation:introTextIn 0.5s 0.15s ease both;
+    `;
+        text.innerHTML = `
+      <div style="color:${card.color}; font-size:clamp(9px,2.5vw,12px); font-weight:700;
+                  letter-spacing:4px; text-transform:uppercase; margin-bottom:10px; opacity:0.8;">
+        ${card.role}
+      </div>
+      <div style="color:#fff; font-size:clamp(28px,8vw,56px); font-weight:900;
+                  letter-spacing:2px; line-height:1; margin-bottom:10px;
+                  text-shadow:0 2px 20px rgba(0,0,0,0.8);">
+        ${card.name}
+      </div>
+      <div style="color:rgba(240,232,216,0.5); font-size:clamp(11px,3vw,15px);
+                  font-weight:400; letter-spacing:0.5px; margin-bottom:18px;">
+        ${card.sub}
+      </div>
+      <div style="color:${card.color}; font-size:clamp(12px,3vw,16px);
+                  font-style:italic; opacity:0.75; letter-spacing:0.5px;">
+        ${card.line}
       </div>
     `;
+        // Scanlines overlay
+        const scan = document.createElement('div');
+        scan.style.cssText = `
+      position:absolute; inset:0; z-index:1; pointer-events:none; opacity:0.03;
+      background: repeating-linear-gradient(0deg, #fff 0px, #fff 1px, transparent 1px, transparent 3px);
+    `;
+        wrap.appendChild(stripe);
+        wrap.appendChild(diag);
+        wrap.appendChild(text);
+        wrap.appendChild(scan);
+        stage.innerHTML = '';
+        stage.appendChild(wrap);
     }
-    _showOutro(content, onDone) {
+    _showTitle(stage, onDone) {
         if (this.done)
             return;
-        content.innerHTML = `
-      <div class="intro-outro">
-        <div class="intro-tree-big">🌳</div>
-        <div class="intro-title-big">TROWELED EARTH RUSH</div>
-        <div class="intro-tagline">"The walls remember every hand that shaped them."</div>
+        stage.innerHTML = `
+      <div style="animation:introTitleIn 0.6s ease both; text-align:center; position:relative; z-index:5;">
+        <img src="${WHITE_LOGO}" onerror="this.style.display='none'" alt="TEM"
+          style="height:clamp(70px,14vw,100px); width:auto; object-fit:contain;
+                 margin-bottom:20px; filter:drop-shadow(0 0 30px rgba(200,168,106,0.4)) brightness(0.9);">
+        <div style="color:#C8A86A; font-size:clamp(22px,7vw,48px); font-weight:900;
+                    letter-spacing:5px; text-shadow:0 0 60px rgba(200,168,106,0.5);">
+          TROWELED EARTH RUSH
+        </div>
+        <div style="color:rgba(200,168,106,0.45); font-size:clamp(10px,2.5vw,13px);
+                    letter-spacing:3px; margin-top:10px;">
+          MELBOURNE
+        </div>
       </div>
     `;
-        this._after(2800, () => {
-            // Fade out overlay
+        // Darken bg for title
+        stage.style.background = 'radial-gradient(ellipse at center, #1a1208 0%, #000 70%)';
+        this._after(2600, () => {
             this.overlay.style.transition = `opacity ${FADE_MS}ms ease`;
             this.overlay.style.opacity = '0';
             this._after(FADE_MS + 50, () => this._finish(onDone));
         });
     }
-    _finish(onDone) {
-        if (this.done)
-            return;
-        this.done = true;
-        this.timers.forEach(clearTimeout);
-        cancelAnimationFrame(this.rafId);
-        this._stopAudio();
-        this.overlay?.remove();
-        onDone();
-    }
-    // ── Theme song (real audio) ────────────────────────────────────────────────
     _startAudio() {
-        // Try real audio file first
         try {
             const audio = new Audio();
             audio.src = AUDIO.theme;
-            audio.volume = 0.72;
-            audio.loop = false;
-            // Fade in over 2s
             audio.volume = 0;
             audio.play().then(() => {
-                this.useRealAudio = true;
                 this.themeAudio = audio;
                 let vol = 0;
                 const fadeIn = setInterval(() => {
@@ -141,178 +236,31 @@ export class IntroSequence {
                     if (vol >= 0.72)
                         clearInterval(fadeIn);
                 }, 80);
-            }).catch(() => {
-                this._startSynthAudio();
-            });
+            }).catch(() => { });
         }
-        catch {
-            this._startSynthAudio();
-        }
+        catch { }
     }
-    _stopAudio() {
+    _finish(onDone) {
+        if (this.done)
+            return;
+        this.done = true;
+        this.timers.forEach(clearTimeout);
+        // Fade out audio
         if (this.themeAudio) {
             const audio = this.themeAudio;
             let vol = audio.volume;
-            const fadeOut = setInterval(() => {
+            const fade = setInterval(() => {
                 vol = Math.max(0, vol - 0.06);
                 audio.volume = vol;
                 if (vol <= 0) {
-                    clearInterval(fadeOut);
+                    clearInterval(fade);
                     audio.pause();
                     audio.src = '';
                 }
             }, 60);
         }
-        try {
-            if (this.ctx) {
-                this.masterGain?.gain.setValueAtTime(this.masterGain.gain.value, this.ctx.currentTime);
-                this.masterGain?.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 0.5);
-                setTimeout(() => { try {
-                    this.ctx.close();
-                }
-                catch { } }, 600);
-            }
-        }
-        catch { }
-    }
-    // ── Synth fallback ─────────────────────────────────────────────────────────
-    _startSynthAudio() {
-        try {
-            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-            this.masterGain = this.ctx.createGain();
-            this.masterGain.gain.value = 0.12;
-            this.masterGain.connect(this.ctx.destination);
-            this._scheduleAnthem();
-        }
-        catch { /* audio fails silently */ }
-    }
-    _scheduleAnthem() {
-        if (!this.ctx)
-            return;
-        const bpm = 82, bps = bpm / 60;
-        let t = this.ctx.currentTime + 0.1;
-        // Low drone pad
-        const drone = this.ctx.createOscillator();
-        const droneG = this.ctx.createGain();
-        const droneFlt = this.ctx.createBiquadFilter();
-        drone.type = 'sine';
-        drone.frequency.value = 55;
-        droneFlt.type = 'lowpass';
-        droneFlt.frequency.value = 200;
-        droneG.gain.setValueAtTime(0, t);
-        droneG.gain.linearRampToValueAtTime(0.4, t + 2);
-        drone.connect(droneFlt);
-        droneFlt.connect(droneG);
-        droneG.connect(this.masterGain);
-        drone.start(t);
-        // Schedule 120 beats (≈88s at 82bpm)
-        for (let beat = 0; beat < 120; beat++) {
-            const bt = t + beat / bps;
-            const b = beat % 4;
-            // Kick
-            if (b === 0 || b === 2)
-                this._kick(bt, 60);
-            // Snare
-            if (b === 1 || b === 3)
-                this._snare(bt, 0.06);
-            // Hi-hat every beat (quiet)
-            this._hihat(bt, 0.018);
-            // Bass pulse on 0
-            if (b === 0)
-                this._bassPulse(bt, 55);
-            // High atmosphere sweep every 8 beats
-            if (beat % 8 === 0)
-                this._pad(bt, 220 * (beat % 3 === 0 ? 1 : beat % 3 === 1 ? 1.25 : 0.75));
-        }
-    }
-    _kick(t, freq) {
-        try {
-            const o = this.ctx.createOscillator(), g = this.ctx.createGain();
-            o.frequency.setValueAtTime(freq, t);
-            o.frequency.exponentialRampToValueAtTime(20, t + 0.15);
-            g.gain.setValueAtTime(0.6, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-            o.connect(g);
-            g.connect(this.masterGain);
-            o.start(t);
-            o.stop(t + 0.35);
-        }
-        catch { }
-    }
-    _snare(t, vol) {
-        try {
-            const buf = this.ctx.createBuffer(1, Math.floor(this.ctx.sampleRate * 0.2), this.ctx.sampleRate);
-            const d = buf.getChannelData(0);
-            for (let i = 0; i < d.length; i++)
-                d[i] = Math.random() * 2 - 1;
-            const src = this.ctx.createBufferSource(), flt = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
-            src.buffer = buf;
-            flt.type = 'bandpass';
-            flt.frequency.value = 1800;
-            g.gain.setValueAtTime(vol, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-            src.connect(flt);
-            flt.connect(g);
-            g.connect(this.masterGain);
-            src.start(t);
-            src.stop(t + 0.22);
-        }
-        catch { }
-    }
-    _hihat(t, vol) {
-        try {
-            const buf = this.ctx.createBuffer(1, Math.floor(this.ctx.sampleRate * 0.05), this.ctx.sampleRate);
-            const d = buf.getChannelData(0);
-            for (let i = 0; i < d.length; i++)
-                d[i] = Math.random() * 2 - 1;
-            const src = this.ctx.createBufferSource(), flt = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
-            src.buffer = buf;
-            flt.type = 'highpass';
-            flt.frequency.value = 8000;
-            g.gain.setValueAtTime(vol, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-            src.connect(flt);
-            flt.connect(g);
-            g.connect(this.masterGain);
-            src.start(t);
-            src.stop(t + 0.07);
-        }
-        catch { }
-    }
-    _bassPulse(t, freq) {
-        try {
-            const o = this.ctx.createOscillator(), flt = this.ctx.createBiquadFilter(), g = this.ctx.createGain();
-            o.type = 'sawtooth';
-            o.frequency.value = freq;
-            flt.type = 'lowpass';
-            flt.frequency.value = 300;
-            g.gain.setValueAtTime(0.35, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
-            o.connect(flt);
-            flt.connect(g);
-            g.connect(this.masterGain);
-            o.start(t);
-            o.stop(t + 0.55);
-        }
-        catch { }
-    }
-    _pad(t, freq) {
-        try {
-            const o = this.ctx.createOscillator(), g = this.ctx.createGain(), flt = this.ctx.createBiquadFilter();
-            o.type = 'triangle';
-            o.frequency.value = freq;
-            flt.type = 'lowpass';
-            flt.frequency.value = 1200;
-            g.gain.setValueAtTime(0, t);
-            g.gain.linearRampToValueAtTime(0.08, t + 0.5);
-            g.gain.linearRampToValueAtTime(0, t + 3.5);
-            o.connect(flt);
-            flt.connect(g);
-            g.connect(this.masterGain);
-            o.start(t);
-            o.stop(t + 4);
-        }
-        catch { }
+        this.overlay?.remove();
+        onDone();
     }
     _after(ms, fn) {
         this.timers.push(setTimeout(fn, ms));
@@ -323,60 +271,30 @@ export class IntroSequence {
         const s = document.createElement('style');
         s.id = 'intro-styles';
         s.textContent = `
-      .intro-city {
-        position:absolute; inset:0; z-index:1;
-        background: linear-gradient(180deg, #0a0806 0%, #1a1208 40%, #0d0a06 100%);
-        overflow:hidden;
+      .intro-bar {
+        position:absolute; left:0; right:0; z-index:10;
+        background:#000; height:clamp(40px,8vh,70px);
+        pointer-events:none;
       }
-      .intro-city::before {
-        content:''; position:absolute; bottom:0; left:0; right:0; height:35%;
-        background: linear-gradient(0deg,
-          rgba(30,20,10,0.9) 0%, rgba(15,10,5,0.5) 60%, transparent 100%);
-      }
-      .intro-city::after {
-        content:''; position:absolute; bottom:60px; left:0; right:0; height:160px;
-        background:
-          repeating-linear-gradient(90deg,
-            transparent 0, transparent 40px, rgba(200,168,106,0.05) 40px, rgba(200,168,106,0.05) 42px
-          );
-        mask-image: linear-gradient(0deg, rgba(0,0,0,0.5) 0%, transparent 100%);
-      }
+      .intro-bar-top { top:0; }
+      .intro-bar-bot { bottom:0; }
 
-      .intro-logo-wrap { text-align:center; animation: introFadeIn 1.2s ease both; }
-      .intro-tree { font-size:56px; margin-bottom:12px; display:block; }
-      .intro-brand {
-        color:#C8A86A; font-size:clamp(22px,7vw,42px); font-weight:900;
-        letter-spacing:6px; text-shadow:0 0 40px rgba(200,168,106,0.5);
+      @keyframes introFadeIn {
+        from { opacity:0; transform:scale(0.96) }
+        to   { opacity:1; transform:scale(1) }
       }
-      .intro-sub { color:rgba(200,168,106,0.5); font-size:13px; letter-spacing:4px; margin-top:6px; }
-
-      .intro-verse { animation: introFadeIn 0.5s ease both; }
-      .intro-verse.chorus { border-top:1px solid rgba(200,168,106,0.25); padding-top:16px; }
-      .intro-char-name {
-        font-size:clamp(11px,3vw,14px); font-weight:900; letter-spacing:4px;
-        text-transform:uppercase; margin-bottom:14px; opacity:0.9;
+      @keyframes introCardIn {
+        from { opacity:0; clip-path:inset(0 100% 0 0) }
+        to   { opacity:1; clip-path:inset(0 0% 0 0) }
       }
-      .intro-lines { display:flex; flex-direction:column; gap:7px; }
-      .intro-line {
-        color:rgba(240,232,216,0.82); font-size:clamp(13px,3.5vw,17px);
-        line-height:1.5; font-style:italic;
-        animation: introLineIn 0.4s ease both;
+      @keyframes introTextIn {
+        from { opacity:0; transform:translateX(-24px) }
+        to   { opacity:1; transform:translateX(0) }
       }
-
-      .intro-outro { animation: introFadeIn 0.8s ease both; text-align:center; }
-      .intro-tree-big { font-size:72px; margin-bottom:16px; display:block; animation: introPulse 1.5s ease-in-out infinite; }
-      .intro-title-big {
-        color:#C8A86A; font-size:clamp(24px,8vw,52px); font-weight:900;
-        letter-spacing:4px; text-shadow:0 0 60px rgba(200,168,106,0.6);
+      @keyframes introTitleIn {
+        from { opacity:0; transform:scale(1.08) }
+        to   { opacity:1; transform:scale(1) }
       }
-      .intro-tagline {
-        color:rgba(200,168,106,0.5); font-size:13px; font-style:italic;
-        margin-top:12px; letter-spacing:0.5px;
-      }
-
-      @keyframes introFadeIn { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
-      @keyframes introLineIn { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
-      @keyframes introPulse  { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
     `;
         document.head.appendChild(s);
     }

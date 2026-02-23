@@ -166,26 +166,32 @@ class RadioAudioEngine {
   }
 
   play(station: Station): void {
-    if (!this.ctx) return;
     this.stop();
     this.currentStation = station;
     this.beatCount = 0;
 
-    // Try real audio file first
+    // Try real audio file first — no AudioContext needed
     if (station.audioFile) {
+      const vol = Math.min(1, (this.masterGain?.gain.value ?? 0.18) * 4.5);
       const audio = new Audio();
       audio.src = station.audioFile;
       audio.loop = true;
-      audio.volume = (this.masterGain?.gain.value ?? 0.18) * 4;
-      audio.volume = Math.min(1, audio.volume);
-      audio.play().then(() => {
+      audio.volume = vol;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          this.realAudioEl = audio;
+          this.realAudioActive = true;
+        }).catch(() => {
+          // Real audio blocked — fall back to generative
+          this.realAudioActive = false;
+          this._startGenerative();
+        });
+      } else {
+        // Older browser — assume play started
         this.realAudioEl = audio;
         this.realAudioActive = true;
-      }).catch(() => {
-        // Fall back to generative synth
-        this.realAudioActive = false;
-        this._startGenerative();
-      });
+      }
     } else {
       this._startGenerative();
     }
