@@ -568,7 +568,7 @@ export class IntroSequence {
             connie: '#F0C8A0',
             jarrad: '#E0B090',
             fabio: '#D4A070',
-            joe: '#D4A070',
+            joe: '#EED8C0', // fair/pale — lightest of the crew
             phil: '#D8A888',
         };
         const skin = skinTones[sc.id] ?? '#D0A080';
@@ -1059,15 +1059,20 @@ export class IntroSequence {
                 break;
             }
             case 'joe': {
-                // ── Short dark brown, no helmet — natural ──
-                ctx.fillStyle = '#2a1800';
+                // ── Short light-brown hair, neat. Fair pale skin. Wide-eyed Joe. ──
+                ctx.fillStyle = '#3a2510'; // medium brown (lighter than other crew)
                 ctx.beginPath();
-                ctx.arc(cx, hy - hr * 0.68, hr * 1.1, Math.PI, 0);
+                ctx.arc(cx, hy - hr * 0.68, hr * 1.08, Math.PI, 0);
                 ctx.fill();
-                // Slightly messy
+                // Neat slight side-part
                 ctx.beginPath();
-                ctx.ellipse(cx + hr * 0.2, hy - hr * 1.38, hr * 0.65, hr * 0.35, 0.2, 0, Math.PI * 2);
+                ctx.ellipse(cx - hr * 0.15, hy - hr * 1.35, hr * 0.6, hr * 0.30, -0.1, 0, Math.PI * 2);
                 ctx.fill();
+                // Hi-vis yellow shirt stripe (Joe wears hi-vis, not TEM black — cartoon confirmed)
+                ctx.fillStyle = '#D4E800';
+                ctx.fillRect(cx - 22, groundY - hh * 0.58, 44, hh * 0.06);
+                ctx.fillStyle = '#B8CC00';
+                ctx.fillRect(cx - 22, groundY - hh * 0.52, 44, hh * 0.03);
                 break;
             }
             case 'phil': {
