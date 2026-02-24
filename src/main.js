@@ -33,8 +33,8 @@ import { submitScore, getPlayerName } from './services/LeaderboardService';
 import { PlayerNamePrompt } from './ui/PlayerNamePrompt';
 import { MarbellinoMixer } from './minigames/MarbellinoMixer';
 import { BattleScreen } from './ui/BattleScreen';
-import { ContractWar } from './gameplay/ContractWar';
 import { getRandomRival } from './data/RivalCrews';
+import { TowerDefence } from './minigames/TowerDefence';
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS = {
     Matt: "Matt folds himself into the back. \"Took your time.\" He's already on his phone.",
@@ -74,7 +74,8 @@ async function main() {
     const crewSelector = new CrewSelector();
     // ── CONTRACT WARS — battle system ────────────────────────────────────────────
     const battleScreen = new BattleScreen();
-    const contractWar = new ContractWar();
+    const towerDefence = new TowerDefence();
+    let _currentRival = getRandomRival(); // updated per contested job
     // ── Job accepted → crew selector → briefing → start Phase 1 ─────────────────
     const jobBoard = new JobBoard((job) => {
         jobBoard.hide();
@@ -116,13 +117,11 @@ async function main() {
             if (job.isContested) {
                 // ── CONTRACT WARS: prompt name → battle screen → rival tracker ────────
                 _namePrompt.show((_name) => {
-                    const rival = getRandomRival();
+                    _currentRival = getRandomRival();
                     _contestedJobTitle = job.title;
-                    battleScreen.show(getActiveCrew(), rival, () => {
-                        contractWar.start(rival);
-                        beginJob();
+                    battleScreen.show(getActiveCrew(), _currentRival, () => {
+                        beginJob(); // TD fires inside the mini-game sequence below
                     });
-                    // Async: inject leaderboard after overlay is in DOM
                     setTimeout(() => battleScreen.injectLeaderboard(job.title), 50);
                 });
             }
@@ -212,8 +211,7 @@ async function main() {
         physics.update(dt);
         van.updateSuspension(dt);
         // ── CONTRACT WARS — tick rival progress ───────────────────────────────────
-        if (contractWar.isActive())
-            contractWar.update(dt);
+        // (ContractWar replaced by TowerDefence in mini-game sequence)
         const jobActive = jobManager.activeJob !== null && jobManager.activePhase >= 2;
         spillMeter.setVisible(jobActive);
         if (jobActive) {
@@ -289,7 +287,6 @@ async function main() {
                 hud.updateCrewStatus([], [], false);
                 characters.showAllCrew();
                 setTimeout(() => {
-                    contractWar.end();
                     const jobs = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
                     jobBoard.show(jobs);
                 }, 3500);
@@ -442,13 +439,10 @@ async function main() {
                     hud.updateCrewStatus([], [], false);
                     radio.setVisible(false);
                     _contestedStartTime = Date.now();
-                    miniGameManager.startRandom((result) => {
+                    // ── Shared job-complete handler ────────────────────────────────
+                    const finishJob = (finalQuality, isContestWin = false) => {
                         radio.setVisible(true);
-                        // CONTRACT WARS — player finished; mark complete and stop rival
-                        if (contractWar.isActive()) {
-                            contractWar.setPlayerProgress(1.0);
-                            contractWar.end();
-                            // Submit score to leaderboard
+                        if (isContestWin) {
                             const completionSecs = (Date.now() - _contestedStartTime) / 1000;
                             submitScore({
                                 player_name: getPlayerName() ?? 'TEM Crew',
@@ -458,7 +452,7 @@ async function main() {
                                 payout: Math.max(0, arrived.pay),
                             });
                         }
-                        const earned = jobManager.completeJob(arrived, result.qualityPct);
+                        const earned = jobManager.completeJob(arrived, finalQuality);
                         if (earned < 0) {
                             hud.showPenalty(arrived.title, Math.abs(earned));
                         }
@@ -472,19 +466,61 @@ async function main() {
                         coffeeBreakAt = -1;
                         toiletBreakAt = -1;
                         jobCompleting = false;
-                        // 🏆 Reward trigger — fires once when all photos collected
                         if (isAllCollected() && !RewardScreen.isUnlocked()) {
                             setTimeout(() => rewardScreen.trigger(), 2000);
                         }
                         else {
                             setTimeout(() => {
-                                const available = [
-                                    ...jobManager.getAvailableJobs(),
-                                    ...jobManager.getContestedJobs(),
-                                ];
+                                const available = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
                                 if (available.length > 0)
                                     jobBoard.show(available);
                             }, 3500);
+                        }
+                    };
+                    // ── STAGE 1: Jarrad's Scaffold Game (ALL jobs) ─────────────────
+                    miniGameManager.startScaffold((scaffoldResult) => {
+                        const reachedTop = scaffoldResult.qualityPct >= 0.45;
+                        if (arrived.isContested && reachedTop) {
+                            // ── STAGE 2: Tower Defence (contested jobs only) ──────────
+                            const tdCfg = {
+                                jobTitle: arrived.title,
+                                payout: arrived.pay,
+                                crewIds: getActiveCrew(),
+                                rival: { name: _currentRival.name, color: _currentRival.color, difficulty: _currentRival.difficulty },
+                            };
+                            towerDefence.show(tdCfg, (tdResult) => {
+                                if (tdResult.won) {
+                                    // ── STAGE 3: Photo Reveal / TrowelingGame ─────────────
+                                    miniGameManager.startTroweling((photoResult) => {
+                                        const combined = (scaffoldResult.qualityPct * 0.25)
+                                            + (tdResult.qualityPct * 0.50)
+                                            + (photoResult.qualityPct * 0.25);
+                                        finishJob(Math.min(1, combined), true);
+                                    });
+                                }
+                                else {
+                                    // TD lost — contract stolen, show message, 0 pay
+                                    radio.setVisible(true);
+                                    hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
+                                    characters.showAllCrew();
+                                    breakActive = null;
+                                    savedWaypoint = null;
+                                    coffeeBreakAt = -1;
+                                    toiletBreakAt = -1;
+                                    jobCompleting = false;
+                                    jobManager.completeJob(arrived, 0); // 0 quality = 0 pay
+                                    hud.updateMoney(jobManager.money);
+                                    setTimeout(() => {
+                                        const available = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+                                        if (available.length > 0)
+                                            jobBoard.show(available);
+                                    }, 3500);
+                                }
+                            });
+                        }
+                        else {
+                            // Regular job or scaffold failed — complete with scaffold result
+                            finishJob(scaffoldResult.qualityPct, false);
                         }
                     });
                 }, randomFrom(BRAND_SLOGANS));
