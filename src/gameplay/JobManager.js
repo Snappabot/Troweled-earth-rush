@@ -198,10 +198,12 @@ export class JobManager {
     getAvailableJobs() {
         return this.jobs.filter(j => !this.completedJobIds.has(j.id) && j !== this.activeJob);
     }
-    acceptJob(job) {
+    acceptJob(job, crewOverride) {
         this.activeJob = job;
         this.activePhase = 1;
-        this.crewToPickup = this._pickCrew(job.crewNeeded);
+        this.crewToPickup = (crewOverride && crewOverride.length > 0)
+            ? crewOverride
+            : this._pickCrew(job.crewNeeded);
         this.crewPickedUp = [];
         this.startTravelTimer();
     }

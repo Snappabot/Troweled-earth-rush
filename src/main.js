@@ -88,7 +88,8 @@ async function main() {
             const beginJob = () => {
                 dialoguePause.show(`📋 ${job.title}`, `Client: ${job.client}\n\n${job.description}\n\n💰 Pay: ${payWithBonus.toLocaleString()} sats${payWithBonus !== job.pay ? ` ✦ crew bonus!` : ''}\n\n🏭 Head to the TEM workshop to collect supplies.`, () => {
                     job.pay = payWithBonus; // apply crew pay bonus
-                    jobManager.acceptJob(job);
+                    const selectedCrewNames = getActiveCrew().map(id => id.charAt(0).toUpperCase() + id.slice(1));
+                    jobManager.acceptJob(job, selectedCrewNames);
                     waypointSystem.setTarget(JobManager.WORKSHOP_POS);
                     hud.setActiveJob(job, 1);
                     hud.updateCrewStatus([], [], false);
@@ -477,52 +478,42 @@ async function main() {
                             }, 3500);
                         }
                     };
-                    // ── STAGE 1: Jarrad's Scaffold Game (ALL jobs) ─────────────────
-                    miniGameManager.startScaffold((scaffoldResult) => {
-                        const reachedTop = scaffoldResult.qualityPct >= 0.45;
-                        if (arrived.isContested && reachedTop) {
-                            // ── STAGE 2: Tower Defence (contested jobs only) ──────────
-                            const tdCfg = {
-                                jobTitle: arrived.title,
-                                payout: arrived.pay,
-                                crewIds: getActiveCrew(),
-                                rival: { name: _currentRival.name, color: _currentRival.color, difficulty: _currentRival.difficulty },
-                            };
-                            towerDefence.show(tdCfg, (tdResult) => {
-                                if (tdResult.won) {
-                                    // ── STAGE 3: Photo Reveal / TrowelingGame ─────────────
-                                    miniGameManager.startTroweling((photoResult) => {
-                                        const combined = (scaffoldResult.qualityPct * 0.25)
-                                            + (tdResult.qualityPct * 0.50)
-                                            + (photoResult.qualityPct * 0.25);
-                                        finishJob(Math.min(1, combined), true);
-                                    });
-                                }
-                                else {
-                                    // TD lost — contract stolen, show message, 0 pay
-                                    radio.setVisible(true);
-                                    hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
-                                    characters.showAllCrew();
-                                    breakActive = null;
-                                    savedWaypoint = null;
-                                    coffeeBreakAt = -1;
-                                    toiletBreakAt = -1;
-                                    jobCompleting = false;
-                                    jobManager.completeJob(arrived, 0); // 0 quality = 0 pay
-                                    hud.updateMoney(jobManager.money);
-                                    setTimeout(() => {
-                                        const available = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
-                                        if (available.length > 0)
-                                            jobBoard.show(available);
-                                    }, 3500);
-                                }
-                            });
-                        }
-                        else {
-                            // Regular job or scaffold failed — complete with scaffold result
-                            finishJob(scaffoldResult.qualityPct, false);
-                        }
-                    });
+                    if (arrived.isContested) {
+                        // ── Tower Defence (contested jobs) ────────────────────────────
+                        const tdCfg = {
+                            jobTitle: arrived.title,
+                            payout: arrived.pay,
+                            crewIds: getActiveCrew(),
+                            rival: { name: _currentRival.name, color: _currentRival.color, difficulty: _currentRival.difficulty },
+                        };
+                        towerDefence.show(tdCfg, (tdResult) => {
+                            if (tdResult.won) {
+                                finishJob(tdResult.qualityPct, true);
+                            }
+                            else {
+                                // TD lost — contract stolen
+                                radio.setVisible(true);
+                                hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
+                                characters.showAllCrew();
+                                breakActive = null;
+                                savedWaypoint = null;
+                                coffeeBreakAt = -1;
+                                toiletBreakAt = -1;
+                                jobCompleting = false;
+                                jobManager.completeJob(arrived, 0);
+                                hud.updateMoney(jobManager.money);
+                                setTimeout(() => {
+                                    const available = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+                                    if (available.length > 0)
+                                        jobBoard.show(available);
+                                }, 3500);
+                            }
+                        });
+                    }
+                    else {
+                        // Regular job — complete directly (mini-games are achievement-only)
+                        finishJob(1.0, false);
+                    }
                 }, randomFrom(BRAND_SLOGANS));
             }
         }
