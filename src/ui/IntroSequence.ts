@@ -23,6 +23,8 @@ interface Scene {
   buildingTint: string;
   spotColor: string;
   voiceChar: string;
+  durationMs?: number;    // override per-scene (default = SCENE_MS)
+  heroReveal?: boolean;   // true = dramatic final reveal treatment
 }
 
 const SCENES: Scene[] = [
@@ -36,17 +38,6 @@ const SCENES: Scene[] = [
     particleColor: '#C8A86A', particleKind: 'dust',
     buildingTint: '#182840',  spotColor: '#C8A86A33',
     voiceChar: 'Narrator',
-  },
-  {
-    id: 'jose',
-    name: 'JOSE GARCIA',
-    role: 'The Spaniard · Master of Clay',
-    line: "Some people call me Wall Jesus. They're not wrong!",
-    accentColor: '#FF7040',
-    skyTop: '#7A1800', skyBot: '#CC3300',   // bright red-orange
-    particleColor: '#FF9040', particleKind: 'sparks',
-    buildingTint: '#3A0C00',  spotColor: '#FF704055',
-    voiceChar: 'Jose',
   },
   {
     id: 'matt',
@@ -124,6 +115,20 @@ const SCENES: Scene[] = [
     particleColor: '#88FFFF', particleKind: 'dust',
     buildingTint: '#002222',  spotColor: '#44CCCC55',
     voiceChar: 'Phil',
+  },
+  // ── JOSE — THE FINAL REVEAL. THE HEART OF TEM. ─────────────────────────────
+  {
+    id: 'jose',
+    name: 'JOSE GARCIA',
+    role: 'THE HEART OF TROWELED EARTH · El Maestro',
+    line: "Some people call me Wall Jesus... They're not wrong.",
+    accentColor: '#FFD700',
+    skyTop: '#1A0040', skyBot: '#FF8C00',   // dramatic purple-to-gold sunrise
+    particleColor: '#FFD700', particleKind: 'sparks',
+    buildingTint: '#1A0020',  spotColor: '#FFD70066',
+    voiceChar: 'Jose',
+    durationMs: 14000,   // longer — this is THE moment
+    heroReveal: true,
   },
 ];
 
@@ -299,7 +304,7 @@ export class IntroSequence {
     for (let i = 1; i < SCENES.length; i++) {
       const snap = SCENES[i];
       this._after(t, () => this._startScene(snap));
-      t += SCENE_MS;
+      t += snap.durationMs ?? SCENE_MS;
     }
     this._after(t, () => this._showTitle(onDone));
 
@@ -343,6 +348,34 @@ export class IntroSequence {
             style="height:clamp(50px,10vw,80px); width:auto; object-fit:contain;
                    filter:brightness(0.85); display:block; margin-bottom:16px;"
             onerror="this.style.display='none'">
+        ` : scene.heroReveal ? `
+          <!-- ── JOSE HERO REVEAL ── -->
+          <div style="animation:introSlideUp 0.8s ease both;">
+            <div style="color:#FFD700; font-size:clamp(8px,2vw,10px);
+                        font-weight:900; letter-spacing:6px; margin-bottom:10px;
+                        text-shadow:0 0 20px #FFD700;">
+              ★ &nbsp; THE HEART OF TROWELED EARTH &nbsp; ★
+            </div>
+            <div style="display:inline-block; background:linear-gradient(135deg,#E8A830,#FFD700);
+                        color:#000; font-size:clamp(8px,1.8vw,10px); font-weight:900;
+                        letter-spacing:4px; padding:3px 12px; border-radius:4px;
+                        margin-bottom:14px; text-transform:uppercase;">
+              EL MAESTRO · WALL JESUS
+            </div>
+            <div style="color:#FFD700; font-size:clamp(48px,15vw,88px); font-weight:900;
+                        letter-spacing:3px; line-height:0.95; margin-bottom:16px;
+                        text-shadow:0 0 60px #FFD700, 0 0 120px #FF8C00,
+                                    0 4px 40px rgba(0,0,0,0.95);
+                        font-style:italic;">
+              JOSE
+            </div>
+            <div style="color:#fff; font-size:clamp(12px,3vw,16px);
+                        font-style:italic; opacity:0.9; letter-spacing:1px;
+                        text-shadow:0 2px 20px #000, 0 0 40px #FFD70066;
+                        max-width:340px; margin:0 auto; line-height:1.4;">
+              "${scene.line}"
+            </div>
+          </div>
         ` : `
           <div style="color:${scene.accentColor}; font-size:clamp(9px,2.5vw,11px);
                       font-weight:800; letter-spacing:5px; text-transform:uppercase;
