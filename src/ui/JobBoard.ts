@@ -1,4 +1,5 @@
 import type { Job } from '../gameplay/JobManager';
+import { getRandomRival } from '../data/RivalCrews';
 
 function formatSats(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M sats`;
@@ -62,6 +63,64 @@ export class JobBoard {
         .jb-card:hover {
           background: rgba(255,255,255,0.10);
         }
+        .jb-card-contested {
+          background: linear-gradient(135deg, rgba(40,20,5,0.95), rgba(25,10,0,0.98));
+          border: 2px solid #E8A830;
+          border-radius: 14px;
+          padding: 0;
+          width: 100%;
+          max-width: 480px;
+          margin-bottom: 14px;
+          box-sizing: border-box;
+          box-shadow: 0 0 24px rgba(232,168,48,0.25), inset 0 0 40px rgba(232,168,48,0.04);
+          animation: jbContestPulse 2.5s ease-in-out infinite;
+          overflow: hidden;
+        }
+        @keyframes jbContestPulse {
+          0%, 100% { box-shadow: 0 0 18px rgba(232,168,48,0.22), inset 0 0 40px rgba(232,168,48,0.04); }
+          50%       { box-shadow: 0 0 36px rgba(232,168,48,0.45), inset 0 0 40px rgba(232,168,48,0.08); }
+        }
+        .jb-war-banner {
+          background: linear-gradient(90deg, #B8840A, #E8A830, #B8840A);
+          padding: 6px 16px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 8px;
+        }
+        .jb-war-label {
+          color: #000;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 3px;
+        }
+        .jb-war-rival {
+          color: #000;
+          font-size: 11px;
+          font-weight: 800;
+          letter-spacing: 1px;
+          opacity: 0.8;
+        }
+        .jb-card-contested-body {
+          padding: 14px 16px 16px;
+        }
+        .jb-battle-btn {
+          background: linear-gradient(135deg, #E8A830, #C87010);
+          color: #000;
+          border: none;
+          border-radius: 10px;
+          padding: 13px 24px;
+          font-size: 16px;
+          font-weight: 900;
+          cursor: pointer;
+          width: 100%;
+          letter-spacing: 1px;
+          transition: opacity 0.15s, transform 0.1s;
+          min-height: 48px;
+          text-transform: uppercase;
+        }
+        .jb-battle-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+        .jb-battle-btn:active { transform: translateY(0); opacity: 1; }
         .jb-card-header {
           display: flex;
           justify-content: space-between;
@@ -184,6 +243,158 @@ export class JobBoard {
     return this.visible;
   }
 
+  // ── Contested (battle) card ─────────────────────────────────────────────────
+  private _makeContestedCard(job: Job): HTMLElement {
+    const rival = getRandomRival();
+
+    const card = document.createElement('div');
+    card.className = 'jb-card-contested';
+
+    // Gold war banner
+    const banner = document.createElement('div');
+    banner.className = 'jb-war-banner';
+    banner.innerHTML = `
+      <span class="jb-war-label">⚔️ CONTRACT WAR</span>
+      <span class="jb-war-rival">vs ${rival.name}</span>
+    `;
+    card.appendChild(banner);
+
+    // Card body
+    const body = document.createElement('div');
+    body.className = 'jb-card-contested-body';
+
+    // Title + pay
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'jb-card-header';
+    cardHeader.style.marginBottom = '6px';
+
+    const jobTitle = document.createElement('div');
+    jobTitle.className = 'jb-title';
+    jobTitle.style.color = '#FFD880';
+    jobTitle.textContent = job.title.replace(/^⚔️\s*/, '');
+    cardHeader.appendChild(jobTitle);
+
+    const pay = document.createElement('div');
+    pay.className = 'jb-pay';
+    pay.style.color = '#E8A830';
+    pay.textContent = `₿ ${formatSats(job.pay)}`;
+    cardHeader.appendChild(pay);
+    body.appendChild(cardHeader);
+
+    // Rival info strip
+    const rivalStrip = document.createElement('div');
+    rivalStrip.style.cssText = `
+      display:flex; align-items:center; gap:10px;
+      background:rgba(232,168,48,0.08); border:1px solid rgba(232,168,48,0.2);
+      border-radius:8px; padding:8px 12px; margin-bottom:10px;
+    `;
+    rivalStrip.innerHTML = `
+      <div style="font-size:22px">🥊</div>
+      <div>
+        <div style="color:#E8A830;font-size:12px;font-weight:900;letter-spacing:1px;">RIVAL CREW</div>
+        <div style="color:#fff;font-size:14px;font-weight:800;">${rival.name}</div>
+        <div style="color:#aaa;font-size:11px;">Difficulty: ${'★'.repeat(Math.round(rival.difficulty * 5))}${'☆'.repeat(5 - Math.round(rival.difficulty * 5))}</div>
+      </div>
+      <div style="margin-left:auto;text-align:right;">
+        <div style="color:#2ECC40;font-size:11px;font-weight:700;">BONUS PAY</div>
+        <div style="color:#2ECC40;font-size:13px;font-weight:900;">1.5×</div>
+      </div>
+    `;
+    body.appendChild(rivalStrip);
+
+    // Badges
+    const meta = document.createElement('div');
+    meta.className = 'jb-meta';
+    meta.style.marginBottom = '8px';
+    const zoneBadge = document.createElement('span');
+    zoneBadge.className = 'jb-badge';
+    zoneBadge.textContent = ZONE_LABELS[job.zone] ?? job.zone;
+    meta.appendChild(zoneBadge);
+    const typeBadge = document.createElement('span');
+    typeBadge.className = `jb-badge${job.type === 'emergency' ? ' jb-emergency-badge' : ''}`;
+    typeBadge.textContent = TYPE_LABELS[job.type] ?? job.type;
+    meta.appendChild(typeBadge);
+    body.appendChild(meta);
+
+    // Description
+    const desc = document.createElement('div');
+    desc.className = 'jb-desc';
+    desc.style.color = '#ccc';
+    desc.textContent = job.description;
+    body.appendChild(desc);
+
+    // Battle button
+    const battleBtn = document.createElement('button');
+    battleBtn.className = 'jb-battle-btn';
+    battleBtn.textContent = '⚔️ BATTLE FOR THIS JOB';
+    battleBtn.addEventListener('click', () => this.onAccept(job));
+    body.appendChild(battleBtn);
+
+    card.appendChild(body);
+    return card;
+  }
+
+  // ── Regular job card ────────────────────────────────────────────────────────
+  private _makeRegularCard(job: Job): HTMLElement {
+    const card = document.createElement('div');
+    card.className = 'jb-card';
+
+    const cardHeader = document.createElement('div');
+    cardHeader.className = 'jb-card-header';
+
+    const jobTitle = document.createElement('div');
+    jobTitle.className = 'jb-title';
+    jobTitle.textContent = job.title;
+    cardHeader.appendChild(jobTitle);
+
+    const pay = document.createElement('div');
+    pay.className = 'jb-pay';
+    pay.textContent = `₿ ${formatSats(job.pay)}`;
+    cardHeader.appendChild(pay);
+
+    card.appendChild(cardHeader);
+
+    const meta = document.createElement('div');
+    meta.className = 'jb-meta';
+
+    const zoneBadge = document.createElement('span');
+    zoneBadge.className = 'jb-badge';
+    zoneBadge.textContent = ZONE_LABELS[job.zone] ?? job.zone;
+    meta.appendChild(zoneBadge);
+
+    const typeBadge = document.createElement('span');
+    typeBadge.className = `jb-badge${job.type === 'emergency' ? ' jb-emergency-badge' : ''}`;
+    typeBadge.textContent = TYPE_LABELS[job.type] ?? job.type;
+    meta.appendChild(typeBadge);
+
+    if (job.timeLimit > 0) {
+      const timeBadge = document.createElement('span');
+      timeBadge.className = 'jb-badge jb-emergency-badge';
+      timeBadge.textContent = `⏱️ ${Math.round(job.timeLimit / 60)} min limit`;
+      meta.appendChild(timeBadge);
+    }
+
+    card.appendChild(meta);
+
+    const clientEl = document.createElement('div');
+    clientEl.className = 'jb-client';
+    clientEl.textContent = `Client: ${job.client}`;
+    card.appendChild(clientEl);
+
+    const desc = document.createElement('div');
+    desc.className = 'jb-desc';
+    desc.textContent = job.description;
+    card.appendChild(desc);
+
+    const acceptBtn = document.createElement('button');
+    acceptBtn.className = 'jb-accept-btn';
+    acceptBtn.textContent = 'ACCEPT →';
+    acceptBtn.addEventListener('click', () => this.onAccept(job));
+    card.appendChild(acceptBtn);
+
+    return card;
+  }
+
   private _render(): void {
     this.overlay.innerHTML = '';
 
@@ -232,70 +443,11 @@ export class JobBoard {
     }
 
     for (const job of this.jobs) {
-      const card = document.createElement('div');
-      card.className = 'jb-card';
-
-      // Header: title + pay
-      const cardHeader = document.createElement('div');
-      cardHeader.className = 'jb-card-header';
-
-      const jobTitle = document.createElement('div');
-      jobTitle.className = 'jb-title';
-      jobTitle.textContent = job.title;
-      cardHeader.appendChild(jobTitle);
-
-      const pay = document.createElement('div');
-      pay.className = 'jb-pay';
-      pay.textContent = `₿ ${formatSats(job.pay)}`;
-      cardHeader.appendChild(pay);
-
-      card.appendChild(cardHeader);
-
-      // Badges: zone + type (+ emergency label)
-      const meta = document.createElement('div');
-      meta.className = 'jb-meta';
-
-      const zoneBadge = document.createElement('span');
-      zoneBadge.className = 'jb-badge';
-      zoneBadge.textContent = ZONE_LABELS[job.zone] ?? job.zone;
-      meta.appendChild(zoneBadge);
-
-      const typeBadge = document.createElement('span');
-      typeBadge.className = `jb-badge${job.type === 'emergency' ? ' jb-emergency-badge' : ''}`;
-      typeBadge.textContent = TYPE_LABELS[job.type] ?? job.type;
-      meta.appendChild(typeBadge);
-
-      if (job.timeLimit > 0) {
-        const timeBadge = document.createElement('span');
-        timeBadge.className = 'jb-badge jb-emergency-badge';
-        timeBadge.textContent = `⏱️ ${Math.round(job.timeLimit / 60)} min limit`;
-        meta.appendChild(timeBadge);
+      if (job.isContested) {
+        this.overlay.appendChild(this._makeContestedCard(job));
+      } else {
+        this.overlay.appendChild(this._makeRegularCard(job));
       }
-
-      card.appendChild(meta);
-
-      // Client
-      const clientEl = document.createElement('div');
-      clientEl.className = 'jb-client';
-      clientEl.textContent = `Client: ${job.client}`;
-      card.appendChild(clientEl);
-
-      // Description
-      const desc = document.createElement('div');
-      desc.className = 'jb-desc';
-      desc.textContent = job.description;
-      card.appendChild(desc);
-
-      // Accept button
-      const acceptBtn = document.createElement('button');
-      acceptBtn.className = 'jb-accept-btn';
-      acceptBtn.textContent = 'ACCEPT →';
-      acceptBtn.addEventListener('click', () => {
-        this.onAccept(job);
-      });
-      card.appendChild(acceptBtn);
-
-      this.overlay.appendChild(card);
     }
   }
 }
