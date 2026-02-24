@@ -390,14 +390,13 @@ export class JobManager {
   }
 
   /**
-   * Returns the normal available jobs list, occasionally mixed with 1 contested job.
-   * 20% chance of a contested job appearing on the board.
+   * Always returns 1 contested job — ⚔️ Contract Wars always available on the board.
+   * Occasionally returns 2 for extra heat.
    */
   getContestedJobs(): Job[] {
     const result: Job[] = [];
-    if (Math.random() < 0.20) {
-      result.push(this.generateContestedJob());
-    }
+    result.push(this.generateContestedJob());
+    if (Math.random() < 0.30) result.push(this.generateContestedJob());
     return result;
   }
 }
