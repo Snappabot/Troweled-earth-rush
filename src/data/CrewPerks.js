@@ -7,7 +7,7 @@ export const CREW_ROSTER = [
         color: '#E8A830',
         skinTone: '#C8856A',
         hairColor: '#1e0d00',
-        locked: true,
+        locked: false, // mascot but now freely selectable
         passive: { name: 'Touch of God', desc: 'Wall jobs pay +15%. Spill meter drains 20% slower.' },
         active: { name: 'Wall Jesus Mode', desc: 'Instant wall prep — skip the prep phase on any job.' },
         perkTag: 'Always in. He IS the mission.',
@@ -128,9 +128,9 @@ export const CREW_ROSTER = [
     },
 ];
 // ── Active Crew State ─────────────────────────────────────────────────────────
-let _activeCrew = ['jose'];
+let _activeCrew = [];
 export function setActiveCrew(ids) {
-    _activeCrew = ['jose', ...ids.filter(id => id !== 'jose')];
+    _activeCrew = [...ids]; // any 3 — Jose no longer mandatory
 }
 export function getActiveCrew() { return _activeCrew; }
 export function crewHas(id) { return _activeCrew.includes(id); }

@@ -1,15 +1,13 @@
 import { CREW_ROSTER, setActiveCrew } from '../data/CrewPerks';
-// ── CrewSelector — pick your team before each job ────────────────────────────
-// Jose is always locked in (he IS the game). Pick 2 more from the roster.
-// Each card shows a mini canvas avatar + name + passive perk summary.
+// ── CrewSelector — pick any 3 crew before each job ───────────────────────────
+// Jose is the mascot but NOT mandatory — pick any 3 from the roster.
 export class CrewSelector {
     _el = null;
-    _selected = new Set(['jose']);
-    _synergy = '';
-    static MAX_PICKS = 2; // picks beyond Jose
+    _selected = new Set();
+    static MAX_PICKS = 3;
     show(jobTitle, jobPay, onConfirm) {
         this.hide();
-        this._selected = new Set(['jose']);
+        this._selected = new Set();
         const ov = document.createElement('div');
         ov.id = 'crew-sel-ov';
         ov.style.cssText = `
@@ -32,51 +30,37 @@ export class CrewSelector {
       <div style="color:#2ECC40;font-size:11px;letter-spacing:2px;font-weight:900;">TROWELED EARTH RUSH</div>
       <div style="color:#fff;font-size:17px;font-weight:900;margin:3px 0;">📋 ${jobTitle}</div>
       <div style="color:#F0C030;font-size:13px;font-weight:700;">💰 ${jobPay.toLocaleString()} sats</div>
-      <div style="color:#aaa;font-size:11px;margin-top:4px;">Jose is always in. Pick <strong style="color:#fff;">2 crew</strong> to roll with.</div>
+      <div style="color:#aaa;font-size:11px;margin-top:4px;">Pick <strong style="color:#fff;">any 3 crew</strong> to roll with.</div>
     `;
         ov.appendChild(header);
-        // ── Jose — always locked hero card ───────────────────────────────────────
-        const joseBanner = document.createElement('div');
-        joseBanner.style.cssText = `
-      width:100%; max-width:420px;
-      background:linear-gradient(90deg,#1a0800,#2a1200);
-      border:2px solid #E8A830;
-      border-radius:10px; margin:14px 0 4px;
-      padding:12px 16px; box-sizing:border-box;
-      display:flex; align-items:center; gap:14px;
-    `;
-        const joseCanvas = this._makeAvatar(CREW_ROSTER[0], 56);
-        joseBanner.appendChild(joseCanvas);
-        const joseInfo = document.createElement('div');
-        joseInfo.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="color:#E8A830;font-size:16px;font-weight:900;">Jose</span>
-        <span style="background:#E8A830;color:#000;font-size:9px;font-weight:900;padding:2px 6px;border-radius:10px;">MASCOT</span>
-        <span style="background:#333;color:#E8A830;font-size:9px;padding:2px 6px;border-radius:10px;">LOCKED IN</span>
-      </div>
-      <div style="color:#aaa;font-size:11px;margin-top:2px;">Wall Jesus 🙏 — Always the driver. Always on mission.</div>
-      <div style="color:#E8A830;font-size:10px;margin-top:3px;">✦ Wall jobs +15%  ✦ Spill drain -20%</div>
-    `;
-        joseBanner.appendChild(joseInfo);
-        ov.appendChild(joseBanner);
         // ── Synergy hint ─────────────────────────────────────────────────────────
         const synergyEl = document.createElement('div');
         synergyEl.id = 'crew-synergy';
         synergyEl.style.cssText = `
       color:#2ECC40; font-size:11px; min-height:18px;
-      text-align:center; padding:2px 16px; transition:opacity 0.3s;
+      text-align:center; padding:6px 16px; transition:opacity 0.3s;
       width:100%; max-width:420px; box-sizing:border-box;
     `;
         ov.appendChild(synergyEl);
-        // ── Crew grid ─────────────────────────────────────────────────────────────
+        // ── Crew grid — ALL 9 characters ─────────────────────────────────────────
         const grid = document.createElement('div');
         grid.style.cssText = `
       display:grid; grid-template-columns:repeat(3,1fr);
       gap:10px; padding:8px 12px; width:100%;
       max-width:420px; box-sizing:border-box;
     `;
-        const others = CREW_ROSTER.filter(c => !c.locked);
-        others.forEach(crew => {
+        const confirmBtn = document.createElement('button');
+        confirmBtn.id = 'crew-confirm';
+        confirmBtn.style.cssText = `
+      background:#555; color:#888; border:none;
+      padding:14px 28px; font-size:15px; font-weight:900;
+      border-radius:8px; cursor:not-allowed; flex:1;
+      font-family:'Arial Black',Arial,sans-serif;
+      letter-spacing:1px; transition:all 0.2s;
+    `;
+        confirmBtn.textContent = '🚐 ROLL OUT';
+        confirmBtn.disabled = true;
+        CREW_ROSTER.forEach(crew => {
             const card = this._makeCard(crew, synergyEl, () => this._updateConfirm(confirmBtn));
             grid.appendChild(card);
         });
@@ -92,25 +76,12 @@ export class CrewSelector {
         const countEl = document.createElement('div');
         countEl.id = 'crew-count';
         countEl.style.cssText = 'color:#aaa;font-size:12px;font-weight:700;min-width:100px;';
-        countEl.textContent = '0 / 2 picked';
-        const confirmBtn = document.createElement('button');
-        confirmBtn.id = 'crew-confirm';
-        confirmBtn.style.cssText = `
-      background:#555; color:#888; border:none;
-      padding:14px 28px; font-size:15px; font-weight:900;
-      border-radius:8px; cursor:not-allowed; flex:1;
-      font-family:'Arial Black',Arial,sans-serif;
-      letter-spacing:1px; transition:all 0.2s;
-    `;
-        confirmBtn.textContent = '🚐 ROLL OUT';
-        confirmBtn.disabled = true;
+        countEl.textContent = '0 / 3 picked';
         bar.appendChild(countEl);
         bar.appendChild(confirmBtn);
         ov.appendChild(bar);
-        // Confirm handler
         confirmBtn.addEventListener('click', () => {
-            const picks = [...this._selected].filter(id => id !== 'jose');
-            setActiveCrew(picks);
+            setActiveCrew([...this._selected]);
             this.hide();
             onConfirm([...this._selected]);
         });
@@ -125,14 +96,30 @@ export class CrewSelector {
     _makeCard(crew, synergyEl, onChange) {
         const card = document.createElement('div');
         card.dataset.id = crew.id;
+        // Jose gets a special gold treatment to show he's the mascot
+        const isJose = crew.id === 'jose';
         card.style.cssText = `
-      background:#111; border:2px solid #333;
+      background:${isJose ? '#1a0e00' : '#111'}; 
+      border:2px solid ${isJose ? '#E8A83066' : '#333'};
       border-radius:10px; padding:10px 8px;
       display:flex; flex-direction:column; align-items:center;
       gap:5px; cursor:pointer; transition:all 0.18s;
       user-select:none; -webkit-tap-highlight-color:transparent;
       position:relative;
     `;
+        // MASCOT badge for Jose
+        if (isJose) {
+            const badge = document.createElement('div');
+            badge.style.cssText = `
+        position:absolute; top:4px; right:4px;
+        background:#E8A830; color:#000;
+        font-size:7px; font-weight:900;
+        padding:1px 4px; border-radius:4px;
+        letter-spacing:0.5px;
+      `;
+            badge.textContent = '★';
+            card.appendChild(badge);
+        }
         const avatar = this._makeAvatar(crew, 52);
         card.appendChild(avatar);
         const name = document.createElement('div');
@@ -150,7 +137,6 @@ export class CrewSelector {
     `;
         perkEl.textContent = crew.passive.desc;
         card.appendChild(perkEl);
-        // Tag pill
         const tag = document.createElement('div');
         tag.style.cssText = `
       background:${crew.color}22; border:1px solid ${crew.color}66;
@@ -164,14 +150,13 @@ export class CrewSelector {
             const id = crew.id;
             if (this._selected.has(id)) {
                 this._selected.delete(id);
-                card.style.border = '2px solid #333';
-                card.style.background = '#111';
+                card.style.border = `2px solid ${isJose ? '#E8A83066' : '#333'}`;
+                card.style.background = isJose ? '#1a0e00' : '#111';
                 card.style.boxShadow = '';
                 card.style.transform = '';
             }
             else {
-                const picks = this._selected.size - 1; // exclude jose
-                if (picks >= CrewSelector.MAX_PICKS)
+                if (this._selected.size >= CrewSelector.MAX_PICKS)
                     return;
                 this._selected.add(id);
                 card.style.border = `2px solid ${crew.color}`;
@@ -186,10 +171,10 @@ export class CrewSelector {
     }
     // ── Update confirm button + count ──────────────────────────────────────────
     _updateConfirm(btn) {
-        const picks = this._selected.size - 1;
+        const picks = this._selected.size;
         const countEl = document.getElementById('crew-count');
         if (countEl)
-            countEl.textContent = `${picks} / 2 picked`;
+            countEl.textContent = `${picks} / 3 picked`;
         if (picks === CrewSelector.MAX_PICKS) {
             btn.style.background = '#2ECC40';
             btn.style.color = '#000';
@@ -210,21 +195,23 @@ export class CrewSelector {
         const has = (id) => this._selected.has(id);
         let hint = '';
         if (has('jose') && has('phil'))
-            hint = '⚡ Synergy: Zero interruptions — pure flow run';
+            hint = '⚡ Wall Jesus + Veteran — zero interruptions, pure flow';
         if (has('fabio') && has('tsuyoshi'))
-            hint = '🔥 Synergy: Full speed team — clock-out crunch kings';
+            hint = '🔥 Speed squad — clock-out crunch kings';
         if (has('joe') && has('matt'))
-            hint = '💰 Synergy: Off-books premium — BTC rockets this run';
+            hint = '💰 Off-books premium — BTC rockets this run';
         if (has('connie') && has('jarrad'))
-            hint = '🎲 Synergy: Penalty shield + chaos — high risk, protected';
+            hint = '🎲 Penalty shield + chaos — high risk, protected';
         if (has('jose') && has('connie'))
-            hint = '💼 Synergy: Wall Jesus + German Efficiency — unstoppable';
+            hint = '💼 Wall Jesus + Efficiency — unstoppable combo';
         if (has('mikayla') && has('matt'))
-            hint = '📈 Synergy: Full board + pay boost — maximum earning run';
+            hint = '📈 Full board + pay boost — maximum earning run';
+        if (has('jose') && has('matt') && has('connie'))
+            hint = '👑 THE DREAM TEAM — Jose + Diplomatt + German Efficiency';
         el.textContent = hint;
         el.style.opacity = hint ? '1' : '0';
     }
-    // ── Draw mini canvas avatar for a crew member ──────────────────────────────
+    // ── Draw mini canvas avatar ────────────────────────────────────────────────
     _makeAvatar(crew, size) {
         const cv = document.createElement('canvas');
         cv.width = size;
@@ -232,29 +219,24 @@ export class CrewSelector {
         cv.style.cssText = `border-radius:50%; display:block;`;
         const ctx = cv.getContext('2d');
         const cx = size / 2;
-        const bg = crew.locked ? '#1a0800' : '#1a1a1a';
-        ctx.fillStyle = bg;
+        ctx.fillStyle = crew.id === 'jose' ? '#1a0800' : '#1a1a1a';
         ctx.beginPath();
         ctx.arc(cx, cx, cx, 0, Math.PI * 2);
         ctx.fill();
-        // ── Neck ──────────────────────────────────────────────────────────────────
         const neckW = size * 0.14;
         const neckY = size * 0.62;
         ctx.fillStyle = crew.skinTone;
         ctx.fillRect(cx - neckW / 2, neckY, neckW, size * 0.22);
-        // ── Head ──────────────────────────────────────────────────────────────────
         const hy = size * 0.44;
         const hr = size * 0.22;
         ctx.fillStyle = crew.skinTone;
         ctx.beginPath();
         ctx.ellipse(cx, hy, hr * 0.88, hr, 0, 0, Math.PI * 2);
         ctx.fill();
-        // ── Hair per character ────────────────────────────────────────────────────
         ctx.fillStyle = crew.hairColor;
         ctx.strokeStyle = crew.hairColor;
         switch (crew.id) {
             case 'jose': {
-                // Dreads — 5 mini locs
                 ctx.lineCap = 'round';
                 const locs = [
                     { dx: -10, len: size * 0.34, w: 2.5 },
@@ -274,7 +256,6 @@ export class CrewSelector {
                 ctx.beginPath();
                 ctx.arc(cx, hy - hr * 0.55, hr * 1.02, Math.PI, 0);
                 ctx.fill();
-                // Glasses (Jose always has clear glasses)
                 ctx.strokeStyle = 'rgba(200,200,200,0.7)';
                 ctx.lineWidth = 1.2;
                 const gw = hr * 0.85;
@@ -289,14 +270,12 @@ export class CrewSelector {
                 break;
             }
             case 'matt': {
-                // Tousled medium brown
                 ctx.beginPath();
                 ctx.arc(cx, hy - hr * 0.55, hr * 1.08, Math.PI, 0);
                 ctx.fill();
                 ctx.beginPath();
                 ctx.ellipse(cx - hr * 0.3, hy - hr * 1.2, hr * 0.65, hr * 0.38, -0.2, 0, Math.PI * 2);
                 ctx.fill();
-                // Beard
                 ctx.fillStyle = '#3a1a08';
                 ctx.beginPath();
                 ctx.ellipse(cx, hy + hr * 0.45, hr * 0.65, hr * 0.32, 0, 0, Math.PI);
@@ -304,17 +283,12 @@ export class CrewSelector {
                 break;
             }
             case 'tsuyoshi': {
-                // Mohawk — shaved sides, tall spikes
                 const mw = size * 0.12;
                 const baseY2 = hy - hr * 0.05;
                 ctx.fillStyle = crew.hairColor;
                 ctx.fillRect(cx - mw / 2, baseY2 - hr * 0.2, mw, hr * 0.35);
-                const spk = [
-                    { ox: -0.3, h: size * 0.28, t: -0.15 },
-                    { ox: 0.0, h: size * 0.36, t: 0.0 },
-                    { ox: 0.3, h: size * 0.26, t: 0.15 },
-                ];
-                spk.forEach(s => {
+                [{ ox: -0.3, h: size * 0.28, t: -0.15 }, { ox: 0.0, h: size * 0.36, t: 0.0 }, { ox: 0.3, h: size * 0.26, t: 0.15 }]
+                    .forEach(s => {
                     const sx = cx + s.ox * mw * 2;
                     ctx.beginPath();
                     ctx.moveTo(sx - 2.5, baseY2);
@@ -326,19 +300,16 @@ export class CrewSelector {
                 break;
             }
             case 'jarrad': {
-                // Dark crop
                 ctx.beginPath();
                 ctx.arc(cx, hy - hr * 0.6, hr * 1.05, Math.PI, 0);
                 ctx.fill();
                 ctx.beginPath();
                 ctx.ellipse(cx - hr * 0.1, hy - hr * 1.3, hr * 0.6, hr * 0.28, -0.1, 0, Math.PI * 2);
                 ctx.fill();
-                // Beard
                 ctx.fillStyle = '#2a1e08';
                 ctx.beginPath();
                 ctx.ellipse(cx, hy + hr * 0.42, hr * 0.6, hr * 0.26, 0, 0, Math.PI);
                 ctx.fill();
-                // Glasses
                 ctx.strokeStyle = '#111';
                 ctx.lineWidth = 1.2;
                 ctx.fillStyle = 'rgba(160,200,240,0.15)';
@@ -355,7 +326,6 @@ export class CrewSelector {
                 break;
             }
             case 'fabio': {
-                // Short dark slicked
                 ctx.beginPath();
                 ctx.arc(cx, hy - hr * 0.6, hr * 1.05, Math.PI, 0);
                 ctx.fill();
@@ -369,7 +339,6 @@ export class CrewSelector {
                 break;
             }
             case 'phil': {
-                // Full silver
                 ctx.fillStyle = '#C8C8C4';
                 ctx.beginPath();
                 ctx.arc(cx, hy - hr * 0.6, hr * 1.08, Math.PI, 0);
@@ -378,7 +347,6 @@ export class CrewSelector {
                 ctx.beginPath();
                 ctx.ellipse(cx, hy - hr * 1.1, hr * 0.55, hr * 0.28, 0, 0, Math.PI * 2);
                 ctx.fill();
-                // Glasses
                 ctx.strokeStyle = '#111';
                 ctx.lineWidth = 1.2;
                 ctx.fillStyle = 'rgba(160,200,240,0.15)';
@@ -401,7 +369,6 @@ export class CrewSelector {
                 ctx.beginPath();
                 ctx.ellipse(cx - hr * 0.1, hy - hr * 1.3, hr * 0.55, hr * 0.26, -0.1, 0, Math.PI * 2);
                 ctx.fill();
-                // Hi-vis hint
                 ctx.fillStyle = '#D4E800';
                 ctx.fillRect(cx - size * 0.25, size * 0.82, size * 0.5, size * 0.06);
                 break;
@@ -423,16 +390,9 @@ export class CrewSelector {
                 break;
             }
         }
-        // ── Locked star for Jose ───────────────────────────────────────────────
-        if (crew.locked) {
-            ctx.fillStyle = '#E8A830';
-            ctx.font = `bold ${size * 0.22}px Arial`;
-            ctx.textAlign = 'center';
-            ctx.fillText('★', cx, size * 0.96);
-        }
         // Border ring
-        ctx.strokeStyle = crew.locked ? '#E8A830' : crew.color + '99';
-        ctx.lineWidth = crew.locked ? 2.5 : 1.5;
+        ctx.strokeStyle = crew.id === 'jose' ? '#E8A830' : crew.color + '99';
+        ctx.lineWidth = crew.id === 'jose' ? 2.5 : 1.5;
         ctx.beginPath();
         ctx.arc(cx, cx, cx - 1.5, 0, Math.PI * 2);
         ctx.stroke();
