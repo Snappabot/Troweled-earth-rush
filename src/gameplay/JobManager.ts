@@ -227,10 +227,12 @@ export class JobManager {
     );
   }
 
-  acceptJob(job: Job): void {
+  acceptJob(job: Job, crewOverride?: string[]): void {
     this.activeJob = job;
     this.activePhase = 1;
-    this.crewToPickup = this._pickCrew(job.crewNeeded);
+    this.crewToPickup = (crewOverride && crewOverride.length > 0)
+      ? crewOverride
+      : this._pickCrew(job.crewNeeded);
     this.crewPickedUp = [];
     this.startTravelTimer();
   }
