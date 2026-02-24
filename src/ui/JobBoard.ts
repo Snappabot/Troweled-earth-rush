@@ -228,7 +228,7 @@ export class JobBoard {
   }
 
   show(jobs: Job[]): void {
-    this.jobs = jobs.slice(0, 5);
+    this.jobs = jobs.slice(0, 8);
     this.visible = true;
     this._render();
     this.overlay.style.display = 'flex';

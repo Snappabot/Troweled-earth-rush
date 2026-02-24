@@ -184,7 +184,7 @@ async function main() {
     () => {
       if (jobBoard.isVisible()) jobBoard.hide();
       else {
-        const jobs = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+        const jobs = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
         jobBoard.show(jobs);
       }
     },
@@ -328,7 +328,7 @@ async function main() {
         hud.updateCrewStatus([], [], false);
         characters.showAllCrew();
         setTimeout(() => {
-          const jobs = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+          const jobs = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
           jobBoard.show(jobs);
         }, 3500);
       }
@@ -554,7 +554,7 @@ async function main() {
                 setTimeout(() => rewardScreen.trigger(), 2000);
               } else {
                 setTimeout(() => {
-                  const available = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+                  const available = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
                   if (available.length > 0) jobBoard.show(available);
                 }, 3500);
               }
@@ -585,7 +585,7 @@ async function main() {
                     jobManager.completeJob(arrived, 0);
                     hud.updateMoney(jobManager.money);
                     setTimeout(() => {
-                      const available = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+                      const available = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
                       if (available.length > 0) jobBoard.show(available);
                     }, 3500);
                   }
@@ -607,7 +607,7 @@ async function main() {
 
   // Show job board on first load (mix in contested jobs 20% of the time)
   setTimeout(() => {
-    const jobs = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+    const jobs = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
     jobBoard.show(jobs);
   }, 1000);
 
