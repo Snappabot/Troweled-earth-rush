@@ -30,6 +30,8 @@ import { StartMenu } from './ui/StartMenu';
 import { GameMenu } from './ui/GameMenu';
 import { CrewSelector } from './ui/CrewSelector';
 import { crewBreakImmune, crewPayMult, crewTimerBonus, getActiveCrew } from './data/CrewPerks';
+import { submitScore, getPlayerName } from './services/LeaderboardService';
+import { PlayerNamePrompt } from './ui/PlayerNamePrompt';
 import { MarbellinoMixer } from './minigames/MarbellinoMixer';
 import { BattleScreen } from './ui/BattleScreen';
 import { ContractWar } from './gameplay/ContractWar';
@@ -129,12 +131,16 @@ async function main() {
       };
 
       if (job.isContested) {
-        // ── CONTRACT WARS: show pre-battle screen, then start rival tracker ──
-        const rival = getRandomRival();
-        battleScreen.show(getActiveCrew(), rival, () => {
-          // Battle screen countdown done — start the rival tracker
-          contractWar.start(rival);
-          beginJob();
+        // ── CONTRACT WARS: prompt name → battle screen → rival tracker ────────
+        _namePrompt.show((_name) => {
+          const rival = getRandomRival();
+          _contestedJobTitle  = job.title;
+          battleScreen.show(getActiveCrew(), rival, () => {
+            contractWar.start(rival);
+            beginJob();
+          });
+          // Async: inject leaderboard after overlay is in DOM
+          setTimeout(() => battleScreen.injectLeaderboard(job.title), 50);
         });
       } else {
         beginJob();
@@ -194,6 +200,11 @@ async function main() {
 
   // Guard to prevent job completion firing more than once per arrival
   let jobCompleting = false;
+
+  // ── Contested job tracking for leaderboard ────────────────────────────────
+  let _contestedJobTitle   = '';
+  let _contestedStartTime  = 0;   // Date.now() when job mini-game starts
+  const _namePrompt = new PlayerNamePrompt();
 
   // ── Random break interrupt system ─────────────────────────────────────────────
   // Breaks can fire at any point during a job — random timing each run
@@ -513,12 +524,22 @@ async function main() {
             hud.setActiveJob(null, 3);
             hud.updateCrewStatus([], [], false);
             radio.setVisible(false);
+            _contestedStartTime = Date.now();
             miniGameManager.startRandom((result) => {
               radio.setVisible(true);
               // CONTRACT WARS — player finished; mark complete and stop rival
               if (contractWar.isActive()) {
                 contractWar.setPlayerProgress(1.0);
                 contractWar.end();
+                // Submit score to leaderboard
+                const completionSecs = (Date.now() - _contestedStartTime) / 1000;
+                submitScore({
+                  player_name:       getPlayerName() ?? 'TEM Crew',
+                  job_title:         _contestedJobTitle.replace(/^⚔️\s*/, '').trim(),
+                  crew_ids:          getActiveCrew(),
+                  completion_time_s: Math.round(completionSecs),
+                  payout:            Math.max(0, arrived.pay),
+                });
               }
               const earned = jobManager.completeJob(arrived, result.qualityPct);
               if (earned < 0) {

@@ -1,4 +1,5 @@
 import { CREW_ROSTER } from '../data/CrewPerks';
+import { getLeaderboard } from '../services/LeaderboardService';
 // ── BattleScreen — dramatic pre-battle overlay for CONTRACT WARS ─────────────
 export class BattleScreen {
     _el = null;
@@ -513,5 +514,56 @@ export class BattleScreen {
             animId = requestAnimationFrame(tick);
         };
         animId = requestAnimationFrame(tick);
+    }
+    // ── Inject leaderboard scores into the battle screen overlay ─────────────────
+    async injectLeaderboard(jobTitle) {
+        const ov = document.getElementById('battle-screen-ov');
+        if (!ov)
+            return;
+        // Remove ⚔️ prefix for matching
+        const cleanTitle = jobTitle.replace(/^⚔️\s*/, '').trim();
+        const scores = await getLeaderboard(cleanTitle, 5);
+        const panel = document.createElement('div');
+        panel.style.cssText = `
+      position:absolute; bottom:80px; left:50%; transform:translateX(-50%);
+      width:90%; max-width:340px; z-index:3;
+      background:rgba(0,0,0,0.75); border:1px solid #FFD70040;
+      border-radius:10px; padding:10px 14px;
+    `;
+        if (scores.length === 0) {
+            panel.innerHTML = `
+        <div style="color:#FFD700;font-size:10px;font-weight:900;letter-spacing:2px;
+                    text-align:center;margin-bottom:6px;">⚡ FASTEST CREWS</div>
+        <div style="color:#666;font-size:11px;text-align:center;font-style:italic;">
+          No records yet — be the first to set one!
+        </div>
+      `;
+        }
+        else {
+            const rows = scores.map((s, i) => {
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+                const mins = Math.floor(s.completion_time_s / 60);
+                const secs = String(Math.round(s.completion_time_s % 60)).padStart(2, '0');
+                return `
+          <div style="display:flex;justify-content:space-between;align-items:center;
+                      padding:3px 0;border-bottom:1px solid #ffffff10;">
+            <span style="color:#FFD700;font-size:10px;">${medal}</span>
+            <span style="color:#fff;font-size:10px;font-weight:700;flex:1;margin:0 8px;
+                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${s.player_name}
+            </span>
+            <span style="color:#2ECC40;font-size:10px;font-weight:700;">
+              ${mins}:${secs}
+            </span>
+          </div>
+        `;
+            }).join('');
+            panel.innerHTML = `
+        <div style="color:#FFD700;font-size:10px;font-weight:900;letter-spacing:2px;
+                    text-align:center;margin-bottom:6px;">⚡ FASTEST CREWS — BEAT THEM</div>
+        ${rows}
+      `;
+        }
+        ov.appendChild(panel);
     }
 }
