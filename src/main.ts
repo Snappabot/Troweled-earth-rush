@@ -560,37 +560,41 @@ async function main() {
               }
             };
 
-            if (arrived.isContested) {
-              // ── Tower Defence (contested jobs) ────────────────────────────
-              const tdCfg: TDConfig = {
-                jobTitle: arrived.title,
-                payout:   arrived.pay,
-                crewIds:  getActiveCrew(),
-                rival:    { name: _currentRival.name, color: _currentRival.color, difficulty: _currentRival.difficulty },
-              };
-              towerDefence.show(tdCfg, (tdResult) => {
-                if (tdResult.won) {
-                  finishJob(tdResult.qualityPct, true);
-                } else {
-                  // TD lost — contract stolen
-                  radio.setVisible(true);
-                  hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
-                  characters.showAllCrew();
-                  breakActive = null; savedWaypoint = null;
-                  coffeeBreakAt = -1; toiletBreakAt = -1;
-                  jobCompleting = false;
-                  jobManager.completeJob(arrived, 0);
-                  hud.updateMoney(jobManager.money);
-                  setTimeout(() => {
-                    const available = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
-                    if (available.length > 0) jobBoard.show(available);
-                  }, 3500);
-                }
-              });
-            } else {
-              // Regular job — complete directly (mini-games are achievement-only)
-              finishJob(1.0, false);
-            }
+            // ── Stage 1: Scaffold Game (all jobs) ────────────────────────
+            miniGameManager.startScaffold((scaffoldResult) => {
+              if (arrived.isContested) {
+                // ── Stage 2: Tower Defence (contested jobs only) ─────────
+                const tdCfg: TDConfig = {
+                  jobTitle: arrived.title,
+                  payout:   arrived.pay,
+                  crewIds:  getActiveCrew(),
+                  rival:    { name: _currentRival.name, color: _currentRival.color, difficulty: _currentRival.difficulty },
+                };
+                towerDefence.show(tdCfg, (tdResult) => {
+                  if (tdResult.won) {
+                    const combined = Math.min(1, (scaffoldResult.qualityPct > 0 ? scaffoldResult.qualityPct * 0.3 : 0) + tdResult.qualityPct * 0.7);
+                    finishJob(combined, true);
+                  } else {
+                    // TD lost — contract stolen
+                    radio.setVisible(true);
+                    hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
+                    characters.showAllCrew();
+                    breakActive = null; savedWaypoint = null;
+                    coffeeBreakAt = -1; toiletBreakAt = -1;
+                    jobCompleting = false;
+                    jobManager.completeJob(arrived, 0);
+                    hud.updateMoney(jobManager.money);
+                    setTimeout(() => {
+                      const available = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+                      if (available.length > 0) jobBoard.show(available);
+                    }, 3500);
+                  }
+                });
+              } else {
+                // Regular job — scaffold result determines pay
+                finishJob(Math.max(0, scaffoldResult.qualityPct), false);
+              }
+            });
           },
           randomFrom(BRAND_SLOGANS)
         );
