@@ -435,7 +435,7 @@ export class TowerDefence {
       if (def.special === 'aoe') {
         for (const e of this._enemies) {
           if (dist(tower.x, tower.y, e.x, e.y) <= range) {
-            this._shoot(tower.id, tower.x, tower.y, e, damage, def.crewId ?? tower.crewId, true);
+            this._shoot(tower.id, tower.x, tower.y, e, damage, tower.crewId, true);
           }
         }
         // Connie uses crewId directly
@@ -733,13 +733,13 @@ export class TowerDefence {
 
     // Hover hint — highlight selected crew range on grid cells if crew is selected
     if (this._selectedCrew) {
-      ctx.fillStyle = T_DEFS[this._selectedCrew]?.color + '15' ?? '#ffffff15';
+      ctx.fillStyle = (T_DEFS[this._selectedCrew]?.color ?? '#ffffff') + '15';
       for (let r = 0; r < ROWS; r++) {
         if (r === PR && this._selectedCrew !== 'phil') continue;
         const isPhilOnPath = r === PR && this._selectedCrew === 'phil';
         for (let c = 0; c < COLS; c++) {
           if (!this._towers.find(t => t.col === c && t.row === r)) {
-            ctx.fillStyle = isPhilOnPath ? '#7F8C8D22' : (T_DEFS[this._selectedCrew]?.color + '18' ?? '#ffffff18');
+            ctx.fillStyle = isPhilOnPath ? '#7F8C8D22' : ((T_DEFS[this._selectedCrew]?.color ?? '#ffffff') + '18');
             ctx.fillRect(c * CX + 1, HH + r * CY + 1, CX - 2, CY - 2);
           }
         }
