@@ -28,6 +28,8 @@ import { TEMRadio } from './audio/TEMRadio';
 import { IntroSequence } from './ui/IntroSequence';
 import { StartMenu } from './ui/StartMenu';
 import { GameMenu } from './ui/GameMenu';
+import { CrewSelector } from './ui/CrewSelector';
+import { crewBreakImmune, crewPayMult, crewTimerBonus } from './data/CrewPerks';
 import { MarbellinoMixer } from './minigames/MarbellinoMixer';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
@@ -75,31 +77,47 @@ async function main() {
   );
   const waypointSystem = new WaypointSystem(engine.scene);
 
-  // ── Job accepted → show briefing, then start Phase 1 ────────────────────────
+  // ── Crew Selector ────────────────────────────────────────────────────────────
+  const crewSelector = new CrewSelector();
+
+  // ── Job accepted → crew selector → briefing → start Phase 1 ─────────────────
   const jobBoard = new JobBoard((job: Job) => {
     jobBoard.hide();
-    dialoguePause.show(
-      `📋 ${job.title}`,
-      `Client: ${job.client}\n\n${job.description}\n\n💰 Pay: $${job.pay.toLocaleString()}\n\n🏭 Head to the TEM workshop to collect supplies.`,
-      () => {
-        jobManager.acceptJob(job);
-        waypointSystem.setTarget(JobManager.WORKSHOP_POS);
-        hud.setActiveJob(job, 1);
-        hud.updateCrewStatus([], [], false);
-        // Schedule random breaks — can fire at any point during the job
-        jobElapsed = 0;
-        const firstAt  = 20 + Math.random() * 60;   // 20–80s in
-        const secondAt = firstAt + 20 + Math.random() * 50; // 20–70s later
-        if (Math.random() > 0.5) {
-          coffeeBreakAt = firstAt; toiletBreakAt = secondAt;
-        } else {
-          toiletBreakAt = firstAt; coffeeBreakAt = secondAt;
-        }
-        breakActive = null;
-        savedWaypoint = null;
-      },
-      randomFrom(JOB_OPENERS)
-    );
+
+    // Show crew selector first — player picks their team
+    crewSelector.show(job.title, job.pay, (_crew) => {
+      // Apply crew timer bonus to pay (perk effects)
+      const payWithBonus = Math.round(job.pay * crewPayMult());
+      const extraTime = crewTimerBonus();
+
+      dialoguePause.show(
+        `📋 ${job.title}`,
+        `Client: ${job.client}\n\n${job.description}\n\n💰 Pay: ${payWithBonus.toLocaleString()} sats${payWithBonus !== job.pay ? ` ✦ crew bonus!` : ''}\n\n🏭 Head to the TEM workshop to collect supplies.`,
+        () => {
+          job.pay = payWithBonus;   // apply crew pay bonus
+          jobManager.acceptJob(job);
+          waypointSystem.setTarget(JobManager.WORKSHOP_POS);
+          hud.setActiveJob(job, 1);
+          hud.updateCrewStatus([], [], false);
+          // Schedule random breaks — skipped entirely if Phil is in crew
+          jobElapsed = 0;
+          if (!crewBreakImmune()) {
+            const firstAt  = 20 + Math.random() * 60 + extraTime;
+            const secondAt = firstAt + 20 + Math.random() * 50;
+            if (Math.random() > 0.5) {
+              coffeeBreakAt = firstAt; toiletBreakAt = secondAt;
+            } else {
+              toiletBreakAt = firstAt; coffeeBreakAt = secondAt;
+            }
+          } else {
+            coffeeBreakAt = Infinity; toiletBreakAt = Infinity;
+          }
+          breakActive = null;
+          savedWaypoint = null;
+        },
+        randomFrom(JOB_OPENERS)
+      );
+    });
   });
 
   // ── Spill penalty callback ───────────────────────────────────────────────────
