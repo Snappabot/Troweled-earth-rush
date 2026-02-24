@@ -324,4 +324,35 @@ export class JobManager {
         const dz = vanZ - pz;
         return Math.sqrt(dx * dx + dz * dz);
     }
+    // ── CONTRACT WARS — Contested Jobs ───────────────────────────────────────
+    /**
+     * Generate a one-off contested premium job (not in the fixed ALL_JOBS list).
+     * Pay is 1.5× a random job's pay, prefixed with ⚔️, and isContested = true.
+     */
+    generateContestedJob() {
+        const bases = this.getAvailableJobs();
+        const base = bases.length > 0
+            ? bases[Math.floor(Math.random() * bases.length)]
+            : ALL_JOBS[Math.floor(Math.random() * ALL_JOBS.length)];
+        const contested = {
+            ...base,
+            id: `contested_${Date.now()}_${Math.floor(Math.random() * 9999)}`,
+            title: `⚔️ ${base.title}`,
+            pay: Math.round(base.pay * 1.5),
+            isContested: true,
+            completed: false,
+        };
+        return contested;
+    }
+    /**
+     * Returns the normal available jobs list, occasionally mixed with 1 contested job.
+     * 20% chance of a contested job appearing on the board.
+     */
+    getContestedJobs() {
+        const result = [];
+        if (Math.random() < 0.20) {
+            result.push(this.generateContestedJob());
+        }
+        return result;
+    }
 }

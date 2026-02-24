@@ -28,8 +28,11 @@ import { IntroSequence } from './ui/IntroSequence';
 import { StartMenu } from './ui/StartMenu';
 import { GameMenu } from './ui/GameMenu';
 import { CrewSelector } from './ui/CrewSelector';
-import { crewBreakImmune, crewPayMult, crewTimerBonus } from './data/CrewPerks';
+import { crewBreakImmune, crewPayMult, crewTimerBonus, getActiveCrew } from './data/CrewPerks';
 import { MarbellinoMixer } from './minigames/MarbellinoMixer';
+import { BattleScreen } from './ui/BattleScreen';
+import { ContractWar } from './gameplay/ContractWar';
+import { getRandomRival } from './data/RivalCrews';
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS = {
     Matt: "Matt folds himself into the back. \"Took your time.\" He's already on his phone.",
@@ -67,6 +70,9 @@ async function main() {
     const waypointSystem = new WaypointSystem(engine.scene);
     // ── Crew Selector ────────────────────────────────────────────────────────────
     const crewSelector = new CrewSelector();
+    // ── CONTRACT WARS — battle system ────────────────────────────────────────────
+    const battleScreen = new BattleScreen();
+    const contractWar = new ContractWar();
     // ── Job accepted → crew selector → briefing → start Phase 1 ─────────────────
     const jobBoard = new JobBoard((job) => {
         jobBoard.hide();
@@ -75,33 +81,48 @@ async function main() {
             // Apply crew timer bonus to pay (perk effects)
             const payWithBonus = Math.round(job.pay * crewPayMult());
             const extraTime = crewTimerBonus();
-            dialoguePause.show(`📋 ${job.title}`, `Client: ${job.client}\n\n${job.description}\n\n💰 Pay: ${payWithBonus.toLocaleString()} sats${payWithBonus !== job.pay ? ` ✦ crew bonus!` : ''}\n\n🏭 Head to the TEM workshop to collect supplies.`, () => {
-                job.pay = payWithBonus; // apply crew pay bonus
-                jobManager.acceptJob(job);
-                waypointSystem.setTarget(JobManager.WORKSHOP_POS);
-                hud.setActiveJob(job, 1);
-                hud.updateCrewStatus([], [], false);
-                // Schedule random breaks — skipped entirely if Phil is in crew
-                jobElapsed = 0;
-                if (!crewBreakImmune()) {
-                    const firstAt = 20 + Math.random() * 60 + extraTime;
-                    const secondAt = firstAt + 20 + Math.random() * 50;
-                    if (Math.random() > 0.5) {
-                        coffeeBreakAt = firstAt;
-                        toiletBreakAt = secondAt;
+            /** Shared function: start the job after briefing (or after battle screen) */
+            const beginJob = () => {
+                dialoguePause.show(`📋 ${job.title}`, `Client: ${job.client}\n\n${job.description}\n\n💰 Pay: ${payWithBonus.toLocaleString()} sats${payWithBonus !== job.pay ? ` ✦ crew bonus!` : ''}\n\n🏭 Head to the TEM workshop to collect supplies.`, () => {
+                    job.pay = payWithBonus; // apply crew pay bonus
+                    jobManager.acceptJob(job);
+                    waypointSystem.setTarget(JobManager.WORKSHOP_POS);
+                    hud.setActiveJob(job, 1);
+                    hud.updateCrewStatus([], [], false);
+                    // Schedule random breaks — skipped entirely if Phil is in crew
+                    jobElapsed = 0;
+                    if (!crewBreakImmune()) {
+                        const firstAt = 20 + Math.random() * 60 + extraTime;
+                        const secondAt = firstAt + 20 + Math.random() * 50;
+                        if (Math.random() > 0.5) {
+                            coffeeBreakAt = firstAt;
+                            toiletBreakAt = secondAt;
+                        }
+                        else {
+                            toiletBreakAt = firstAt;
+                            coffeeBreakAt = secondAt;
+                        }
                     }
                     else {
-                        toiletBreakAt = firstAt;
-                        coffeeBreakAt = secondAt;
+                        coffeeBreakAt = Infinity;
+                        toiletBreakAt = Infinity;
                     }
-                }
-                else {
-                    coffeeBreakAt = Infinity;
-                    toiletBreakAt = Infinity;
-                }
-                breakActive = null;
-                savedWaypoint = null;
-            }, randomFrom(JOB_OPENERS));
+                    breakActive = null;
+                    savedWaypoint = null;
+                }, randomFrom(JOB_OPENERS));
+            };
+            if (job.isContested) {
+                // ── CONTRACT WARS: show pre-battle screen, then start rival tracker ──
+                const rival = getRandomRival();
+                battleScreen.show(getActiveCrew(), rival, () => {
+                    // Battle screen countdown done — start the rival tracker
+                    contractWar.start(rival);
+                    beginJob();
+                });
+            }
+            else {
+                beginJob();
+            }
         });
     });
     // ── Spill penalty callback ───────────────────────────────────────────────────
@@ -131,8 +152,10 @@ async function main() {
     const gameMenu = new GameMenu(() => achievementGallery.show(), () => {
         if (jobBoard.isVisible())
             jobBoard.hide();
-        else
-            jobBoard.show(jobManager.getAvailableJobs());
+        else {
+            const jobs = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+            jobBoard.show(jobs);
+        }
     }, () => marbellinoMixer.show((pts) => {
         if (pts > 0) {
             jobManager.money += pts * 1_000; // reward sats per correct formula
@@ -178,6 +201,9 @@ async function main() {
         // ── Normal game loop ──────────────────────────────────────────────────────
         physics.update(dt);
         van.updateSuspension(dt);
+        // ── CONTRACT WARS — tick rival progress ───────────────────────────────────
+        if (contractWar.isActive())
+            contractWar.update(dt);
         const jobActive = jobManager.activeJob !== null && jobManager.activePhase >= 2;
         spillMeter.setVisible(jobActive);
         if (jobActive) {
@@ -252,7 +278,11 @@ async function main() {
                 hud.updateMoney(jobManager.money);
                 hud.updateCrewStatus([], [], false);
                 characters.showAllCrew();
-                setTimeout(() => jobBoard.show(jobManager.getAvailableJobs()), 3500);
+                setTimeout(() => {
+                    contractWar.end();
+                    const jobs = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+                    jobBoard.show(jobs);
+                }, 3500);
             }
         }
         else {
@@ -403,6 +433,11 @@ async function main() {
                     radio.setVisible(false);
                     miniGameManager.startRandom((result) => {
                         radio.setVisible(true);
+                        // CONTRACT WARS — player finished; mark complete and stop rival
+                        if (contractWar.isActive()) {
+                            contractWar.setPlayerProgress(1.0);
+                            contractWar.end();
+                        }
                         const earned = jobManager.completeJob(arrived, result.qualityPct);
                         if (earned < 0) {
                             hud.showPenalty(arrived.title, Math.abs(earned));
@@ -423,7 +458,10 @@ async function main() {
                         }
                         else {
                             setTimeout(() => {
-                                const available = jobManager.getAvailableJobs();
+                                const available = [
+                                    ...jobManager.getAvailableJobs(),
+                                    ...jobManager.getContestedJobs(),
+                                ];
                                 if (available.length > 0)
                                     jobBoard.show(available);
                             }, 3500);
@@ -435,9 +473,10 @@ async function main() {
         engine.camera.follow(van.mesh.position, van.velocity, van.heading);
         hud.update(physics.speed, spillMeter.level);
     });
-    // Show job board on first load
+    // Show job board on first load (mix in contested jobs 20% of the time)
     setTimeout(() => {
-        jobBoard.show(jobManager.getAvailableJobs());
+        const jobs = [...jobManager.getAvailableJobs(), ...jobManager.getContestedJobs()];
+        jobBoard.show(jobs);
     }, 1000);
     engine.start();
 }
