@@ -396,7 +396,7 @@ export class JobManager {
   getContestedJobs(): Job[] {
     const result: Job[] = [];
     result.push(this.generateContestedJob());
-    if (Math.random() < 0.30) result.push(this.generateContestedJob());
+    if (Math.random() < 0.40) result.push(this.generateContestedJob());
     return result;
   }
 }
