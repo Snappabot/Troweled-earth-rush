@@ -33,7 +33,7 @@ interface Plat {
 }
 interface SwingBar { anchorX: number; anchorY: number; radius: number; mesh: THREE.Mesh; }
 interface ClimbPole { x: number; y1: number; y2: number; }
-interface FallingGlob { x: number; y: number; vx: number; vy: number; r: number; mesh: THREE.Mesh; dead: boolean; }
+interface FallingGlob { x: number; y: number; vx: number; vy: number; r: number; mesh: THREE.Mesh; shadowRing: THREE.Mesh; dead: boolean; }
 
 export class ScaffoldGame {
   private overlay!: HTMLDivElement;
@@ -79,6 +79,7 @@ export class ScaffoldGame {
   private throwCount = 0;                // tracks bionic burst trigger
   private bionichipActive = false;       // bionic burst mode flag
   private bionichipBurstLeft = 0;        // globs left to fire in burst
+  private invincT = 0;                   // invincibility frames after hit (seconds)
 
   // Connie's bionic personality taunt lines
   private readonly CONNIE_TAUNTS = [
@@ -415,23 +416,38 @@ export class ScaffoldGame {
 
   // ── Falling plaster glob (thrown by Connie) ────────────────────────────────
   private _spawnGlob(): void {
-    // Spawn from Connie's current position with slight random spread
-    const sx = this.connTopX + (Math.random() - 0.5) * 3;
-    const sy = GOAL_Y - 0.5;
-    const geo = new THREE.SphereGeometry(0.32, 8, 8);
+    // Spawn just above the top of camera view so player always sees it coming
+    const camTop = this.camera.position.y + 11;
+    const spawnY = Math.min(camTop, GOAL_Y);
+    const sx = this.connTopX + (Math.random() - 0.5) * 4;
+
+    // Glob — big, bright, unmissable
+    const geo = new THREE.SphereGeometry(0.85, 10, 10);
     const mat = new THREE.MeshLambertMaterial({
-      color: 0xE8D4A0, emissive: 0x997733, emissiveIntensity: 0.4
+      color: 0xFF6622, emissive: 0xCC3300, emissiveIntensity: 0.9
     });
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(sx, sy, 0.5);
+    mesh.position.set(sx, spawnY, 0.5);
     mesh.castShadow = true;
     this.scene.add(mesh);
+
+    // Target shadow ring — pulsing red circle on the ground below
+    const ringGeo = new THREE.RingGeometry(0.6, 1.1, 20);
+    const ringMat = new THREE.MeshBasicMaterial({
+      color: 0xFF2200, transparent: true, opacity: 0.75, side: THREE.DoubleSide
+    });
+    const shadowRing = new THREE.Mesh(ringGeo, ringMat);
+    shadowRing.rotation.x = -Math.PI / 2;
+    shadowRing.position.set(sx, 0.3, 0.5);
+    this.scene.add(shadowRing);
+
     this.globs.push({
-      x: sx, y: sy,
-      vx: (Math.random() - 0.5) * 4,  // slight horizontal drift
-      vy: 2,                            // tiny upward launch, gravity pulls down fast
-      r: 0.32,
+      x: sx, y: spawnY,
+      vx: (Math.random() - 0.5) * 3.5,
+      vy: -4,   // already moving down fast — no arc
+      r: 0.85,
       mesh,
+      shadowRing,
       dead: false,
     });
   }
@@ -662,9 +678,9 @@ export class ScaffoldGame {
       } else {
         this._spawnGlob();
       }
-      // Next throw: gets faster as timer runs down
-      const urgency = Math.max(0.7, this.timer / 120);
-      this.globSpawnTimer = (2.5 + Math.random() * 2.0) * urgency;
+      // Next throw: 1.5–3s, gets faster as timer runs down
+      const urgency = Math.max(0.55, this.timer / 120);
+      this.globSpawnTimer = (1.5 + Math.random() * 1.5) * urgency;
       // Set next taunt line
       if (this.warningEl) {
         if (this.throwCount % 4 === 3) {
@@ -679,6 +695,15 @@ export class ScaffoldGame {
       }
     }
 
+    // Tick invincibility
+    if (this.invincT > 0) {
+      this.invincT -= dt;
+      // Flash player during invincibility
+      this.charGroup.visible = Math.sin(this.invincT * 25) > 0;
+    } else {
+      this.charGroup.visible = true;
+    }
+
     // ── Update globs ──────────────────────────────────────────────────────
     for (const g of this.globs) {
       if (g.dead) continue;
@@ -686,17 +711,34 @@ export class ScaffoldGame {
       g.x += g.vx * dt;
       g.y += g.vy * dt;
       g.mesh.position.set(g.x, g.y, 0.5);
-      g.mesh.rotation.z += 3 * dt; // spin for visual flair
+      g.mesh.rotation.z += 4 * dt;
 
-      // Player hit
-      if (!this.delivered) {
+      // Pulse shadow ring — grows + brightens as glob approaches ground
+      const heightFrac = Math.max(0, Math.min(1, g.y / (GOAL_Y + 5)));
+      const ringScale = 1.0 + (1 - heightFrac) * 1.2; // grows as it falls
+      const ringOpacity = 0.4 + (1 - heightFrac) * 0.55;
+      g.shadowRing.position.x = g.x;
+      g.shadowRing.scale.setScalar(ringScale);
+      (g.shadowRing.material as THREE.MeshBasicMaterial).opacity = ringOpacity;
+
+      // Player hit (skip if invincible)
+      if (!this.delivered && this.invincT <= 0) {
         const dx = Math.abs(this.px - g.x);
-        const dy = g.y - this.py;  // positive when glob is above player's feet
-        if (dx < PW + g.r + 0.1 && dy > -0.5 && dy < PH + g.r) {
+        const dy = g.y - this.py;
+        if (dx < PW + g.r + 0.15 && dy > -0.5 && dy < PH + g.r) {
           g.dead = true;
           this.scene.remove(g.mesh);
-          this._loseLife();
-          if (this.gameOver) return;
+          this.scene.remove(g.shadowRing);
+          this.lives--;
+          this._updateHearts();
+          if (this.lives <= 0) { this._end(false); return; }
+          // Knockback — heavy downward/sideways push, player falls to platform below naturally
+          this.vy = -18;
+          this.vx = (this.px > g.x ? 1 : -1) * 5;
+          this.onGround = false; this.jumpsLeft = 1;
+          this.climbPole = null; this.swingBar = null;
+          this.invincT = 1.2; // 1.2s invincibility
+          continue;
         }
       }
 
@@ -707,12 +749,14 @@ export class ScaffoldGame {
               Math.abs(g.y - p.y) < 0.5 && g.vy <= 0) {
             g.dead = true;
             this.scene.remove(g.mesh);
+            this.scene.remove(g.shadowRing);
             break;
           }
         }
         if (!g.dead && g.y < -2) {
           g.dead = true;
           this.scene.remove(g.mesh);
+          this.scene.remove(g.shadowRing);
         }
       }
     }
@@ -942,9 +986,10 @@ export class ScaffoldGame {
 
   private _cleanup(): void {
     cancelAnimationFrame(this.rafId);
-    // Remove any in-flight globs
+    // Remove any in-flight globs + their shadow rings
     for (const g of this.globs) {
-      if (!g.dead) this.scene.remove(g.mesh);
+      this.scene.remove(g.mesh);
+      this.scene.remove(g.shadowRing);
     }
     this.globs = [];
     this.renderer.dispose();
