@@ -86,7 +86,7 @@ const STATIONS: Station[] = [
       "Jarrad called in. Said he's been waiting fifteen minutes. Legend.",
     ],
     bpm: 140, rootHz: 164.81, vibe: 'rock', color: '#C1666B',
-    // no audioFile — uses generative rock drums
+    audioFile: AUDIO.scaffold,
   },
   {
     id: 'fabio-pizza',

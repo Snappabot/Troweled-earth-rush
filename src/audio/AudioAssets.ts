@@ -14,5 +14,6 @@ export const AUDIO = {
   radio6:  `${BASE}audio/radio6.aac`,   // Warlord Sessions station
   radio7:  `${BASE}audio/radio7.aac`,   // Tsuyoshi FM station
   radio8:  `${BASE}audio/radio8.m4a`,   // Jarrad's station
-  connie:  `${BASE}audio/connie.aac`,   // Connie's Gold station
+  connie:   `${BASE}audio/connie.aac`,   // Connie's Gold station
+  scaffold: `${BASE}audio/scaffold.m4a`, // The Scaffold station
 } as const;
