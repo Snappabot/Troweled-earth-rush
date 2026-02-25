@@ -9,4 +9,5 @@ export const AUDIO = {
   radio1:  `${BASE}audio/radio1.m4a`,
   radio2:  `${BASE}audio/radio2.m4a`,
   radio3:  `${BASE}audio/radio3.m4a`,
+  radio4:  `${BASE}audio/theme.m4a`,    // The Scaffold station
 } as const;
