@@ -204,8 +204,8 @@ const ALL_JOBS: Job[] = [
 const ALL_CREW_NAMES = ['Jose', 'Jarrad', 'Matt', 'Phil', 'Tsuyoshi', 'Fabio'];
 
 export class JobManager {
-  /** Fixed workshop location — near spawn, TEM depot */
-  static readonly WORKSHOP_POS = { x: 10, z: 15 };
+  /** Fixed workshop location — TEM depot (away from van spawn at 0,0) */
+  static readonly WORKSHOP_POS = { x: -60, z: 30 };
 
   private jobs: Job[] = ALL_JOBS.map(j => ({ ...j }));
   activeJob: Job | null = null;

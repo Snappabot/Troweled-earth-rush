@@ -211,7 +211,7 @@ export class MarbellinoMixer {
     const xBtn=document.createElement('button');
     xBtn.textContent='✕';
     xBtn.style.cssText=`background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.45);font-size:16px;width:34px;height:34px;border-radius:50%;cursor:pointer;flex-shrink:0;`;
-    xBtn.addEventListener('click',()=>this._cleanup());
+    xBtn.addEventListener('click',()=>{this._cleanup();this._fireOnDone(0);});
     hdr.appendChild(xBtn);
     panel.appendChild(hdr);
 
@@ -601,7 +601,7 @@ export class MarbellinoMixer {
     if(this.mixBtn){this.mixBtn.textContent='🏆 CRACKED!';this.mixBtn.style.background='linear-gradient(135deg,#2a8a44,#1a6030)';this.mixBtn.style.color='#88FFcc';this.mixBtn.disabled=true;}
     if(this.fireBtn) this.fireBtn.disabled=true;
     const pts=Math.round(((pct-82)/18)*40);
-    setTimeout(()=>{this._cleanup();this.onDone?.(pts);},4500);
+    setTimeout(()=>{this._cleanup();this._fireOnDone(pts);},4500);
   }
 
   private _triggerTimeout():void{
@@ -615,7 +615,7 @@ export class MarbellinoMixer {
       this.mixBtn.style.background='rgba(100,30,20,0.9)';
       this.mixBtn.style.color='#FF9988';
       this.mixBtn.textContent='Close';
-      this.mixBtn.addEventListener('click',()=>{this._cleanup();this.onDone?.(0);},{once:true});
+      this.mixBtn.addEventListener('click',()=>{this._cleanup();this._fireOnDone(0);},{once:true});
     }
   }
 
@@ -995,6 +995,11 @@ export class MarbellinoMixer {
   }
 
   // ── Cleanup ────────────────────────────────────────────────────────────────
+  /** Fire onDone exactly once — nulls it first to prevent double-calls */
+  private _fireOnDone(pts:number):void{
+    const cb=this.onDone; this.onDone=null; cb?.(pts);
+  }
+
   private _cleanup():void{
     this._stopTimer(); cancelAnimationFrame(this.rafId);
     document.getElementById('mmv4-ov')?.remove();
