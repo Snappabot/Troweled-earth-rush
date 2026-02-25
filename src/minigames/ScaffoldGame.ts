@@ -76,6 +76,20 @@ export class ScaffoldGame {
   private connTopMesh: THREE.Group | null = null;
   private warnT = 0;                     // countdown before throw
   private warningEl: HTMLDivElement | null = null;
+  private throwCount = 0;                // tracks bionic burst trigger
+  private bionichipActive = false;       // bionic burst mode flag
+  private bionichipBurstLeft = 0;        // globs left to fire in burst
+
+  // Connie's bionic personality taunt lines
+  private readonly CONNIE_TAUNTS = [
+    '🪣 Watch the silicone!',
+    '⚡ Metal hip, no miss!',
+    '🦾 Bionic arm activated!',
+    '💀 Duck, Jarrad!',
+    '🪣 Plasterin\' from above!',
+    '😈 Try me, hardhat!',
+  ];
+  private readonly BIONIC_WARNING = '⚡⚡ BIONIC BURST!!';
 
   // HUD
   private heartsEl!: HTMLDivElement;
@@ -172,6 +186,10 @@ export class ScaffoldGame {
     this.connTopMesh.scale.setScalar(0.85);
     this.connTopMesh.position.set(0, GOAL_Y + 0.5, 0.3);
     this.scene.add(this.connTopMesh);
+    // Bionic glow light (attached to Connie, pulsed when in burst mode)
+    const bionichipLight = new THREE.PointLight(0x8844FF, 0, 6);
+    bionichipLight.name = 'bionichipLight';
+    this.connTopMesh.add(bionichipLight);
   }
 
   // ── Background city / building facade ─────────────────────────────────────
@@ -609,6 +627,15 @@ export class ScaffoldGame {
     if (this.connTopMesh) {
       this.connTopMesh.position.x = this.connTopX;
       this.connTopMesh.rotation.y = this.connTopDir > 0 ? -0.2 : Math.PI + 0.2;
+      // Bionic hip glow during burst
+      const bLight = this.connTopMesh.getObjectByName('bionichipLight') as THREE.PointLight | undefined;
+      if (bLight) {
+        bLight.intensity = this.bionichipActive ? 2.5 + Math.sin(performance.now() * 0.02) * 1.5 : 0;
+      }
+      // Move faster during bionic burst
+      if (this.bionichipActive) {
+        this.connTopX += this.CONN_TOP_SPD * 2.5 * this.connTopDir * dt;
+      }
     }
 
     // Warning countdown before throw
@@ -617,11 +644,39 @@ export class ScaffoldGame {
       this.warningEl.style.display = 'block';
     }
     if (this.globSpawnTimer <= 0) {
-      this._spawnGlob();
-      if (this.warningEl) this.warningEl.style.display = 'none';
-      // Next throw: 2.5–4.5s (gets faster as timer runs down — more frantic)
+      this.throwCount++;
+      const isBionic = this.throwCount % 4 === 0; // every 4th throw = bionic burst
+      if (this.warningEl) {
+        this.warningEl.style.display = 'none';
+        this.warningEl.style.background = 'rgba(200,0,0,0.85)';
+      }
+      if (isBionic) {
+        // Bionic burst: 3 rapid globs
+        this.bionichipActive = true;
+        this.bionichipBurstLeft = 2; // spawn 1 now + 2 more via timer
+        this._spawnGlob();
+        // Schedule 2 more globs 0.25s apart
+        setTimeout(() => { if (!this.gameOver) this._spawnGlob(); }, 250);
+        setTimeout(() => { if (!this.gameOver) this._spawnGlob(); }, 500);
+        setTimeout(() => { this.bionichipActive = false; }, 600);
+      } else {
+        this._spawnGlob();
+      }
+      // Next throw: gets faster as timer runs down
       const urgency = Math.max(0.7, this.timer / 120);
       this.globSpawnTimer = (2.5 + Math.random() * 2.0) * urgency;
+      // Set next taunt line
+      if (this.warningEl) {
+        if (this.throwCount % 4 === 3) {
+          // Pre-announce bionic on the throw BEFORE it hits
+          this.warningEl.textContent = this.BIONIC_WARNING;
+          this.warningEl.style.background = 'rgba(80,0,180,0.92)';
+        } else {
+          const t = this.CONNIE_TAUNTS[Math.floor(Math.random() * this.CONNIE_TAUNTS.length)];
+          this.warningEl.textContent = t;
+          this.warningEl.style.background = 'rgba(200,0,0,0.85)';
+        }
+      }
     }
 
     // ── Update globs ──────────────────────────────────────────────────────

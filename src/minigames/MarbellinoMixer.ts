@@ -142,6 +142,12 @@ export class MarbellinoMixer {
   private connieHitT=0;
   private bucketFlashT=0;
 
+  // Bionic hip
+  private bionichipTimer=10+Math.random()*6;  // seconds until first lunge
+  private bionichipActive=false;
+  private bionichipT=0;                        // remaining duration of active burst
+  private readonly BIONIC_DURATION=2.2;
+
   // Mix
   private currentMix='#F8F6F0';
   private displayMix='#F8F6F0';
@@ -163,6 +169,7 @@ export class MarbellinoMixer {
     this.solved=false; this.timer=90; this.shots={B:0,Y:0,L:0,R:0,G:0};
     this.sel='B'; this.ball=null; this.splats=[];
     this.connieHitT=0; this.bucketFlashT=0;
+    this.bionichipActive=false; this.bionichipT=0; this.bionichipTimer=10+Math.random()*6;
     this.currentMix='#F8F6F0'; this.displayMix='#F8F6F0';
     this.mixState='idle'; this.mixT=0; this.matchValue=0; this.mixedResult='';
     this.isAiming=false; this.hasFired=false;
@@ -199,7 +206,7 @@ export class MarbellinoMixer {
     hdr.innerHTML=`<div>
       <div style="color:#C8A86A;font-size:10px;font-weight:800;letter-spacing:4px;opacity:0.7;">TEM WORKSHOP</div>
       <div style="color:#fff;font-size:18px;font-weight:900;">🎨 MARBELLINO MIXER</div>
-      <div style="color:rgba(200,168,106,0.5);font-size:11px;margin-top:2px;">Hit the moving bucket — Connie won't hold still!</div>
+      <div style="color:rgba(200,168,106,0.5);font-size:11px;margin-top:2px;">Metal hip. Silicone. Bionic powers. Good luck.</div>
     </div>`;
     const xBtn=document.createElement('button');
     xBtn.textContent='✕';
@@ -446,7 +453,24 @@ export class MarbellinoMixer {
         if(this.connX>=this.connMaxX){ this.connX=this.connMaxX; this.connDir=-1; this.connPauseT=0.25+Math.random()*0.6; }
         if(this.connX<=this.connMinX){ this.connX=this.connMinX; this.connDir=1;  this.connPauseT=0.25+Math.random()*0.6; }
         // Occasional random speed bump
-        if(Math.random()<dt*0.3) this.connSpeed=(55+Math.random()*50)*(this.W/400);
+        if(!this.bionichipActive && Math.random()<dt*0.3) this.connSpeed=(55+Math.random()*50)*(this.W/400);
+
+        // ── Bionic hip burst ──────────────────────────────────────────────
+        this.bionichipTimer-=dt;
+        if(this.bionichipTimer<=0&&!this.bionichipActive){
+          this.bionichipActive=true;
+          this.bionichipT=this.BIONIC_DURATION;
+          // Lunge at triple speed
+          this.connSpeed=(220+Math.random()*80)*(this.W/400);
+        }
+        if(this.bionichipActive){
+          this.bionichipT-=dt;
+          if(this.bionichipT<=0){
+            this.bionichipActive=false;
+            this.bionichipTimer=8+Math.random()*7; // next burst in 8-15s
+            this.connSpeed=(55+Math.random()*50)*(this.W/400);
+          }
+        }
       }
       this.cnX=Math.round(this.connX);
       this.bkX=Math.round(this.connX-62*(this.W/400));
@@ -770,14 +794,44 @@ export class MarbellinoMixer {
     ctx.beginPath(); ctx.arc(cx+16*(this.W/400),cy-bh*0.47,4.5*(this.W/400),0,Math.PI*2); ctx.fillStyle=skin; ctx.fill();
     ctx.lineCap='butt';
 
+    // ── Bionic hip glow (electric purple aura around hips) ─────────────────
+    if(this.bionichipActive){
+      const t=performance.now()/120;
+      const gAlpha=0.35+Math.sin(t)*0.2;
+      const hipY=cy-bh*0.35;
+      const grad=ctx.createRadialGradient(cx,hipY,2*(this.W/400),cx,hipY,22*(this.W/400));
+      grad.addColorStop(0,`rgba(160,80,255,${gAlpha*1.2})`);
+      grad.addColorStop(0.5,`rgba(100,40,200,${gAlpha})`);
+      grad.addColorStop(1,'transparent');
+      ctx.fillStyle=grad;
+      ctx.beginPath(); ctx.ellipse(cx,hipY,22*(this.W/400),14*(this.W/400),0,0,Math.PI*2); ctx.fill();
+      // Electric sparks
+      ctx.save(); ctx.strokeStyle=`rgba(200,140,255,${0.6+Math.sin(t*3)*0.3})`; ctx.lineWidth=1.5*(this.W/400); ctx.lineCap='round';
+      for(let s=0;s<4;s++){
+        const sa=t+s*Math.PI/2;
+        const sr=14*(this.W/400);
+        const ex=cx+Math.cos(sa)*sr; const ey=hipY+Math.sin(sa)*sr*0.6;
+        ctx.beginPath(); ctx.moveTo(cx+Math.cos(sa+0.3)*6*(this.W/400),hipY+Math.sin(sa+0.3)*4*(this.W/400));
+        ctx.lineTo(ex,ey); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     if(hit){
       ctx.font=`bold ${Math.round(11*(this.W/400))}px system-ui`; ctx.fillStyle='#FF4422';
-      ctx.textAlign='center'; ctx.fillText('JOSE!!! 😤',cx,cy-bh-6*(this.W/400));
+      ctx.textAlign='center';
+      ctx.fillText(this.bionichipActive?'OW MY SILICONE!! 😱':'JOSE!!! 😤',cx,cy-bh-6*(this.W/400));
       ctx.textAlign='start';
     }
 
-    // Speed indicator when moving fast
-    if(moving&&this.connSpeed>(80*(this.W/400))){
+    // Speed indicator / bionic taunt
+    if(this.bionichipActive){
+      ctx.save(); ctx.globalAlpha=0.85+Math.sin(performance.now()/80)*0.15;
+      ctx.font=`bold ${Math.round(11*(this.W/400))}px system-ui`;
+      ctx.fillStyle='#CC88FF'; ctx.textAlign='center';
+      ctx.fillText('⚡ BIONIC HIP!',cx,cy-bh-4*(this.W/400));
+      ctx.restore();
+    } else if(moving&&this.connSpeed>(80*(this.W/400))){
       ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle='#FF9944';
       ctx.font=`bold ${Math.round(10*(this.W/400))}px system-ui`;
       ctx.textAlign='center';
