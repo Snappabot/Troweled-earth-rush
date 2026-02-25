@@ -131,6 +131,27 @@ const STATIONS: Station[] = [
     audioFile: AUDIO.radio3,
   },
   {
+    id: 'jarrad-fm',
+    name: 'JARRAD FM',
+    freq: '105.9',
+    tagline: "He's Running Late But He's Here",
+    songs: [
+      '★ Five Floors No Fear [Radio Cut]',
+      'Topknot Thunder',
+      'Scaffold or Die',
+      'Left My Phone on Level 4',
+      'Running Late (Again)',
+    ],
+    dj: [
+      "Jarrad FM 105.9 — yeah nah yeah nah yeah.",
+      "That was Jarrad. He submitted it from the scaffold. Mid-climb.",
+      "105.9 — for the ones who take the stairs AND the poles.",
+      "Jarrad called in. Said he's almost there. That was 40 minutes ago.",
+    ],
+    bpm: 128, rootHz: 174.61, vibe: 'rock', color: '#E8A830',
+    audioFile: AUDIO.radio8,
+  },
+  {
     id: 'tsuyoshi-fm',
     name: 'TSUYOSHI FM',
     freq: '104.5',
