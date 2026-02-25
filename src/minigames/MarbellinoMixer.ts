@@ -219,7 +219,8 @@ export class MarbellinoMixer {
     tsw.style.cssText=`width:56px;height:56px;border-radius:12px;border:2.5px solid rgba(200,168,106,0.5);background:${this.target!.hex};box-shadow:0 4px 18px rgba(0,0,0,0.4);flex-shrink:0;`;
     const stars='★'.repeat(this.target!.difficulty)+'☆'.repeat(3-this.target!.difficulty);
     const tlbl=document.createElement('div');
-    tlbl.innerHTML=`<div style="color:rgba(255,255,255,0.3);font-size:9px;font-weight:700;letter-spacing:2px;text-align:center;">TARGET</div><div id="mmv4-name" style="color:#fff;font-size:14px;font-weight:900;text-align:center;">???</div><div style="color:#C8A86A;font-size:10px;text-align:center;">${stars}</div>`;
+    const _tFormula=Object.entries(this.target!.shots).filter(([,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(' · ');
+    tlbl.innerHTML=`<div style="color:rgba(255,255,255,0.3);font-size:9px;font-weight:700;letter-spacing:2px;text-align:center;">TARGET</div><div id="mmv4-name" style="color:#fff;font-size:13px;font-weight:900;text-align:center;">${this.target!.name}</div><div style="color:#FFD080;font-size:10px;font-weight:900;text-align:center;margin-top:2px;letter-spacing:0.5px;">${_tFormula}</div><div style="color:#C8A86A;font-size:10px;text-align:center;">${stars}</div>`;
     targetCol.appendChild(tsw); targetCol.appendChild(tlbl);
 
     // 4×4 colour palette grid — all 16 targets
@@ -255,7 +256,7 @@ export class MarbellinoMixer {
     // Connie movement hint
     const moveHint=document.createElement('div');
     moveHint.style.cssText=`text-align:center;color:rgba(255,120,50,0.7);font-size:10px;font-weight:700;padding:3px 16px 0;letter-spacing:1px;`;
-    moveHint.textContent='⚠️ CONNIE IS MOVING — time your shots!';
+    moveHint.textContent='🎯 MATCH THE RECIPE — skill of the shot counts!';
     panel.appendChild(moveHint);
 
     // Canvas pointer events for aiming
@@ -567,11 +568,10 @@ export class MarbellinoMixer {
     markSolved(this.target!.name);
     this.mixState='success'; this.mixT=0;
     const nameEl=document.getElementById('mmv4-name');
-    if(nameEl){nameEl.textContent=this.target!.name;nameEl.style.color='#44DD88';}
+    if(nameEl){nameEl.style.color='#44DD88';}
     const hint=document.getElementById('mmv4-hint');
     if(hint){
-      const f=PIGS.filter(p=>this.target!.shots[p.key as PKey]>0).map(p=>`${p.key}=${this.target!.shots[p.key as PKey]}`).join(' · ');
-      hint.textContent=`✓ ${f}   (${getSolved().size}/${MIXER_FORMULAS.length} cracked)`;
+      hint.textContent=`✓ Cracked! (${getSolved().size}/${MIXER_FORMULAS.length} done)`;
       hint.style.color='#44DD8888';
     }
     if(this.mixBtn){this.mixBtn.textContent='🏆 CRACKED!';this.mixBtn.style.background='linear-gradient(135deg,#2a8a44,#1a6030)';this.mixBtn.style.color='#88FFcc';this.mixBtn.disabled=true;}
@@ -585,7 +585,7 @@ export class MarbellinoMixer {
     this._stopTimer(); this.mixState='fail'; this.mixT=0;
     if(this.timerEl){this.timerEl.textContent='0:00';this.timerEl.style.color='#FF4444';}
     const nameEl=document.getElementById('mmv4-name');
-    if(nameEl){nameEl.textContent=`${this.target!.name} ← answer`;nameEl.style.color='#FF8866';}
+    if(nameEl){nameEl.style.color='#FF8866';}
     if(this.mixBtn){
       this.mixBtn.disabled=false;
       this.mixBtn.style.background='rgba(100,30,20,0.9)';

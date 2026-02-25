@@ -33,6 +33,7 @@ interface Plat {
 }
 interface SwingBar { anchorX: number; anchorY: number; radius: number; mesh: THREE.Mesh; }
 interface ClimbPole { x: number; y1: number; y2: number; }
+interface FallingGlob { x: number; y: number; vx: number; vy: number; r: number; mesh: THREE.Mesh; dead: boolean; }
 
 export class ScaffoldGame {
   private overlay!: HTMLDivElement;
@@ -65,6 +66,16 @@ export class ScaffoldGame {
   private platforms: Plat[] = [];
   private poles: ClimbPole[] = [];
   private swingBars: SwingBar[] = [];
+
+  // Connie at top — throws falling globs
+  private globs: FallingGlob[] = [];
+  private globSpawnTimer = 3.5;          // first throw at 3.5s
+  private connTopX = 0;
+  private connTopDir = 1;
+  private readonly CONN_TOP_SPD = 2.8;  // units/s
+  private connTopMesh: THREE.Group | null = null;
+  private warnT = 0;                     // countdown before throw
+  private warningEl: HTMLDivElement | null = null;
 
   // HUD
   private heartsEl!: HTMLDivElement;
@@ -154,6 +165,13 @@ export class ScaffoldGame {
     this.charGroup = this.char.group;
     this.charGroup.scale.setScalar(1.0);
     this.scene.add(this.charGroup);
+
+    // Connie at top — throws plaster globs down
+    const connieCrew = new CrewCharacter(CREW_CONFIGS['Connie']);
+    this.connTopMesh = connieCrew.group;
+    this.connTopMesh.scale.setScalar(0.85);
+    this.connTopMesh.position.set(0, GOAL_Y + 0.5, 0.3);
+    this.scene.add(this.connTopMesh);
   }
 
   // ── Background city / building facade ─────────────────────────────────────
@@ -235,41 +253,40 @@ export class ScaffoldGame {
       this._addDiag(PX, y0, -PX, y1);
     }
 
-    // ── Wooden plank platforms ───────────────────────────────────────────────
-    // Floor 0 — full wide ground (start), easy take-off
-    this._addPlat(-7.5, 7.5, 0, 'normal');
+    // ── Wooden plank platforms (HARD — fewer, smaller, bigger gaps) ──────────
+    // Floor 0 — narrow starting pad (not wall-to-wall anymore)
+    this._addPlat(-4.5, 4.5, 0, 'normal');
 
-    // Floor 1 — two sections with a gap in the centre
-    this._addPlat(-7.5, -1.2, FLOOR_H * 1, 'normal');
-    this._addPlat(1.2, 7.5, FLOOR_H * 1, 'normal');
+    // Floor 1 — two stubby pads with a big centre gap
+    this._addPlat(-7.5, -2.5, FLOOR_H * 1, 'normal');
+    this._addPlat(2.5, 7.5, FLOOR_H * 1, 'normal');
 
-    // Floor 2 — left section + crumbling right
-    this._addPlat(-7.5, -1.0, FLOOR_H * 2, 'normal');
-    this._addPlat(2.0, 7.5, FLOOR_H * 2, 'crumble');
+    // Floor 2 — crumble left, small normal right
+    this._addPlat(-7.5, -2.0, FLOOR_H * 2, 'crumble');
+    this._addPlat(3.5, 7.5, FLOOR_H * 2, 'normal');
 
-    // Floor 3 — three small pads + a moving platform crossing the gap
-    this._addPlat(-7.5, -3.0, FLOOR_H * 3, 'normal');
-    this._addPlat(3.0, 7.5, FLOOR_H * 3, 'normal');
-    this._addPlat(-2.0, 2.0, FLOOR_H * 3, 'moving');
+    // Floor 3 — small outer pads + narrow moving centre
+    this._addPlat(-7.5, -4.5, FLOOR_H * 3, 'normal');
+    this._addPlat(-1.5, 1.5, FLOOR_H * 3, 'moving');
+    this._addPlat(4.5, 7.5, FLOOR_H * 3, 'normal');
 
-    // Floor 4 — full except large gap right
-    this._addPlat(-7.5, 1.5, FLOOR_H * 4, 'normal');
-    this._addPlat(4.0, 7.5, FLOOR_H * 4, 'crumble');
+    // Floor 4 — only crumble left, normal on far right (big gap in middle)
+    this._addPlat(-7.5, -3.5, FLOOR_H * 4, 'crumble');
+    this._addPlat(4.0, 7.5, FLOOR_H * 4, 'normal');
 
-    // Floor 5 — staggered stepping stones
-    this._addPlat(-7.5, -4.0, FLOOR_H * 5, 'normal');
-    this._addPlat(-1.5, 1.5, FLOOR_H * 5 + 0.8, 'normal');  // slight rise
-    this._addPlat(4.0, 7.5, FLOOR_H * 5, 'normal');
+    // Floor 5 — tiny pads, slight height variation
+    this._addPlat(-7.5, -5.0, FLOOR_H * 5, 'normal');
+    this._addPlat(-1.2, 1.2, FLOOR_H * 5 + 1.0, 'moving');  // raised + moving
+    this._addPlat(5.0, 7.5, FLOOR_H * 5, 'crumble');
 
-    // Floor 6 — moving platform + narrow planks
-    this._addPlat(-7.5, -4.5, FLOOR_H * 6, 'normal');
-    this._addPlat(4.5, 7.5, FLOOR_H * 6, 'normal');
-    this._addPlat(-3.0, 3.0, FLOOR_H * 6, 'moving');
+    // Floor 6 — only a moving platform, outer crumbles at edges
+    this._addPlat(-7.5, -5.5, FLOOR_H * 6, 'crumble');
+    this._addPlat(-2.5, 2.5, FLOOR_H * 6, 'moving');          // the only reliable path
+    this._addPlat(5.5, 7.5, FLOOR_H * 6, 'crumble');
 
-    // Floor 7 — mostly open, crumble on both sides
-    this._addPlat(-7.5, -4.5, FLOOR_H * 7, 'crumble');
-    this._addPlat(-1.5, 1.5, FLOOR_H * 7, 'normal');  // safe centre
-    this._addPlat(4.5, 7.5, FLOOR_H * 7, 'crumble');
+    // Floor 7 — nightmare: tiny crumble pads only, poles are the solution
+    this._addPlat(-7.5, -5.0, FLOOR_H * 7, 'crumble');
+    this._addPlat(5.0, 7.5, FLOOR_H * 7, 'crumble');
 
     // ── Swing bars (golden grab bars mid-floor) ───────────────────────────────
     this._addSwingBar(0, FLOOR_H * 1 + 2.5, 2.8);   // F1→2 bridge
@@ -378,6 +395,29 @@ export class ScaffoldGame {
     this.scene.add(m);
   }
 
+  // ── Falling plaster glob (thrown by Connie) ────────────────────────────────
+  private _spawnGlob(): void {
+    // Spawn from Connie's current position with slight random spread
+    const sx = this.connTopX + (Math.random() - 0.5) * 3;
+    const sy = GOAL_Y - 0.5;
+    const geo = new THREE.SphereGeometry(0.32, 8, 8);
+    const mat = new THREE.MeshLambertMaterial({
+      color: 0xE8D4A0, emissive: 0x997733, emissiveIntensity: 0.4
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(sx, sy, 0.5);
+    mesh.castShadow = true;
+    this.scene.add(mesh);
+    this.globs.push({
+      x: sx, y: sy,
+      vx: (Math.random() - 0.5) * 4,  // slight horizontal drift
+      vy: 2,                            // tiny upward launch, gravity pulls down fast
+      r: 0.32,
+      mesh,
+      dead: false,
+    });
+  }
+
   // ── HUD ────────────────────────────────────────────────────────────────────
   private _buildHUD(): void {
     const hud = document.createElement('div');
@@ -407,6 +447,17 @@ export class ScaffoldGame {
     hud.appendChild(title);
     hud.appendChild(this.timerEl);
     this.overlay.appendChild(hud);
+
+    // Warning flash
+    this.warningEl = document.createElement('div');
+    this.warningEl.style.cssText = `
+      position:absolute; top:58px; left:50%; transform:translateX(-50%);
+      background:rgba(200,0,0,0.85); color:#fff; padding:5px 18px;
+      border-radius:16px; font-size:14px; font-weight:900; letter-spacing:1px;
+      z-index:110; display:none; pointer-events:none;
+    `;
+    this.warningEl.textContent = '🪣 INCOMING!';
+    this.overlay.appendChild(this.warningEl);
   }
 
   private _updateHearts(): void {
@@ -550,6 +601,68 @@ export class ScaffoldGame {
         }
       }
     }
+
+    // ── Connie top movement + glob throw ───────────────────────────────────
+    this.connTopX += this.CONN_TOP_SPD * this.connTopDir * dt;
+    if (this.connTopX > 6.5) { this.connTopX = 6.5; this.connTopDir = -1; }
+    if (this.connTopX < -6.5) { this.connTopX = -6.5; this.connTopDir = 1; }
+    if (this.connTopMesh) {
+      this.connTopMesh.position.x = this.connTopX;
+      this.connTopMesh.rotation.y = this.connTopDir > 0 ? -0.2 : Math.PI + 0.2;
+    }
+
+    // Warning countdown before throw
+    this.globSpawnTimer -= dt;
+    if (this.globSpawnTimer <= 1.5 && this.warningEl) {
+      this.warningEl.style.display = 'block';
+    }
+    if (this.globSpawnTimer <= 0) {
+      this._spawnGlob();
+      if (this.warningEl) this.warningEl.style.display = 'none';
+      // Next throw: 2.5–4.5s (gets faster as timer runs down — more frantic)
+      const urgency = Math.max(0.7, this.timer / 120);
+      this.globSpawnTimer = (2.5 + Math.random() * 2.0) * urgency;
+    }
+
+    // ── Update globs ──────────────────────────────────────────────────────
+    for (const g of this.globs) {
+      if (g.dead) continue;
+      g.vy = Math.max(g.vy - GRAVITY * dt, MAX_FALL);
+      g.x += g.vx * dt;
+      g.y += g.vy * dt;
+      g.mesh.position.set(g.x, g.y, 0.5);
+      g.mesh.rotation.z += 3 * dt; // spin for visual flair
+
+      // Player hit
+      if (!this.delivered) {
+        const dx = Math.abs(this.px - g.x);
+        const dy = g.y - this.py;  // positive when glob is above player's feet
+        if (dx < PW + g.r + 0.1 && dy > -0.5 && dy < PH + g.r) {
+          g.dead = true;
+          this.scene.remove(g.mesh);
+          this._loseLife();
+          if (this.gameOver) return;
+        }
+      }
+
+      // Splat on platform or ground
+      if (!g.dead) {
+        for (const p of this.platforms) {
+          if (!p.crumbled && g.x > p.x1 && g.x < p.x2 &&
+              Math.abs(g.y - p.y) < 0.5 && g.vy <= 0) {
+            g.dead = true;
+            this.scene.remove(g.mesh);
+            break;
+          }
+        }
+        if (!g.dead && g.y < -2) {
+          g.dead = true;
+          this.scene.remove(g.mesh);
+        }
+      }
+    }
+    // Purge dead
+    this.globs = this.globs.filter(g => !g.dead);
 
     if (this.swingBar) {
       this._physicsSwing(dt);
@@ -774,6 +887,11 @@ export class ScaffoldGame {
 
   private _cleanup(): void {
     cancelAnimationFrame(this.rafId);
+    // Remove any in-flight globs
+    for (const g of this.globs) {
+      if (!g.dead) this.scene.remove(g.mesh);
+    }
+    this.globs = [];
     this.renderer.dispose();
     this.overlay.dispatchEvent(new Event('remove'));
     this.overlay.remove();
