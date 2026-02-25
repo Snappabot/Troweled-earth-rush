@@ -596,8 +596,7 @@ async function main() {
                   try {
                     towerDefence.show(tdCfg, (tdResult) => {
                       if (tdResult.won) {
-                        const combined = Math.min(1, (scaffoldResult.qualityPct > 0 ? scaffoldResult.qualityPct * 0.3 : 0) + tdResult.qualityPct * 0.7);
-                        finishJob(combined, true);
+                        finishJob(1, true);
                       } else {
                         // TD lost — contract stolen
                         radio.setVisible(true);
@@ -617,12 +616,12 @@ async function main() {
                   } catch (err) {
                     // TD failed — fall back to scaffold result
                     console.error('TowerDefence init failed:', err);
-                    finishJob(Math.max(0.5, scaffoldResult.qualityPct), true);
+                    finishJob(1, true);
                   }
                 }, 1800);
               } else {
                 // Regular job — scaffold result determines pay
-                finishJob(Math.max(0, scaffoldResult.qualityPct), false);
+                finishJob(1, false);
               }
             });
           },
