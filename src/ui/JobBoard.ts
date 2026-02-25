@@ -243,94 +243,113 @@ export class JobBoard {
     return this.visible;
   }
 
-  // ── Contested (battle) card ─────────────────────────────────────────────────
+  // ── Contested (battle) card — all inline styles, no class dependencies ─────
   private _makeContestedCard(job: Job): HTMLElement {
     const rival = getRandomRival();
+    const stars = '★'.repeat(Math.round(rival.difficulty * 5)) + '☆'.repeat(5 - Math.round(rival.difficulty * 5));
+    const cleanTitle = job.title.replace(/^⚔️\s*/, '');
 
     const card = document.createElement('div');
-    card.className = 'jb-card-contested';
-
-    // Gold war banner
-    const banner = document.createElement('div');
-    banner.className = 'jb-war-banner';
-    banner.innerHTML = `
-      <span class="jb-war-label">⚔️ CONTRACT WAR</span>
-      <span class="jb-war-rival">vs ${rival.name}</span>
+    card.style.cssText = `
+      width:100%; max-width:480px; box-sizing:border-box;
+      background:linear-gradient(160deg,#1a0e00,#120900);
+      border:2px solid #E8A830; border-radius:16px;
+      margin-bottom:16px; overflow:visible;
+      box-shadow:0 0 20px rgba(232,168,48,0.2);
+      font-family:system-ui,sans-serif;
     `;
-    card.appendChild(banner);
 
-    // Card body
-    const body = document.createElement('div');
-    body.className = 'jb-card-contested-body';
-
-    // Title + pay
-    const cardHeader = document.createElement('div');
-    cardHeader.className = 'jb-card-header';
-    cardHeader.style.marginBottom = '6px';
-
-    const jobTitle = document.createElement('div');
-    jobTitle.className = 'jb-title';
-    jobTitle.style.color = '#FFD880';
-    jobTitle.textContent = job.title.replace(/^⚔️\s*/, '');
-    cardHeader.appendChild(jobTitle);
-
-    const pay = document.createElement('div');
-    pay.className = 'jb-pay';
-    pay.style.color = '#E8A830';
-    pay.textContent = `₿ ${formatSats(job.pay)}`;
-    cardHeader.appendChild(pay);
-    body.appendChild(cardHeader);
-
-    // Rival info strip
-    const rivalStrip = document.createElement('div');
-    rivalStrip.style.cssText = `
-      display:flex; align-items:center; gap:10px;
-      background:rgba(232,168,48,0.08); border:1px solid rgba(232,168,48,0.2);
-      border-radius:8px; padding:8px 12px; margin-bottom:10px;
-    `;
-    rivalStrip.innerHTML = `
-      <div style="font-size:22px">🥊</div>
-      <div>
-        <div style="color:#E8A830;font-size:12px;font-weight:900;letter-spacing:1px;">RIVAL CREW</div>
-        <div style="color:#fff;font-size:14px;font-weight:800;">${rival.name}</div>
-        <div style="color:#aaa;font-size:11px;">Difficulty: ${'★'.repeat(Math.round(rival.difficulty * 5))}${'☆'.repeat(5 - Math.round(rival.difficulty * 5))}</div>
+    card.innerHTML = `
+      <!-- Gold banner -->
+      <div style="
+        background:linear-gradient(90deg,#B8840A,#E8A830,#B8840A);
+        border-radius:13px 13px 0 0;
+        padding:8px 14px;
+        display:flex; align-items:center; justify-content:space-between;
+      ">
+        <span style="color:#000;font-size:12px;font-weight:900;
+          letter-spacing:2px;font-family:'Arial Black',Arial,sans-serif;">
+          ⚔️ CONTRACT WAR
+        </span>
+        <span style="color:#000;font-size:11px;font-weight:800;">vs ${rival.name}</span>
       </div>
-      <div style="margin-left:auto;text-align:right;">
-        <div style="color:#2ECC40;font-size:11px;font-weight:700;">BONUS PAY</div>
-        <div style="color:#2ECC40;font-size:13px;font-weight:900;">1.5×</div>
+
+      <!-- Body -->
+      <div style="padding:14px 16px 16px;">
+
+        <!-- Title + pay row -->
+        <div style="display:flex;justify-content:space-between;
+          align-items:flex-start;gap:8px;margin-bottom:10px;">
+          <div style="color:#FFD880;font-size:16px;font-weight:900;
+            line-height:1.25;flex:1;">${cleanTitle}</div>
+          <div style="color:#E8A830;font-size:17px;font-weight:900;
+            white-space:nowrap;">₿ ${formatSats(job.pay)}</div>
+        </div>
+
+        <!-- Rival + difficulty strip -->
+        <div style="
+          display:flex;align-items:center;gap:10px;
+          background:rgba(232,168,48,0.08);
+          border:1px solid rgba(232,168,48,0.18);
+          border-radius:8px;padding:8px 12px;margin-bottom:10px;
+        ">
+          <div style="font-size:20px;flex-shrink:0;">🥊</div>
+          <div style="flex:1;">
+            <div style="color:#E8A830;font-size:10px;font-weight:900;letter-spacing:1px;">
+              RIVAL CREW
+            </div>
+            <div style="color:#fff;font-size:13px;font-weight:800;">${rival.name}</div>
+            <div style="color:#aaa;font-size:10px;">${stars}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="color:#2ECC40;font-size:10px;font-weight:700;">FULL PAY</div>
+            <div style="color:#2ECC40;font-size:13px;font-weight:900;">WIN = 100%</div>
+          </div>
+        </div>
+
+        <!-- Zone + type badges -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+          <span style="
+            color:#aaa;font-size:11px;font-weight:600;
+            background:rgba(255,255,255,0.08);
+            border-radius:6px;padding:3px 8px;
+          ">${ZONE_LABELS[job.zone] ?? job.zone}</span>
+          <span style="
+            color:${job.type === 'emergency' ? '#ff6b6b' : '#aaa'};
+            font-size:11px;font-weight:600;
+            background:${job.type === 'emergency' ? 'rgba(255,80,80,0.14)' : 'rgba(255,255,255,0.08)'};
+            border-radius:6px;padding:3px 8px;
+          ">${TYPE_LABELS[job.type] ?? job.type}</span>
+          <span style="color:#888;font-size:11px;font-weight:600;
+            background:rgba(255,255,255,0.06);
+            border-radius:6px;padding:3px 8px;">
+            👤 ${job.client}
+          </span>
+        </div>
+
+        <!-- Description -->
+        <div style="
+          color:#bbb;font-size:13px;line-height:1.5;
+          margin-bottom:14px;
+        ">${job.description}</div>
+
+        <!-- Battle button -->
+        <button id="battle-btn-${job.id}" style="
+          width:100%;
+          background:linear-gradient(135deg,#E8A830,#C07010);
+          color:#000;border:none;border-radius:12px;
+          padding:15px 24px;font-size:16px;font-weight:900;
+          letter-spacing:1px;cursor:pointer;
+          font-family:'Arial Black',Arial,sans-serif;
+          min-height:52px;touch-action:manipulation;
+          box-shadow:0 4px 16px rgba(232,168,48,0.3);
+        ">⚔️ BATTLE FOR THIS JOB</button>
       </div>
     `;
-    body.appendChild(rivalStrip);
 
-    // Badges
-    const meta = document.createElement('div');
-    meta.className = 'jb-meta';
-    meta.style.marginBottom = '8px';
-    const zoneBadge = document.createElement('span');
-    zoneBadge.className = 'jb-badge';
-    zoneBadge.textContent = ZONE_LABELS[job.zone] ?? job.zone;
-    meta.appendChild(zoneBadge);
-    const typeBadge = document.createElement('span');
-    typeBadge.className = `jb-badge${job.type === 'emergency' ? ' jb-emergency-badge' : ''}`;
-    typeBadge.textContent = TYPE_LABELS[job.type] ?? job.type;
-    meta.appendChild(typeBadge);
-    body.appendChild(meta);
+    card.querySelector(`#battle-btn-${job.id}`)
+      ?.addEventListener('click', () => this.onAccept(job));
 
-    // Description
-    const desc = document.createElement('div');
-    desc.className = 'jb-desc';
-    desc.style.color = '#ccc';
-    desc.textContent = job.description;
-    body.appendChild(desc);
-
-    // Battle button
-    const battleBtn = document.createElement('button');
-    battleBtn.className = 'jb-battle-btn';
-    battleBtn.textContent = '⚔️ BATTLE FOR THIS JOB';
-    battleBtn.addEventListener('click', () => this.onAccept(job));
-    body.appendChild(battleBtn);
-
-    card.appendChild(body);
     return card;
   }
 
