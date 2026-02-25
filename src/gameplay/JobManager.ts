@@ -222,12 +222,13 @@ export class JobManager {
   crewPickedUp: string[] = [];
 
   getAvailableJobs(): Job[] {
-    return this.jobs.filter(
-      j => !this.completedJobIds.has(j.id) && j !== this.activeJob
-    );
+    return this.jobs
+      .filter(j => !this.completedJobIds.has(j.id) && j !== this.activeJob)
+      .map(j => ({ ...j, isContested: true }));   // ALL jobs are Contract Wars
   }
 
   acceptJob(job: Job, crewOverride?: string[]): void {
+    job.isContested = true;   // force contested on every accept
     this.activeJob = job;
     this.activePhase = 1;
     this.crewToPickup = (crewOverride && crewOverride.length > 0)
