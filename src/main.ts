@@ -564,32 +564,59 @@ async function main() {
             miniGameManager.startScaffold((scaffoldResult) => {
               if (arrived.isContested) {
                 // ── Stage 2: Tower Defence (contested jobs only) ─────────
+                // Brief announcement overlay before TD launches
+                const tdAnnounce = document.createElement('div');
+                tdAnnounce.style.cssText = `
+                  position:fixed;inset:0;z-index:13999;
+                  background:rgba(0,0,0,0.94);
+                  display:flex;flex-direction:column;align-items:center;justify-content:center;
+                  font-family:system-ui,sans-serif;animation:none;
+                `;
+                tdAnnounce.innerHTML = `
+                  <div style="font-size:46px;margin-bottom:12px;">⚔️</div>
+                  <div style="color:#FFD700;font-size:24px;font-weight:900;letter-spacing:2px;">CONTRACT WARS</div>
+                  <div style="color:#fff;font-size:15px;margin-top:8px;opacity:0.8;">PHASE 2 — TOWER DEFENCE</div>
+                  <div style="color:#aaa;font-size:12px;margin-top:6px;">vs ${_currentRival.name}</div>
+                  <div style="color:#FFD700;font-size:13px;margin-top:18px;opacity:0.6;">loading...</div>
+                `;
+                document.body.appendChild(tdAnnounce);
+
                 const tdCfg: TDConfig = {
                   jobTitle: arrived.title,
                   payout:   arrived.pay,
                   crewIds:  getActiveCrew(),
                   rival:    { name: _currentRival.name, color: _currentRival.color, difficulty: _currentRival.difficulty },
                 };
-                towerDefence.show(tdCfg, (tdResult) => {
-                  if (tdResult.won) {
-                    const combined = Math.min(1, (scaffoldResult.qualityPct > 0 ? scaffoldResult.qualityPct * 0.3 : 0) + tdResult.qualityPct * 0.7);
-                    finishJob(combined, true);
-                  } else {
-                    // TD lost — contract stolen
-                    radio.setVisible(true);
-                    hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
-                    characters.showAllCrew();
-                    breakActive = null; savedWaypoint = null;
-                    coffeeBreakAt = -1; toiletBreakAt = -1;
-                    jobCompleting = false;
-                    jobManager.completeJob(arrived, 0);
-                    hud.updateMoney(jobManager.money);
-                    setTimeout(() => {
-                      const available = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
-                      if (available.length > 0) jobBoard.show(available);
-                    }, 3500);
+
+                setTimeout(() => {
+                  tdAnnounce.remove();
+                  try {
+                    towerDefence.show(tdCfg, (tdResult) => {
+                      if (tdResult.won) {
+                        const combined = Math.min(1, (scaffoldResult.qualityPct > 0 ? scaffoldResult.qualityPct * 0.3 : 0) + tdResult.qualityPct * 0.7);
+                        finishJob(combined, true);
+                      } else {
+                        // TD lost — contract stolen
+                        radio.setVisible(true);
+                        hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
+                        characters.showAllCrew();
+                        breakActive = null; savedWaypoint = null;
+                        coffeeBreakAt = -1; toiletBreakAt = -1;
+                        jobCompleting = false;
+                        jobManager.completeJob(arrived, 0);
+                        hud.updateMoney(jobManager.money);
+                        setTimeout(() => {
+                          const available = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
+                          if (available.length > 0) jobBoard.show(available);
+                        }, 3500);
+                      }
+                    });
+                  } catch (err) {
+                    // TD failed — fall back to scaffold result
+                    console.error('TowerDefence init failed:', err);
+                    finishJob(Math.max(0.5, scaffoldResult.qualityPct), true);
                   }
-                });
+                }, 1800);
               } else {
                 // Regular job — scaffold result determines pay
                 finishJob(Math.max(0, scaffoldResult.qualityPct), false);

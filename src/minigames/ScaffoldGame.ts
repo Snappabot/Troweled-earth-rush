@@ -986,10 +986,10 @@ export class ScaffoldGame {
 
   private _cleanup(): void {
     cancelAnimationFrame(this.rafId);
-    // Remove any in-flight globs + their shadow rings
+    // Remove any in-flight globs + their shadow rings (null-safe)
     for (const g of this.globs) {
-      this.scene.remove(g.mesh);
-      this.scene.remove(g.shadowRing);
+      try { this.scene.remove(g.mesh); } catch {}
+      try { if (g.shadowRing) this.scene.remove(g.shadowRing); } catch {}
     }
     this.globs = [];
     this.renderer.dispose();
