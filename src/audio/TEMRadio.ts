@@ -131,6 +131,27 @@ const STATIONS: Station[] = [
     audioFile: AUDIO.radio3,
   },
   {
+    id: 'warlord-sessions',
+    name: 'WARLORD SESSIONS',
+    freq: '101.5',
+    tagline: "Deep Cuts from the Site",
+    songs: [
+      '★ The Warlord Method [Extended Mix]',
+      'Forty Coats, One Wall',
+      'Blood Red Clay (Long Version)',
+      'Marbellino Deep Session',
+      'The Matt Maloy Experience',
+    ],
+    dj: [
+      "Warlord Sessions 101.5 — long-form. No fillers.",
+      "You're in deep now. Warlord Sessions.",
+      "Matt approved this personally. Says it captures the vibe.",
+      "101.5 — for the ones who stay on site after dark.",
+    ],
+    bpm: 72, rootHz: 207.65, vibe: 'ambient', color: '#A07840',
+    audioFile: AUDIO.radio6,
+  },
+  {
     id: 'joses-mix',
     name: "JOSE'S MIX",
     freq: '96.1',

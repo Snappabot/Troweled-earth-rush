@@ -11,4 +11,5 @@ export const AUDIO = {
   radio3:  `${BASE}audio/radio3.m4a`,
   radio4:  `${BASE}audio/theme.m4a`,    // The Scaffold station
   radio5:  `${BASE}audio/radio5.m4a`,   // Jose's Mix station
+  radio6:  `${BASE}audio/radio6.aac`,   // Warlord Sessions station
 } as const;
