@@ -82,6 +82,45 @@ export const RIVAL_CREWS: RivalCrew[] = [
       { name: 'Rosa',   skinTone: '#E8C0A0', hairColor: '#4a2010', hairStyle: 'long',  accentColor: '#9B59B6' },
     ],
   },
+  {
+    id: 'adelaide_arches',
+    name: 'Adelaide Arches',
+    tagline: 'Church Hall heroes. Still lost.',
+    color: '#E74C3C',
+    difficulty: 0.55,
+    speed: 0.58,
+    members: [
+      { name: 'Murray', skinTone: '#D4A878', hairColor: '#5a3010', hairStyle: 'short',  accentColor: '#E74C3C' },
+      { name: 'Cheryl', skinTone: '#F0D0A8', hairColor: '#C87040', hairStyle: 'bun',    accentColor: '#E74C3C' },
+      { name: 'Wazza',  skinTone: '#C89060', hairColor: '#222222', hairStyle: 'buzz',   accentColor: '#E74C3C' },
+    ],
+  },
+  {
+    id: 'gold_coast_grinders',
+    name: 'Gold Coast Grinders',
+    tagline: 'All tan, no technique.',
+    color: '#F1C40F',
+    difficulty: 0.50,
+    speed: 0.52,
+    members: [
+      { name: 'Bryce',  skinTone: '#E8C090', hairColor: '#D4A840', hairStyle: 'slicked', accentColor: '#F1C40F' },
+      { name: 'Kylie',  skinTone: '#F5D8B0', hairColor: '#E0B040', hairStyle: 'long',    accentColor: '#F1C40F' },
+      { name: 'Damo',   skinTone: '#D09060', hairColor: '#6a4020', hairStyle: 'short',   accentColor: '#F1C40F' },
+    ],
+  },
+  {
+    id: 'tazzy_devils',
+    name: 'Tazzy Devils',
+    tagline: 'Remote. Feral. Surprisingly fast.',
+    color: '#1ABC9C',
+    difficulty: 0.70,
+    speed: 0.75,
+    members: [
+      { name: 'Reg',    skinTone: '#C88858', hairColor: '#333333', hairStyle: 'bald',    accentColor: '#1ABC9C' },
+      { name: 'Shelby', skinTone: '#E0B888', hairColor: '#8B4513', hairStyle: 'ponytail',accentColor: '#1ABC9C' },
+      { name: 'Dozer',  skinTone: '#B87848', hairColor: '#1a0e00', hairStyle: 'afro',    accentColor: '#1ABC9C' },
+    ],
+  },
 ];
 
 /** Return a random rival crew from the roster */
