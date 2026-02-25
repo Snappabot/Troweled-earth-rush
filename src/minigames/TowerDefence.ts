@@ -283,8 +283,39 @@ export class TowerDefence {
       if (!this._ov) return;
       const dt = Math.min((ts - this._last) / 1000, 0.05);
       this._last = ts;
-      this._update(dt);
-      this._draw();
+      try {
+        this._update(dt);
+        this._draw();
+      } catch (err) {
+        console.error('[TowerDefence] loop crash:', err);
+        // Show visible error on the overlay so it's not a silent skip
+        if (this._ov) {
+          const errDiv = document.createElement('div');
+          errDiv.style.cssText = `
+            position:absolute;inset:0;background:rgba(0,0,0,0.9);
+            display:flex;flex-direction:column;align-items:center;
+            justify-content:center;gap:12px;z-index:20;
+            font-family:system-ui,sans-serif;padding:24px;text-align:center;
+          `;
+          errDiv.innerHTML = `
+            <div style="font-size:40px">⚠️</div>
+            <div style="color:#FFD700;font-size:18px;font-weight:900;">TD CRASHED</div>
+            <div style="color:#aaa;font-size:12px;max-width:300px;">${String(err)}</div>
+          `;
+          const skipBtn = document.createElement('button');
+          skipBtn.textContent = 'SKIP TO PHOTO REVEAL';
+          skipBtn.style.cssText = `
+            background:#E8A830;color:#000;border:none;
+            padding:14px 28px;border-radius:12px;font-size:15px;
+            font-weight:900;cursor:pointer;margin-top:8px;
+          `;
+          skipBtn.addEventListener('click', () => { this.hide(); this._done?.({ won: true, earned: this._cfg?.payout ?? 0, wavesCleared: 0, qualityPct: 1 }); });
+          errDiv.appendChild(skipBtn);
+          this._ov.appendChild(errDiv);
+        }
+        cancelAnimationFrame(this._raf);
+        return;
+      }
       this._raf = requestAnimationFrame(tick);
     };
     this._raf = requestAnimationFrame(tick);

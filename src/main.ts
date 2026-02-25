@@ -611,31 +611,26 @@ async function main() {
 
                 setTimeout(() => {
                   tdAnnounce.remove();
-                  try {
-                    towerDefence.show(tdCfg, (tdResult) => {
-                      if (tdResult.won) {
-                        finishJob(1, true);
-                      } else {
-                        // TD lost — contract stolen
-                        radio.setVisible(true);
-                        hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
-                        characters.showAllCrew();
-                        breakActive = null; savedWaypoint = null;
-                        coffeeBreakAt = -1; toiletBreakAt = -1;
-                        jobCompleting = false;
-                        jobManager.completeJob(arrived, 0);
-                        hud.updateMoney(jobManager.money);
-                        setTimeout(() => {
-                          const available = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
-                          if (available.length > 0) jobBoard.show(available);
-                        }, 3500);
-                      }
-                    });
-                  } catch (err) {
-                    // TD failed — fall back to scaffold result
-                    console.error('TowerDefence init failed:', err);
-                    finishJob(1, true);
-                  }
+                  // Show TD — no silent catch fallthrough; surface errors visibly
+                  towerDefence.show(tdCfg, (tdResult) => {
+                    if (tdResult.won) {
+                      finishJob(1, true);
+                    } else {
+                      // TD lost — contract stolen
+                      radio.setVisible(true);
+                      hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
+                      characters.showAllCrew();
+                      breakActive = null; savedWaypoint = null;
+                      coffeeBreakAt = -1; toiletBreakAt = -1;
+                      jobCompleting = false;
+                      jobManager.completeJob(arrived, 0);
+                      hud.updateMoney(jobManager.money);
+                      setTimeout(() => {
+                        const available = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
+                        if (available.length > 0) jobBoard.show(available);
+                      }, 3500);
+                    }
+                  });
                 }, 1800);
               } else {
                 // Regular job — scaffold result determines pay
