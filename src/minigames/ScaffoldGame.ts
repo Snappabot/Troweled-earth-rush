@@ -596,9 +596,11 @@ export class ScaffoldGame {
     this.rafId = requestAnimationFrame(t => this._loop(t));
     const dt = Math.min((ts - this.lastTs) / 1000, 0.05);
     this.lastTs = ts;
-    this._update(dt);
-    this.renderer.render(this.scene, this.camera);
-    this.jumpTap = false; // consume jump edge
+    try {
+      this._update(dt);
+      this.renderer.render(this.scene, this.camera);
+    } catch { /* swallow frame errors — loop must never die */ }
+    this.jumpTap = false;
   }
 
   // ── Update ────────────────────────────────────────────────────────────────
@@ -714,12 +716,14 @@ export class ScaffoldGame {
       g.mesh.rotation.z += 4 * dt;
 
       // Pulse shadow ring — grows + brightens as glob approaches ground
-      const heightFrac = Math.max(0, Math.min(1, g.y / (GOAL_Y + 5)));
-      const ringScale = 1.0 + (1 - heightFrac) * 1.2; // grows as it falls
-      const ringOpacity = 0.4 + (1 - heightFrac) * 0.55;
-      g.shadowRing.position.x = g.x;
-      g.shadowRing.scale.setScalar(ringScale);
-      (g.shadowRing.material as THREE.MeshBasicMaterial).opacity = ringOpacity;
+      if (g.shadowRing) {
+        const heightFrac = Math.max(0, Math.min(1, g.y / (GOAL_Y + 5)));
+        const ringScale = 1.0 + (1 - heightFrac) * 1.2;
+        const ringOpacity = 0.4 + (1 - heightFrac) * 0.55;
+        g.shadowRing.position.x = g.x;
+        g.shadowRing.scale.setScalar(ringScale);
+        (g.shadowRing.material as THREE.MeshBasicMaterial).opacity = ringOpacity;
+      }
 
       // Player hit (skip if invincible)
       if (!this.delivered && this.invincT <= 0) {
@@ -975,12 +979,15 @@ export class ScaffoldGame {
     this.overlay.appendChild(banner);
 
     setTimeout(() => {
-      this._cleanup();
-      this.onCompleteFn({
+      const result = {
         score: success ? 100 : 0,
         qualityPct,
         message: success ? 'Scaffold conquered!' : 'Scaffold failed — 30% deducted.',
-      });
+      };
+      // Cleanup is best-effort — errors must NEVER block the callback
+      try { this._cleanup(); } catch { /* swallow — overlay may already be gone */ }
+      // Callback fires regardless
+      try { this.onCompleteFn(result); } catch {}
     }, success ? 1800 : 2200);
   }
 

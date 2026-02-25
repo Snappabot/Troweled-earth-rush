@@ -136,8 +136,8 @@ export class MiniGameManager {
         this.scaffoldGame = new ScaffoldGame();
         this.scaffoldGame.mount(this.overlay, (result) => {
           if (this.safetyTimer) clearTimeout(this.safetyTimer);
-          this.stop();
-          onComplete(result);
+          try { this.stop(); } catch { this.active = false; }
+          onComplete(result);  // always fires
         });
       } catch (err) {
         console.error('ScaffoldGame init failed:', err);
