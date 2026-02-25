@@ -131,6 +131,27 @@ const STATIONS: Station[] = [
     audioFile: AUDIO.radio3,
   },
   {
+    id: 'joses-mix',
+    name: "JOSE'S MIX",
+    freq: '96.1',
+    tagline: "From the Van. For the Van.",
+    songs: [
+      '★ Late Night Render [LIVE]',
+      'BTC Stack (Instrumental)',
+      'Marbellino Midnight Run',
+      'Van Life Vol. II',
+      'Gold Sky Reprise',
+    ],
+    dj: [
+      "Jose's Mix 96.1 — playing what Jose wants, when Jose wants.",
+      "You're listening to the only station that matters. 96.1.",
+      "That was a banger. Jose approved it personally.",
+      "No requests. Jose already chose the perfect song.",
+    ],
+    bpm: 95, rootHz: 233.08, vibe: 'electronic', color: '#FFD700',
+    audioFile: AUDIO.radio5,
+  },
+  {
     id: 'tem-talk',
     name: 'TEM TALK',
     freq: '91.1',
