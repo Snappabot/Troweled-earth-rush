@@ -38,6 +38,7 @@ import { getRandomRival } from './data/RivalCrews';
 import { TowerDefence } from './minigames/TowerDefence';
 import type { TDConfig } from './minigames/TowerDefence';
 import { ContractWarsPanel } from './ui/ContractWarsPanel';
+import { PhotoReveal } from './minigames/PhotoReveal';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -181,6 +182,7 @@ async function main() {
   // ── Game Menu (☰) — contains radio, money, photo, jobs, mixer, contract wars ──
   const radio = new TEMRadio();
   const contractWarsPanel = new ContractWarsPanel();
+  const photoReveal = new PhotoReveal();
   const gameMenu = new GameMenu(
     () => achievementGallery.show(),
     () => {
@@ -420,28 +422,41 @@ async function main() {
       }
     }
 
-    // ── Phase 1: workshop arrival → supplies loaded ───────────────────────────
+    // ── Phase 1: workshop arrival → Marbellino Mixer → supplies loaded ──────
     if (jobManager.activeJob && jobManager.activePhase === 1 && !breakActive && !jobCompleting) {
       if (jobManager.checkPhase1Arrival(vanX, vanZ)) {
         jobCompleting = true;
         spillMeter.level = 0;
         connie.playLaugh();
 
-        const crewNames = jobManager.crewToPickup.join(' + ');
+        // Brief arrival dialogue, then launch the mixer
         dialoguePause.show(
-          '📦 Supplies Loaded!',
-          `Connie's cackle echoes through the factory as the buckets go in.\n\nNow go pick up the crew:\n👷 ${crewNames}\n\nThey're scattered around the city. Your waypoint will guide you.`,
+          '🎨 Mix The Plaster!',
+          `Jose and Connie are at the depot. The colour formula is up on the board.\n\nMix it right and load the van — then we go get the crew.`,
           () => {
-            jobManager.advanceToPhase2();
-            const firstCrew = jobManager.nextCrewNeeded();
-            if (firstCrew) {
-              const crewPos = characters.getCrewPosition(firstCrew);
-              waypointSystem.setTarget(crewPos);
-            }
-            hud.showPhase1Complete();
-            hud.setActiveJob(jobManager.activeJob, 2);
-            hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
-            jobCompleting = false;
+            // Launch Marbellino Mixer as the material-pickup game
+            marbellinoMixer.show((_pts) => {
+              // Mixer done — advance to crew pickup
+              connie.playLaugh();
+              const crewNames = jobManager.crewToPickup.join(' + ');
+              dialoguePause.show(
+                '📦 Materials Loaded!',
+                `Perfect mix. Buckets in the van.\n\nNow go pick up the crew:\n👷 ${crewNames}\n\nYour waypoint will guide you.`,
+                () => {
+                  jobManager.advanceToPhase2();
+                  const firstCrew = jobManager.nextCrewNeeded();
+                  if (firstCrew) {
+                    const crewPos = characters.getCrewPosition(firstCrew);
+                    waypointSystem.setTarget(crewPos);
+                  }
+                  hud.showPhase1Complete();
+                  hud.setActiveJob(jobManager.activeJob, 2);
+                  hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
+                  jobCompleting = false;
+                },
+                randomFrom(BRAND_SLOGANS)
+              );
+            });
           },
           randomFrom(BRAND_SLOGANS)
         );
@@ -531,36 +546,39 @@ async function main() {
 
             // ── Shared job-complete handler ────────────────────────────────
             const finishJob = (finalQuality: number, isContestWin = false) => {
-              radio.setVisible(true);
-              if (isContestWin) {
-                const completionSecs = (Date.now() - _contestedStartTime) / 1000;
-                submitScore({
-                  player_name:       getPlayerName() ?? 'TEM Crew',
-                  job_title:         _contestedJobTitle.replace(/^⚔️\s*/, '').trim(),
-                  crew_ids:          getActiveCrew(),
-                  completion_time_s: Math.round(completionSecs),
-                  payout:            Math.max(0, arrived.pay),
-                });
-              }
-              const earned = jobManager.completeJob(arrived, finalQuality);
-              if (earned < 0) {
-                hud.showPenalty(arrived.title, Math.abs(earned));
-              } else {
-                hud.showJobComplete(arrived.title, earned);
-              }
-              hud.updateMoney(jobManager.money);
-              characters.showAllCrew();
-              breakActive = null; savedWaypoint = null;
-              coffeeBreakAt = -1; toiletBreakAt = -1;
-              jobCompleting = false;
-              if (isAllCollected() && !RewardScreen.isUnlocked()) {
-                setTimeout(() => rewardScreen.trigger(), 2000);
-              } else {
-                setTimeout(() => {
-                  const available = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
-                  if (available.length > 0) jobBoard.show(available);
-                }, 3500);
-              }
+              // ── Photo Reveal gate — tap tiles to reveal finished work ────
+              photoReveal.show(arrived.title, () => {
+                radio.setVisible(true);
+                if (isContestWin) {
+                  const completionSecs = (Date.now() - _contestedStartTime) / 1000;
+                  submitScore({
+                    player_name:       getPlayerName() ?? 'TEM Crew',
+                    job_title:         _contestedJobTitle.replace(/^⚔️\s*/, '').trim(),
+                    crew_ids:          getActiveCrew(),
+                    completion_time_s: Math.round(completionSecs),
+                    payout:            Math.max(0, arrived.pay),
+                  });
+                }
+                const earned = jobManager.completeJob(arrived, finalQuality);
+                if (earned < 0) {
+                  hud.showPenalty(arrived.title, Math.abs(earned));
+                } else {
+                  hud.showJobComplete(arrived.title, earned);
+                }
+                hud.updateMoney(jobManager.money);
+                characters.showAllCrew();
+                breakActive = null; savedWaypoint = null;
+                coffeeBreakAt = -1; toiletBreakAt = -1;
+                jobCompleting = false;
+                if (isAllCollected() && !RewardScreen.isUnlocked()) {
+                  setTimeout(() => rewardScreen.trigger(), 2000);
+                } else {
+                  setTimeout(() => {
+                    const available = [...jobManager.getContestedJobs(), ...jobManager.getAvailableJobs()];
+                    if (available.length > 0) jobBoard.show(available);
+                  }, 3500);
+                }
+              });
             };
 
             // ── Stage 1: Scaffold Game (all jobs) ────────────────────────
