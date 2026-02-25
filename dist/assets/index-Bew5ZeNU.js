@@ -4532,7 +4532,7 @@ void main() {
       background:rgba(200,0,0,0.85); color:#fff; padding:5px 18px;
       border-radius:16px; font-size:14px; font-weight:900; letter-spacing:1px;
       z-index:110; display:none; pointer-events:none;
-    `,this.warningEl.textContent="🪣 INCOMING!",this.overlay.appendChild(this.warningEl)}_updateHearts(){this.heartsEl.textContent="❤️".repeat(this.lives)+"🖤".repeat(Math.max(0,3-this.lives))}_buildControls(){const e=document.createElement("div");e.style.cssText=`
+    `,this.warningEl.textContent="🪣 Watch the silicone!",this.overlay.appendChild(this.warningEl)}_updateHearts(){this.heartsEl.textContent="❤️".repeat(this.lives)+"🖤".repeat(Math.max(0,3-this.lives))}_buildControls(){const e=document.createElement("div");e.style.cssText=`
       position:absolute; bottom:12px; left:0; right:0; z-index:100;
       display:flex; justify-content:space-between; align-items:flex-end;
       padding:0 20px 8px;
@@ -5638,4 +5638,4 @@ Time to get to work. Show them what TEM does.`,()=>{r.setActiveJob(null,3),r.upd
     background:rgba(200,40,40,0.9);padding:24px 32px;border-radius:16px;
     max-width:90vw;z-index:9999;
   `,e.innerHTML=`<b>🚨 Game failed to start</b><br><br>${(o==null?void 0:o.message)||String(o)}`,document.body.appendChild(e)});
-//# sourceMappingURL=index-BN5uhmb2.js.map
+//# sourceMappingURL=index-Bew5ZeNU.js.map

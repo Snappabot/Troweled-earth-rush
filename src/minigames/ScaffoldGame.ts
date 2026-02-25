@@ -456,7 +456,7 @@ export class ScaffoldGame {
       border-radius:16px; font-size:14px; font-weight:900; letter-spacing:1px;
       z-index:110; display:none; pointer-events:none;
     `;
-    this.warningEl.textContent = '🪣 INCOMING!';
+    this.warningEl.textContent = '🪣 Watch the silicone!';
     this.overlay.appendChild(this.warningEl);
   }
 
