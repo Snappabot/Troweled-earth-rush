@@ -12,4 +12,5 @@ export const AUDIO = {
   radio4:  `${BASE}audio/theme.m4a`,    // The Scaffold station
   radio5:  `${BASE}audio/radio5.m4a`,   // Jose's Mix station
   radio6:  `${BASE}audio/radio6.aac`,   // Warlord Sessions station
+  radio7:  `${BASE}audio/radio7.aac`,   // Tsuyoshi FM station
 } as const;

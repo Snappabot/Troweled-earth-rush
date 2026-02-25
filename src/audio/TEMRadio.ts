@@ -131,6 +131,27 @@ const STATIONS: Station[] = [
     audioFile: AUDIO.radio3,
   },
   {
+    id: 'tsuyoshi-fm',
+    name: 'TSUYOSHI FM',
+    freq: '104.5',
+    tagline: "Precision. Focus. Plaster.",
+    songs: [
+      '★ Five Coat Finish [Live Session]',
+      'Venetian Nights',
+      'Tadelakt & Silence',
+      'The Quiet Climb',
+      'Zero Defects (feat. Tsuyoshi)',
+    ],
+    dj: [
+      "Tsuyoshi FM 104.5 — play it perfectly or don't play it.",
+      "That was flawless. Like Tsuyoshi's tadelakt. 104.5.",
+      "No mistakes. No shortcuts. Tsuyoshi FM.",
+      "You are listening to the most precise station in Melbourne.",
+    ],
+    bpm: 76, rootHz: 220, vibe: 'lofi', color: '#78C8A8',
+    audioFile: AUDIO.radio7,
+  },
+  {
     id: 'warlord-sessions',
     name: 'WARLORD SESSIONS',
     freq: '101.5',
