@@ -442,12 +442,66 @@ export class JobBoard {
       return;
     }
 
-    for (const job of this.jobs) {
-      if (job.isContested) {
-        this.overlay.appendChild(this._makeContestedCard(job));
-      } else {
-        this.overlay.appendChild(this._makeRegularCard(job));
-      }
+    const contested = this.jobs.filter(j => j.isContested);
+    const regular   = this.jobs.filter(j => !j.isContested);
+
+    // ── CONTRACT WARS section ─────────────────────────────────────────────
+    if (contested.length > 0) {
+      const cwHead = this._sectionHeading(
+        '⚔️ CONTRACT WARS',
+        'linear-gradient(90deg,#E8A830,#FF6600)',
+        'rgba(232,168,48,0.12)',
+        'rgba(232,168,48,0.3)',
+      );
+      const cwSub = document.createElement('div');
+      cwSub.style.cssText = `
+        color:#ccc; font-size:11px; font-family:system-ui,sans-serif;
+        margin:-10px 0 12px; width:100%; max-width:480px; text-align:center;
+      `;
+      cwSub.textContent = 'Beat the rival crew — Scaffold + Tower Defence — fastest time wins';
+      this.overlay.appendChild(cwHead);
+      this.overlay.appendChild(cwSub);
+      for (const job of contested) this.overlay.appendChild(this._makeContestedCard(job));
     }
+
+    // ── REGULAR JOBS section ──────────────────────────────────────────────
+    if (regular.length > 0) {
+      const regHead = this._sectionHeading(
+        '📋 AVAILABLE JOBS',
+        'linear-gradient(90deg,#5EDB7D,#3BAA5A)',
+        'rgba(94,219,125,0.08)',
+        'rgba(94,219,125,0.2)',
+      );
+      this.overlay.appendChild(regHead);
+      for (const job of regular) this.overlay.appendChild(this._makeRegularCard(job));
+    }
+  }
+
+  private _sectionHeading(
+    label: string,
+    gradient: string,
+    bgColor: string,
+    borderColor: string,
+  ): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.style.cssText = `
+      width:100%; max-width:480px;
+      display:flex; align-items:center; gap:10px;
+      margin-bottom:12px; margin-top:4px;
+      background:${bgColor};
+      border:1px solid ${borderColor};
+      border-radius:10px; padding:8px 14px;
+      box-sizing:border-box;
+    `;
+    wrap.innerHTML = `
+      <div style="
+        font-size:clamp(12px,3.5vw,15px); font-weight:900; letter-spacing:2px;
+        background:${gradient};
+        -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+        background-clip:text; white-space:nowrap;
+      ">${label}</div>
+      <div style="flex:1;height:1px;background:${borderColor};opacity:0.5;"></div>
+    `;
+    return wrap;
   }
 }

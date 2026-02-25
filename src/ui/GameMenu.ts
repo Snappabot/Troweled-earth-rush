@@ -9,11 +9,11 @@ export class GameMenu {
   private moneySlot!: HTMLDivElement;
   private _open = false;
 
-  constructor(onPhoto: () => void, onJobs: () => void, onMixer?: () => void) {
-    this._build(onPhoto, onJobs, onMixer);
+  constructor(onPhoto: () => void, onJobs: () => void, onMixer?: () => void, onContractWars?: () => void) {
+    this._build(onPhoto, onJobs, onMixer, onContractWars);
   }
 
-  private _build(onPhoto: () => void, onJobs: () => void, onMixer?: () => void): void {
+  private _build(onPhoto: () => void, onJobs: () => void, onMixer?: () => void, onContractWars?: () => void): void {
     // ── Hamburger button — top-right ─────────────────────────────────────────
     this.btn = document.createElement('button');
     this.btn.textContent = '☰';
@@ -81,6 +81,20 @@ export class GameMenu {
         color:#88FFBB; font-size:13px;
       `;
       this.panel.appendChild(mixerBtn);
+    }
+
+    // ── Contract Wars button (full-width) ─────────────────────────────────────
+    if (onContractWars) {
+      const cwBtn = this._actionBtn('⚔️  CONTRACT WARS', 'rgba(40,20,5,0.9)', () => {
+        this._close(); onContractWars();
+      });
+      cwBtn.style.cssText += `
+        width:100%; margin-top:2px;
+        background:linear-gradient(135deg, rgba(60,30,5,0.95), rgba(35,15,3,0.95));
+        border:1px solid rgba(255,180,0,0.25);
+        color:#FFD700; font-size:13px; letter-spacing:1px;
+      `;
+      this.panel.appendChild(cwBtn);
     }
 
     document.body.appendChild(this.panel);

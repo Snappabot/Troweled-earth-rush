@@ -37,6 +37,7 @@ import { BattleScreen } from './ui/BattleScreen';
 import { getRandomRival } from './data/RivalCrews';
 import { TowerDefence } from './minigames/TowerDefence';
 import type { TDConfig } from './minigames/TowerDefence';
+import { ContractWarsPanel } from './ui/ContractWarsPanel';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -177,8 +178,9 @@ async function main() {
   // ── Marbellino Mixer mini-game ─────────────────────────────────────────────
   const marbellinoMixer = new MarbellinoMixer();
 
-  // ── Game Menu (☰) — contains radio, money, photo, jobs, mixer ────────────
+  // ── Game Menu (☰) — contains radio, money, photo, jobs, mixer, contract wars ──
   const radio = new TEMRadio();
+  const contractWarsPanel = new ContractWarsPanel();
   const gameMenu = new GameMenu(
     () => achievementGallery.show(),
     () => {
@@ -195,6 +197,7 @@ async function main() {
         hud.showToast(`🎨 Formula cracked! +${(pts * 1000).toLocaleString()} sats`, 0x44DD88);
       }
     }),
+    () => contractWarsPanel.show(),
   );
   gameMenu.mountMoneyPanel(hud.getMoneyPanel());
   gameMenu.mountRadio(radio.getEl());
