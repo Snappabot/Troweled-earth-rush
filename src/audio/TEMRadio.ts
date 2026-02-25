@@ -65,7 +65,7 @@ const STATIONS: Station[] = [
       "Next up: another classic. Just like our Antique Stucco. Ha!",
     ],
     bpm: 92, rootHz: 261.63, vibe: 'italian', color: '#E8A050',
-    audioFile: AUDIO.radio1,
+    // no audioFile — uses generative Italian accordion
   },
   {
     id: 'brunswick-beats',
@@ -107,7 +107,7 @@ const STATIONS: Station[] = [
       "Jarrad called in. Said he's been waiting fifteen minutes. Legend.",
     ],
     bpm: 140, rootHz: 164.81, vibe: 'rock', color: '#C1666B',
-    audioFile: AUDIO.radio4,
+    // no audioFile — uses generative rock drums
   },
   {
     id: 'fabio-pizza',
