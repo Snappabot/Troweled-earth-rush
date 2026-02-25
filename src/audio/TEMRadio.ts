@@ -47,27 +47,6 @@ const STATIONS: Station[] = [
     audioFile: AUDIO.theme,
   },
   {
-    id: 'connie-gold',
-    name: "CONNIE'S GOLD",
-    freq: '103.7',
-    tagline: 'For the Craft, Darling',
-    songs: [
-      'Quando Quando Quando (In the Van)',
-      'Bella Ciao Bella Render',
-      'Volare Trowel',
-      'Arrivederci Deadline',
-      'O Sole Mio Stucco',
-    ],
-    dj: [
-      "Ehhhh — welcome to Connie's Gold! Ha ha ha ha!",
-      "You're listening to the best station. Connie said so. She's right.",
-      "Connie's Gold 103.7 — music to plaster by, darling.",
-      "Next up: another classic. Just like our Antique Stucco. Ha!",
-    ],
-    bpm: 92, rootHz: 261.63, vibe: 'italian', color: '#E8A050',
-    // no audioFile — uses generative Italian accordion
-  },
-  {
     id: 'brunswick-beats',
     name: 'BRUNSWICK BEATS',
     freq: '99.9',
@@ -213,6 +192,27 @@ const STATIONS: Station[] = [
     ],
     bpm: 95, rootHz: 233.08, vibe: 'electronic', color: '#FFD700',
     audioFile: AUDIO.radio5,
+  },
+  {
+    id: 'connie-gold',
+    name: "CONNIE'S GOLD",
+    freq: '103.7',
+    tagline: 'For the Craft, Darling',
+    songs: [
+      'Quando Quando Quando (In the Van)',
+      'Bella Ciao Bella Render',
+      'Volare Trowel',
+      'Arrivederci Deadline',
+      'O Sole Mio Stucco',
+    ],
+    dj: [
+      "Ehhhh — welcome to Connie's Gold! Ha ha ha ha!",
+      "You're listening to the best station. Connie said so. She's right.",
+      "Connie's Gold 103.7 — music to plaster by, darling.",
+      "Next up: another classic. Just like our Antique Stucco. Ha!",
+    ],
+    bpm: 92, rootHz: 261.63, vibe: 'italian', color: '#E8A050',
+    audioFile: AUDIO.connie,
   },
   {
     id: 'tem-talk',
