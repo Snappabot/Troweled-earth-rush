@@ -147,16 +147,24 @@ export class TrafficSystem {
         aheadDist = rawDist;
       }
 
-      // Only brake if van is in the car's lane (within ~4 units laterally)
-      const vanInLane = lateralDist < 5;
-      const vanAhead = aheadDist > 0 && aheadDist < BRAKE_DISTANCE;
-
-      if (vanInLane && vanAhead) {
-        const t = Math.max(0, (aheadDist - STOP_DISTANCE) / (BRAKE_DISTANCE - STOP_DISTANCE));
-        car.currentSpeed = car.baseSpeed * t; // 0 at stop distance, full speed at brake distance
+      // Broad proximity stop — any car within 7 units of the van stops dead
+      // (prevents the van getting sandwiched at intersections)
+      const proximityDist = Math.sqrt(
+        (vanX - carX) * (vanX - carX) + (vanZ - carZ) * (vanZ - carZ),
+      );
+      if (proximityDist < 7) {
+        car.currentSpeed = 0;
       } else {
-        // Resume gradually
-        car.currentSpeed = Math.min(car.baseSpeed, car.currentSpeed + RESUME_RATE * dt);
+        // Lane-based braking (original logic)
+        const vanInLane = lateralDist < 5;
+        const vanAhead = aheadDist > 0 && aheadDist < BRAKE_DISTANCE;
+
+        if (vanInLane && vanAhead) {
+          const t = Math.max(0, (aheadDist - STOP_DISTANCE) / (BRAKE_DISTANCE - STOP_DISTANCE));
+          car.currentSpeed = car.baseSpeed * t;
+        } else {
+          car.currentSpeed = Math.min(car.baseSpeed, car.currentSpeed + RESUME_RATE * dt);
+        }
       }
 
       // ── Nudge decay ────────────────────────────────────────────────────────
@@ -186,6 +194,8 @@ export class TrafficSystem {
     let rx = vanX, rz = vanZ;
     let hit = false;
 
+    // 3 passes: multi-iteration resolves sandwiching between two cars
+    for (let pass = 0; pass < 3; pass++) {
     for (const car of this.cars) {
       const cx = car.group.position.x;
       const cz = car.group.position.z;
@@ -219,7 +229,8 @@ export class TrafficSystem {
         car.currentSpeed = 0;
         hit = true;
       }
-    }
+    } // end car loop
+    } // end pass loop
 
     return { x: rx, z: rz, hit };
   }

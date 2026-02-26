@@ -163,8 +163,9 @@ async function main() {
     });
   });
 
-  // ── Spill penalty — 30% of active contract ───────────────────────────────────
+  // ── Spill penalty — 30% of active contract (only after materials picked up) ──
   spillMeter.onSpill = () => {
+    if (jobManager.activePhase < 2) return; // no materials on board yet
     const contractPay = jobManager.activeJob?.pay ?? 0;
     const penalty = contractPay > 0 ? Math.round(contractPay * 0.30) : 30_000;
     _jobSpillTotal += penalty;
@@ -398,15 +399,21 @@ async function main() {
       van.mesh.position.x = trafficResult.x;
       van.mesh.position.z = trafficResult.z;
       if (jobActive) {
-        spillMeter.triggerCrash(); // +30% to spill meter; may trigger 30% contract penalty
-        const crashFee = 15_000;   // flat material damage fee
-        _jobSpillTotal += crashFee;
-        jobManager.money = Math.max(0, jobManager.money - crashFee);
-        hud.updateMoney(jobManager.money);
+        // Only spill/damage materials after they've been picked up (Phase 2+)
+        if (jobManager.activePhase >= 2) {
+          spillMeter.triggerCrash(); // +30% to spill meter; may trigger 30% contract penalty
+          const crashFee = 15_000;   // flat material damage fee
+          _jobSpillTotal += crashFee;
+          jobManager.money = Math.max(0, jobManager.money - crashFee);
+          hud.updateMoney(jobManager.money);
+        }
       }
       if (Math.random() < 0.3) {
         const pn = hud.getPlayerChar()?.name ?? 'Driver';
-        hud.showToast(`💥 Watch it ${pn}! -15K sats`, 0xFF3333);
+        const crashMsg = jobManager.activePhase >= 2
+          ? `💥 Watch it ${pn}! -15K sats`
+          : `💥 Watch it ${pn}!`;
+        hud.showToast(crashMsg, 0xFF3333);
       }
     }
 
