@@ -42,6 +42,9 @@ export class HUD {
   private spillPenaltyTimeout: ReturnType<typeof setTimeout> | null = null;
   private currentMoney: number = 500_000;
   private timerPulseInterval: ReturnType<typeof setInterval> | null = null;
+  private raceStripEl!: HTMLDivElement;
+  private racePosEl!: HTMLDivElement;
+  private raceRowsEl!: HTMLDivElement;
 
   constructor() {
     // ── Inject keyframe animations ────────────────────────────────────────────
@@ -61,6 +64,47 @@ export class HUD {
           70%  { background: rgba(220, 38, 38, 0.85); }
           100% { background: rgba(220, 38, 38, 0.0);  }
         }
+        #race-strip {
+          position: fixed;
+          top: 80px;
+          right: 12px;
+          width: 160px;
+          background: rgba(0,0,0,0.65);
+          border-radius: 10px;
+          padding: 8px;
+          display: none;
+          z-index: 200;
+          backdrop-filter: blur(4px);
+          font-family: system-ui, sans-serif;
+          pointer-events: none;
+        }
+        #race-strip.visible { display: block; }
+        .race-header {
+          color: #FFD700;
+          font-size: 11px;
+          font-weight: 700;
+          letter-spacing: 1px;
+          margin-bottom: 6px;
+          text-align: center;
+        }
+        .race-pos {
+          font-size: 22px;
+          font-weight: 900;
+          text-align: center;
+          color: #fff;
+          margin-bottom: 4px;
+        }
+        .race-row {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          margin-bottom: 5px;
+        }
+        .race-row.player-row .race-name { color: #00FF88; font-weight: 700; }
+        .race-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .race-name { font-size: 10px; color: #ddd; width: 50px; white-space: nowrap; overflow: hidden; }
+        .race-bar-bg { flex: 1; height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden; }
+        .race-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
       `;
       document.head.appendChild(style);
     }
@@ -201,6 +245,25 @@ export class HUD {
     `;
     this.flashOverlay.appendChild(flashMsg);
     document.body.appendChild(this.flashOverlay);
+
+    // ── Race strip — top-right, hidden initially ──────────────────────────────
+    this.raceStripEl = document.createElement('div');
+    this.raceStripEl.id = 'race-strip';
+
+    const raceHeader = document.createElement('div');
+    raceHeader.className = 'race-header';
+    raceHeader.textContent = 'RIVAL RACE';
+    this.raceStripEl.appendChild(raceHeader);
+
+    this.racePosEl = document.createElement('div');
+    this.racePosEl.className = 'race-pos';
+    this.racePosEl.textContent = 'P1';
+    this.raceStripEl.appendChild(this.racePosEl);
+
+    this.raceRowsEl = document.createElement('div');
+    this.raceStripEl.appendChild(this.raceRowsEl);
+
+    document.body.appendChild(this.raceStripEl);
 
     // ── Timer fail overlay ────────────────────────────────────────────────────
     this.timerFailOverlay = document.createElement('div');
@@ -572,6 +635,77 @@ export class HUD {
     document.body.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; }, 2000);
     setTimeout(() => el.remove(), 2600);
+  }
+
+  /** Show/hide the race strip */
+  showRaceStrip(show: boolean): void {
+    if (show) {
+      this.raceStripEl.classList.add('visible');
+    } else {
+      this.raceStripEl.classList.remove('visible');
+    }
+  }
+
+  /** Update race strip with player progress + rivals */
+  updateRaceStrip(
+    playerProgress: number,
+    rivals: Array<{ name: string; color: string; progress: number; arrived: boolean }>
+  ): void {
+    // Build combined list: player + rivals
+    const entries: Array<{ name: string; color: string; progress: number; isPlayer: boolean }> = [
+      { name: 'YOU', color: '#00FF88', progress: playerProgress, isPlayer: true },
+      ...rivals.map(r => ({ name: r.name, color: r.color, progress: r.progress, isPlayer: false })),
+    ];
+
+    // Sort descending by progress
+    entries.sort((a, b) => b.progress - a.progress);
+
+    // Determine player position
+    const playerPos = entries.findIndex(e => e.isPlayer) + 1;
+
+    // Update position badge
+    this.racePosEl.textContent = `P${playerPos}`;
+    if (playerPos === 1) {
+      this.racePosEl.style.color = '#FFD700';      // gold
+    } else if (playerPos === 2) {
+      this.racePosEl.style.color = '#C0C0C0';      // silver
+    } else if (playerPos === 3) {
+      this.racePosEl.style.color = '#CD7F32';      // bronze
+    } else {
+      this.racePosEl.style.color = '#ffffff';      // white
+    }
+
+    // Rebuild rows
+    this.raceRowsEl.innerHTML = '';
+    for (const entry of entries) {
+      const row = document.createElement('div');
+      row.className = entry.isPlayer ? 'race-row player-row' : 'race-row';
+
+      const dot = document.createElement('span');
+      dot.className = 'race-dot';
+      dot.style.background = entry.color;
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'race-name';
+      // Shorten name: take first word up to 8 chars
+      const shortName = entry.name.split(' ')[0].slice(0, 8);
+      nameEl.textContent = entry.isPlayer ? 'YOU' : shortName;
+      nameEl.title = entry.name;
+
+      const barBg = document.createElement('div');
+      barBg.className = 'race-bar-bg';
+
+      const barFill = document.createElement('div');
+      barFill.className = 'race-bar-fill';
+      barFill.style.width = `${(entry.progress * 100).toFixed(1)}%`;
+      barFill.style.background = entry.color;
+
+      barBg.appendChild(barFill);
+      row.appendChild(dot);
+      row.appendChild(nameEl);
+      row.appendChild(barBg);
+      this.raceRowsEl.appendChild(row);
+    }
   }
 
   private _showBitcoinAchievement(): void {

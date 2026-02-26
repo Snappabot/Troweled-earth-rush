@@ -42,6 +42,7 @@ import type { TDConfig } from './minigames/TowerDefence';
 import { ContractWarsPanel } from './ui/ContractWarsPanel';
 import { PhotoReveal } from './minigames/PhotoReveal';
 import { WorkshopShootout } from './minigames/WorkshopShootout';
+import { RivalSystem } from './gameplay/RivalSystem';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -96,6 +97,9 @@ async function main() {
   );
   const waypointSystem = new WaypointSystem(engine.scene);
 
+  // ── Rival System — 3 rival crews race to the job site ─────────────────────
+  const rivalSystem = new RivalSystem(engine.scene);
+
   // ── Crew Selector ────────────────────────────────────────────────────────────
   const crewSelector = new CrewSelector();
 
@@ -123,6 +127,8 @@ async function main() {
             job.pay = payWithBonus;   // apply crew pay bonus
             const selectedCrewNames = getActiveCrew().map(id => id.charAt(0).toUpperCase() + id.slice(1));
             jobManager.acceptJob(job, selectedCrewNames);
+            rivalSystem.start(job.position);
+            hud.showRaceStrip(true);
             waypointSystem.setTarget(JobManager.WORKSHOP_POS);
             hud.setActiveJob(job, 1);
             hud.updateCrewStatus([], [], false);
@@ -418,6 +424,17 @@ async function main() {
 
     waypointSystem.update(dt, vanX, vanZ);
 
+    // ── Rival System — update vans + HUD race strip ───────────────────────────
+    if (rivalSystem.isActive()) {
+      rivalSystem.update(dt);
+      const phase = jobManager.activePhase;
+      const playerProgress = phase === 1 ? 0.1
+        : phase === 2 ? 0.35
+        : phase === 3 ? 0.65
+        : 0;
+      hud.updateRaceStrip(playerProgress, rivalSystem.getRaceData());
+    }
+
     // ── Travel timer ──────────────────────────────────────────────────────────
     if (jobManager.activeJob) {
       const result = jobManager.tickTravel(dt);
@@ -432,6 +449,8 @@ async function main() {
         hud.setActiveJob(null, 1);
         hud.updateMoney(jobManager.money);
         hud.updateCrewStatus([], [], false);
+        rivalSystem.stop();
+        hud.showRaceStrip(false);
         characters.showAllCrew();
         setTimeout(() => {
           const jobs = jobManager.getAvailableJobs();
@@ -655,6 +674,8 @@ async function main() {
 
             // ── Shared job-complete handler ────────────────────────────────
             const finishJob = (finalQuality: number, isContestWin = false) => {
+              rivalSystem.stop();
+              hud.showRaceStrip(false);
               // ── Photo Reveal gate — tap tiles to reveal finished work ────
               photoReveal.show(arrived.title, () => {
                 radio.setVisible(true);
@@ -785,6 +806,8 @@ async function main() {
                       finishJob(1, true);
                     } else {
                       // TD lost — contract stolen
+                      rivalSystem.stop();
+                      hud.showRaceStrip(false);
                       radio.setVisible(true);
                       hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
                       characters.showAllCrew();
