@@ -41,6 +41,7 @@ import { TowerDefence } from './minigames/TowerDefence';
 import type { TDConfig } from './minigames/TowerDefence';
 import { ContractWarsPanel } from './ui/ContractWarsPanel';
 import { PhotoReveal } from './minigames/PhotoReveal';
+import { WorkshopShootout } from './minigames/WorkshopShootout';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -676,11 +677,34 @@ async function main() {
               });
             };
 
-            // ── Stage 1: Scaffold Game (all jobs) ────────────────────────
-            miniGameManager.startScaffold((scaffoldResult) => {
+            // ── Stage 1: Workshop Shootout (all jobs) ────────────────────
+            const shootout = new WorkshopShootout();
+            shootout.show({
+              jobTitle:  arrived.title,
+              crewIds:   getActiveCrew(),
+              playerName: playerChar.name,
+            }, (shootoutResult) => {
+              if (!shootoutResult.won) {
+                // Lost the shootout — job stolen by Connie
+                hud.showToast('💨 Connie blocked the job! Contract lost.', 0xFF4400);
+                jobCompleting = false;
+                radio.setVisible(true);
+                breakActive = null; savedWaypoint = null;
+                coffeeBreakAt = -1; toiletBreakAt = -1;
+                hud.setActiveJob(null, 1);
+                hud.updateCrewStatus([], [], false);
+                characters.showAllCrew();
+                jobManager.completeJob(arrived, 0);
+                hud.updateMoney(jobManager.money);
+                setTimeout(() => {
+                  const available = jobManager.getAvailableJobs();
+                  if (available.length > 0) jobBoard.show(available);
+                }, 3500);
+                return;
+              }
+
+              // ── Won Shootout — Stage 2: Tower Defence (contested jobs) ──
               if (arrived.isContested) {
-                // ── Stage 2: Tower Defence (contested jobs only) ─────────
-                // Brief announcement overlay before TD launches
                 const tdAnnounce = document.createElement('div');
                 tdAnnounce.style.cssText = `
                   position:fixed;inset:0;z-index:13999;
@@ -706,7 +730,6 @@ async function main() {
 
                 setTimeout(() => {
                   tdAnnounce.remove();
-                  // Show TD — no silent catch fallthrough; surface errors visibly
                   towerDefence.show(tdCfg, (tdResult) => {
                     if (tdResult.won) {
                       { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88); }
@@ -729,7 +752,7 @@ async function main() {
                   });
                 }, 1800);
               } else {
-                // Regular job — scaffold result determines pay
+                // Regular job — proceed directly to finish
                 { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88); }
                 finishJob(1, false);
               }
