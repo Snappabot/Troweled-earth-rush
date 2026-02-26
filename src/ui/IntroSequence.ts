@@ -738,7 +738,7 @@ export class IntroSequence {
     }
 
     // Black TEM shirt — Jarrad gets broader chest to match muscular build
-    const chestW = sc.id === 'jarrad' ? 50 : 40;
+    const chestW = sc.id === 'jarrad' ? 54 : 40;
     ctx.fillStyle = shirtCol;
     ctx.fillRect(cx - chestW / 2, groundY - hh * 0.80, chestW, hh * 0.37);
 
@@ -752,61 +752,77 @@ export class IntroSequence {
     // Arms — regular crew gets simple sleeves; Jarrad gets full muscular arm drawing
     if (sc.id === 'jarrad') {
       // ── Jarrad: thick muscular arms ──────────────────────────────────────────
+      // Use dark charcoal (#1E1E24) — NOT pure black, so it's visible vs dark bg
+      const armCol  = '#1E1E24';
+      const armRim  = '#3A3A50'; // subtle lighter edge for visibility
+
       const drawMuscleArm = (ax: number, side: number) => {
-        ctx.fillStyle = shirtCol;
-        // Shoulder connector — fills gap between shirt edge and arm
+        // ── Fill (dark charcoal) ─────────────────────────────────────────────
+        ctx.fillStyle = armCol;
+        // Shoulder bridge — connects shirt body to arm start
         ctx.beginPath();
-        ctx.roundRect(ax - 12, groundY - hh * 0.80, 24, hh * 0.06, 4);
+        ctx.roundRect(ax - 13, groundY - hh * 0.81, 26, hh * 0.10, 4);
         ctx.fill();
-        // Upper arm (bicep bulge) — wide rounded rectangle
+        // Upper arm
         ctx.beginPath();
-        ctx.roundRect(ax - 14, groundY - hh * 0.75, 28, hh * 0.20, 8);
+        ctx.roundRect(ax - 15, groundY - hh * 0.74, 30, hh * 0.22, 9);
         ctx.fill();
-        // Bicep peak — convex ellipse on outer edge
+        // Bicep peak
         ctx.beginPath();
-        ctx.ellipse(ax + side * 10, groundY - hh * 0.65, 14, hh * 0.09, side * 0.25, 0, Math.PI * 2);
+        ctx.ellipse(ax + side * 11, groundY - hh * 0.63, 15, hh * 0.10, side * 0.25, 0, Math.PI * 2);
         ctx.fill();
-        // Forearm — extend lower so it reaches hip, no skin gap
+        // Forearm — runs all the way to hand level
         ctx.beginPath();
-        ctx.roundRect(ax - 11, groundY - hh * 0.54, 22, hh * 0.30, 6);
+        ctx.roundRect(ax - 12, groundY - hh * 0.52, 24, hh * 0.28, 7);
         ctx.fill();
-        // Muscle highlight (darker strip to show volume)
-        ctx.fillStyle = '#222222';
+
+        // ── Outline (rim) so arm reads against dark background ──────────────
+        ctx.strokeStyle = armRim;
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.ellipse(ax - side * 4, groundY - hh * 0.64, 5, hh * 0.07, side * 0.1, 0, Math.PI * 2);
+        ctx.roundRect(ax - 15, groundY - hh * 0.74, 30, hh * 0.22, 9);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.roundRect(ax - 12, groundY - hh * 0.52, 24, hh * 0.28, 7);
+        ctx.stroke();
+
+        // Muscle highlight
+        ctx.fillStyle = '#2E2E3A';
+        ctx.beginPath();
+        ctx.ellipse(ax - side * 4, groundY - hh * 0.63, 5, hh * 0.07, side * 0.1, 0, Math.PI * 2);
         ctx.fill();
       };
-      drawMuscleArm(cx - 30, -1); // left arm
-      drawMuscleArm(cx + 30,  1); // right arm
+      drawMuscleArm(cx - 30, -1);
+      drawMuscleArm(cx + 30,  1);
 
-      // ── Left hand (skin fist) ─────────────────────────────────────────────
+      // ── Left hand (fist, skin) ────────────────────────────────────────────
       ctx.fillStyle = skin;
       ctx.beginPath();
-      ctx.ellipse(cx - 30, groundY - hh * 0.24, 10, 9, 0.2, 0, Math.PI * 2);
+      ctx.ellipse(cx - 30, groundY - hh * 0.25, 10, 9, 0.2, 0, Math.PI * 2);
       ctx.fill();
 
-      // ── Right hand: holding phone ─────────────────────────────────────────
+      // ── Right hand: phone ─────────────────────────────────────────────────
       const phX = cx + 30;
-      const phY = groundY - hh * 0.24;
-      // Fingers below phone (skin peek)
+      const phY = groundY - hh * 0.25;
+      // Grip fingers
       ctx.fillStyle = skin;
       ctx.beginPath();
-      ctx.ellipse(phX, phY + 10, 8, 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(phX, phY + 8, 9, 7, 0, 0, Math.PI * 2);
       ctx.fill();
-      // Phone body (dark with blue screen)
-      ctx.fillStyle = '#1A1A1F';
+      // Phone body
+      ctx.fillStyle = '#18181F';
       ctx.beginPath();
-      ctx.roundRect(phX - 8, phY - 14, 16, 28, 3);
+      ctx.roundRect(phX - 8, phY - 16, 16, 26, 3);
       ctx.fill();
-      // Phone screen (blue glow)
-      ctx.fillStyle = '#3A90FF';
+      // Screen
+      ctx.fillStyle = '#2A80FF';
       ctx.beginPath();
-      ctx.roundRect(phX - 6, phY - 12, 12, 20, 2);
+      ctx.roundRect(phX - 6, phY - 14, 12, 18, 2);
       ctx.fill();
-      // Screen glare
-      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      // Glare
+      ctx.fillStyle = 'rgba(255,255,255,0.22)';
       ctx.beginPath();
-      ctx.roundRect(phX - 5, phY - 11, 5, 8, 1);
+      ctx.roundRect(phX - 5, phY - 13, 5, 7, 1);
       ctx.fill();
 
     } else {
