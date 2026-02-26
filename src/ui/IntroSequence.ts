@@ -698,6 +698,45 @@ export class IntroSequence {
     ctx.fillRect(cx - 18, groundY - hh * 0.44, 16, hh * 0.44 - 20);
     ctx.fillRect(cx + 2,  groundY - hh * 0.44, 16, hh * 0.44 - 20);
 
+    // ── Jose: draw back/side dreads BEFORE shirt so they drape over shoulders ──
+    if (sc.id === 'jose') {
+      const jhy  = groundY - hh * 0.87;
+      const jhr  = hh * 0.075; // head horizontal radius
+      const dc   = '#2a1500';
+      const dl   = '#3a1e00';
+      const dcb  = '#1a0800';
+      // Side + back dreads that drape onto shoulders — drawn BEFORE shirt
+      const backDreads = [
+        { dx: -jhr * 1.1, swing: -10, len: hh * 0.42, w: 11, color: dc  },
+        { dx: -jhr * 0.7, swing:  -7, len: hh * 0.46, w: 10, color: dl  },
+        { dx:  jhr * 0.7, swing:   7, len: hh * 0.44, w: 10, color: dl  },
+        { dx:  jhr * 1.1, swing:   9, len: hh * 0.40, w: 11, color: dc  },
+        { dx: -jhr * 0.3, swing:  -3, len: hh * 0.50, w:  9, color: dcb },
+        { dx:  jhr * 0.3, swing:   3, len: hh * 0.48, w:  9, color: dc  },
+      ];
+      ctx.save();
+      ctx.lineCap = 'round';
+      backDreads.forEach(d => {
+        ctx.strokeStyle = d.color;
+        ctx.lineWidth = d.w;
+        const startX = cx + d.dx;
+        const startY = jhy + hh * 0.09; // bottom of head ellipse
+        ctx.beginPath();
+        ctx.moveTo(startX, startY);
+        ctx.bezierCurveTo(
+          startX + d.swing * 0.3, startY + d.len * 0.3,
+          startX + d.swing * 0.8, startY + d.len * 0.7,
+          startX + d.swing * 0.6, startY + d.len,
+        );
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(startX + d.swing * 0.6, startY + d.len, d.w * 0.5, 0, Math.PI * 2);
+        ctx.fillStyle = d.color;
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+
     // Black TEM shirt — Jarrad gets broader chest to match muscular build
     const chestW = sc.id === 'jarrad' ? 50 : 40;
     ctx.fillStyle = shirtCol;
@@ -1049,59 +1088,63 @@ export class IntroSequence {
     switch (sc.id) {
 
       case 'jose': {
-        // ── Shoulder-length+ dreadlocks. Dark brown/caramel. Clear-frame glasses. ──
-        const dc  = '#1e0d00';   // dark dread colour
-        const dl  = '#3a1e00';   // medium brown variation
-        const dca = '#5a3500';   // caramel sun-bleached tips on some locs
-        // Dreads — longer, past shoulder, with caramel highlights on outer locs
-        const dreads = [
-          { dx: -14, swing: -7,  len: hh * 0.30, w: 6, color: dc  },
-          { dx: -9,  swing: -4,  len: hh * 0.35, w: 7, color: dl  },
-          { dx: -4,  swing: -1,  len: hh * 0.38, w: 6, color: dc  },
-          { dx:  1,  swing:  2,  len: hh * 0.36, w: 7, color: dl  },
-          { dx:  6,  swing:  4,  len: hh * 0.33, w: 6, color: dca },
-          { dx: 11,  swing:  5,  len: hh * 0.28, w: 5, color: dca },
-          { dx: -12, swing: -5,  len: hh * 0.22, w: 4, color: dl  }, // front fringe
-          { dx:  8,  swing:  3,  len: hh * 0.20, w: 4, color: dc  },
+        // ── Shoulder-length dreadlocks — back dreads already drawn pre-shirt ──
+        const dc  = '#2a1500';
+        const dl  = '#3a1e00';
+        const dca = '#5a3500'; // lighter caramel tips
+        // Shorter front-facing dreads (frame the face, sit on top of everything)
+        const frontDreads = [
+          { dx: -hr * 1.3, swing: -6, len: hh * 0.28, w: 10, color: dc  },
+          { dx: -hr * 0.8, swing: -3, len: hh * 0.32, w: 11, color: dl  },
+          { dx:  hr * 0.8, swing:  3, len: hh * 0.32, w: 11, color: dl  },
+          { dx:  hr * 1.3, swing:  5, len: hh * 0.26, w: 10, color: dc  },
+          { dx: -hr * 0.2, swing: -2, len: hh * 0.30, w:  9, color: dca },
+          { dx:  hr * 0.2, swing:  2, len: hh * 0.28, w:  9, color: dc  },
         ];
-        dreads.forEach(d => {
+        frontDreads.forEach(d => {
           ctx.strokeStyle = d.color;
           ctx.lineWidth = d.w;
+          const startX = cx + d.dx;
+          const startY = hy + hr * 0.4;
           ctx.beginPath();
-          ctx.moveTo(cx + d.dx, hy - hr * 0.05);
+          ctx.moveTo(startX, startY);
           ctx.bezierCurveTo(
-            cx + d.dx + d.swing * 0.35, hy + d.len * 0.32,
-            cx + d.dx + d.swing * 0.85, hy + d.len * 0.65,
-            cx + d.dx + d.swing * 0.65, hy + d.len,
+            startX + d.swing * 0.4, startY + d.len * 0.35,
+            startX + d.swing * 0.9, startY + d.len * 0.7,
+            startX + d.swing * 0.7, startY + d.len,
           );
           ctx.stroke();
-          // Knobby dread tip
           ctx.beginPath();
-          ctx.arc(cx + d.dx + d.swing * 0.65, hy + d.len, d.w * 0.6, 0, Math.PI * 2);
+          ctx.arc(startX + d.swing * 0.7, startY + d.len, d.w * 0.55, 0, Math.PI * 2);
           ctx.fillStyle = d.color;
           ctx.fill();
         });
-        // Crown cap
+        // Crown cap — covers top of head
         ctx.fillStyle = dc;
         ctx.beginPath();
-        ctx.arc(cx, hy - hr * 0.55, hr * 1.08, Math.PI, 0);
+        ctx.arc(cx, hy - hr * 0.55, hr * 1.1, Math.PI, 0);
         ctx.fill();
+        // Sides of cap covering ears
+        ctx.fillRect(cx - hr * 1.1, hy - hr * 0.5, hr * 0.4, hr * 0.9);
+        ctx.fillRect(cx + hr * 0.7, hy - hr * 0.5, hr * 0.4, hr * 0.9);
         // Dread tie / headband
         ctx.strokeStyle = '#7B4A10';
-        ctx.lineWidth = 3.5;
+        ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(cx, hy - hr * 0.15, hr * 1.14, Math.PI * 0.75, Math.PI * 1.95);
+        ctx.arc(cx, hy - hr * 0.05, hr * 1.12, Math.PI * 0.72, Math.PI * 1.98);
         ctx.stroke();
-        // ── Clear/light rectangular glasses (signature Jose look) ──────────
-        ctx.strokeStyle = 'rgba(210,210,210,0.85)';
-        ctx.lineWidth = 2.2;
-        ctx.fillStyle = 'rgba(180,220,255,0.12)';
-        const jgw = hr * 0.95; const jgh = hr * 0.50; const jgy = hy - hr * 0.12;
-        ctx.beginPath(); ctx.roundRect(cx - jgw - 1, jgy - jgh / 2, jgw, jgh, 2);
-        ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.roundRect(cx + 1, jgy - jgh / 2, jgw, jgh, 2);
-        ctx.fill(); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(cx - 1, jgy); ctx.lineTo(cx + 1, jgy); ctx.stroke();
+        // ── Glasses (randomly shown — matches 3D model behaviour) ──────────
+        if (Math.random() < 0.5) {
+          ctx.strokeStyle = 'rgba(210,210,210,0.85)';
+          ctx.lineWidth = 2.2;
+          ctx.fillStyle = 'rgba(180,220,255,0.12)';
+          const jgw = hr * 0.95; const jgh = hr * 0.50; const jgy = hy - hr * 0.12;
+          ctx.beginPath(); ctx.roundRect(cx - jgw - 1, jgy - jgh / 2, jgw, jgh, 2);
+          ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.roundRect(cx + 1, jgy - jgh / 2, jgw, jgh, 2);
+          ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx - 1, jgy); ctx.lineTo(cx + 1, jgy); ctx.stroke();
+        }
         break;
       }
 
