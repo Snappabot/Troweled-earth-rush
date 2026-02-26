@@ -162,6 +162,7 @@ export class IntroSequence {
   private camShake = 0;
   private currentScene: Scene | null = null;
   private sceneT = 0;  // seconds elapsed in current scene
+  private _joseGlasses = false; // determined once per scene start
   private buildings: {x:number,w:number,h:number}[] = [];
 
   /** Resolves with the already-playing HTMLAudioElement so StartMenu can adopt it seamlessly */
@@ -330,6 +331,7 @@ export class IntroSequence {
     this.panX = 0;
     this.particles = [];
     this.camShake = scene.id === 'matt' || scene.id === 'jose' ? 0.5 : 0;
+    if (scene.id === 'jose') this._joseGlasses = Math.random() < 0.5;
     this._updateText(scene);
   }
 
@@ -702,9 +704,9 @@ export class IntroSequence {
     if (sc.id === 'jose') {
       const jhy  = groundY - hh * 0.87;
       const jhr  = hh * 0.075; // head horizontal radius
-      const dc   = '#2a1500';
-      const dl   = '#3a1e00';
-      const dcb  = '#1a0800';
+      const dc   = '#3a1e00';
+      const dl   = '#5a3200';
+      const dcb  = '#2a1400';
       // Side + back dreads that drape onto shoulders — drawn BEFORE shirt
       const backDreads = [
         { dx: -jhr * 1.1, swing: -10, len: hh * 0.42, w: 11, color: dc  },
@@ -1133,62 +1135,69 @@ export class IntroSequence {
     switch (sc.id) {
 
       case 'jose': {
-        // ── Shoulder-length dreadlocks — back dreads already drawn pre-shirt ──
-        const dc  = '#2a1500';
-        const dl  = '#3a1e00';
-        const dca = '#5a3500'; // lighter caramel tips
-        // Shorter front-facing dreads (frame the face, sit on top of everything)
+        // ── Crown cap (drawn first so dreads hang over it on sides) ──────────
+        const dc  = '#3a1e00';  // slightly lighter for visibility vs bg
+        const dl  = '#5a3200';
+        const dca = '#6a4400';
+        ctx.fillStyle = dc;
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.45, hr * 1.05, Math.PI, 0);
+        ctx.fill();
+        // Narrow side strips (don't extend too far down — keep dread roots visible)
+        ctx.fillRect(cx - hr * 1.05, hy - hr * 0.5, hr * 0.35, hr * 0.55);
+        ctx.fillRect(cx + hr * 0.7,  hy - hr * 0.5, hr * 0.35, hr * 0.55);
+
+        // ── Front dreads — hang from below the cap ────────────────────────
+        const dreadsStart = hy + hr * 0.05; // just below head center / cap edge
         const frontDreads = [
-          { dx: -hr * 1.3, swing: -6, len: hh * 0.28, w: 10, color: dc  },
-          { dx: -hr * 0.8, swing: -3, len: hh * 0.32, w: 11, color: dl  },
-          { dx:  hr * 0.8, swing:  3, len: hh * 0.32, w: 11, color: dl  },
-          { dx:  hr * 1.3, swing:  5, len: hh * 0.26, w: 10, color: dc  },
-          { dx: -hr * 0.2, swing: -2, len: hh * 0.30, w:  9, color: dca },
-          { dx:  hr * 0.2, swing:  2, len: hh * 0.28, w:  9, color: dc  },
+          { dx: -hr * 1.1, swing: -8,  len: hh * 0.32, w: 11, color: dc  },
+          { dx: -hr * 0.65,swing: -4,  len: hh * 0.36, w: 12, color: dl  },
+          { dx:  hr * 0.65,swing:  4,  len: hh * 0.36, w: 12, color: dl  },
+          { dx:  hr * 1.1, swing:  7,  len: hh * 0.30, w: 11, color: dc  },
+          { dx: -hr * 0.1, swing: -2,  len: hh * 0.34, w: 10, color: dca },
+          { dx:  hr * 0.1, swing:  2,  len: hh * 0.32, w: 10, color: dc  },
         ];
+        ctx.save();
+        ctx.lineCap = 'round';
         frontDreads.forEach(d => {
           ctx.strokeStyle = d.color;
           ctx.lineWidth = d.w;
           const startX = cx + d.dx;
-          const startY = hy + hr * 0.4;
           ctx.beginPath();
-          ctx.moveTo(startX, startY);
+          ctx.moveTo(startX, dreadsStart);
           ctx.bezierCurveTo(
-            startX + d.swing * 0.4, startY + d.len * 0.35,
-            startX + d.swing * 0.9, startY + d.len * 0.7,
-            startX + d.swing * 0.7, startY + d.len,
+            startX + d.swing * 0.4, dreadsStart + d.len * 0.35,
+            startX + d.swing * 0.85, dreadsStart + d.len * 0.7,
+            startX + d.swing * 0.65, dreadsStart + d.len,
           );
           ctx.stroke();
+          // Knob tip
           ctx.beginPath();
-          ctx.arc(startX + d.swing * 0.7, startY + d.len, d.w * 0.55, 0, Math.PI * 2);
+          ctx.arc(startX + d.swing * 0.65, dreadsStart + d.len, d.w * 0.55, 0, Math.PI * 2);
           ctx.fillStyle = d.color;
           ctx.fill();
         });
-        // Crown cap — covers top of head
-        ctx.fillStyle = dc;
-        ctx.beginPath();
-        ctx.arc(cx, hy - hr * 0.55, hr * 1.1, Math.PI, 0);
-        ctx.fill();
-        // Sides of cap covering ears
-        ctx.fillRect(cx - hr * 1.1, hy - hr * 0.5, hr * 0.4, hr * 0.9);
-        ctx.fillRect(cx + hr * 0.7, hy - hr * 0.5, hr * 0.4, hr * 0.9);
+        ctx.restore();
+
         // Dread tie / headband
-        ctx.strokeStyle = '#7B4A10';
+        ctx.strokeStyle = '#8B5A1A';
         ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(cx, hy - hr * 0.05, hr * 1.12, Math.PI * 0.72, Math.PI * 1.98);
+        ctx.arc(cx, hy - hr * 0.05, hr * 1.10, Math.PI * 0.72, Math.PI * 1.98);
         ctx.stroke();
-        // ── Glasses (randomly shown — matches 3D model behaviour) ──────────
-        if (Math.random() < 0.5) {
-          ctx.strokeStyle = 'rgba(210,210,210,0.85)';
+
+        // ── Glasses (state fixed once per scene — no per-frame flicker) ──────
+        if (this._joseGlasses) {
+          ctx.strokeStyle = 'rgba(220,220,220,0.9)';
           ctx.lineWidth = 2.2;
-          ctx.fillStyle = 'rgba(180,220,255,0.12)';
-          const jgw = hr * 0.95; const jgh = hr * 0.50; const jgy = hy - hr * 0.12;
-          ctx.beginPath(); ctx.roundRect(cx - jgw - 1, jgy - jgh / 2, jgw, jgh, 2);
+          ctx.fillStyle = 'rgba(180,220,255,0.13)';
+          const jgw = hr * 0.90; const jgh = hr * 0.48; const jgy = hy - hr * 0.10;
+          ctx.beginPath(); ctx.roundRect(cx - jgw - 2, jgy - jgh / 2, jgw, jgh, 2);
           ctx.fill(); ctx.stroke();
-          ctx.beginPath(); ctx.roundRect(cx + 1, jgy - jgh / 2, jgw, jgh, 2);
+          ctx.beginPath(); ctx.roundRect(cx + 2, jgy - jgh / 2, jgw, jgh, 2);
           ctx.fill(); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(cx - 1, jgy); ctx.lineTo(cx + 1, jgy); ctx.stroke();
+          // Bridge
+          ctx.beginPath(); ctx.moveTo(cx - 2, jgy); ctx.lineTo(cx + 2, jgy); ctx.stroke();
         }
         break;
       }
