@@ -1059,11 +1059,6 @@ export class IntroSequence {
         ctx.beginPath();
         ctx.arc(cx, hy - hr * 0.15, hr * 1.14, Math.PI * 0.75, Math.PI * 1.95);
         ctx.stroke();
-        // Scruffy beard
-        ctx.fillStyle = '#2a1000';
-        ctx.beginPath();
-        ctx.ellipse(cx, hy + hr * 0.6, hr * 0.65, hr * 0.35, 0, 0, Math.PI);
-        ctx.fill();
         // ── Clear/light rectangular glasses (signature Jose look) ──────────
         ctx.strokeStyle = 'rgba(210,210,210,0.85)';
         ctx.lineWidth = 2.2;
