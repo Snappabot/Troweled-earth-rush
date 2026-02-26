@@ -33,6 +33,7 @@ import { CrewSelector } from './ui/CrewSelector';
 import { crewBreakImmune, crewPayMult, crewTimerBonus, getActiveCrew } from './data/CrewPerks';
 import { submitScore, getPlayerName } from './services/LeaderboardService';
 import { PlayerNamePrompt } from './ui/PlayerNamePrompt';
+import { CharacterCreator } from './ui/CharacterCreator';
 import { MarbellinoMixer } from './minigames/MarbellinoMixer';
 import { BattleScreen } from './ui/BattleScreen';
 import { getRandomRival } from './data/RivalCrews';
@@ -55,9 +56,10 @@ async function main() {
   // Preload TEM logo before any game objects are created — textures ready instantly
   await preloadTEMLogo();
 
-  // ── Intro cinematic → Start menu ─────────────────────────────────────────────
+  // ── Intro cinematic → Start menu → Character creator ─────────────────────────
   const introAudio = await new IntroSequence().play();
   await new StartMenu().show(introAudio);
+  const playerChar = await new CharacterCreator().show();
 
   const engine = new Engine();
   await engine.init();
@@ -75,6 +77,7 @@ async function main() {
 
   const spillMeter = new SpillMeter();
   const hud = new HUD();
+  hud.setPlayerCharacter(playerChar);
   const dialoguePause = new DialoguePause();
 
   // ── Job system ──────────────────────────────────────────────────────────────
@@ -121,6 +124,7 @@ async function main() {
             waypointSystem.setTarget(JobManager.WORKSHOP_POS);
             hud.setActiveJob(job, 1);
             hud.updateCrewStatus([], [], false);
+            { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`🚐 Let's go ${pn}! Pick up supplies first.`, 0xD4A040); }
             // Schedule random breaks — skipped entirely if Phil is in crew
             jobElapsed = 0;
             if (!crewBreakImmune()) {
@@ -336,6 +340,8 @@ async function main() {
         hud.showToast('☕ Coffeed up — now find a toilet, fast!', 0xD4622A);
       } else {
         hud.showToast('☕ Coffee hit! Plaster steady, bladder loading...', 0xD4622A);
+        // Personalised follow-up toast once the first one fades
+        setTimeout(() => { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`☕ ${pn} grabbed a coffee!`, 0xD4622A); }, 2800);
       }
     }
 
@@ -383,7 +389,10 @@ async function main() {
     if (trafficResult.hit) {
       van.mesh.position.x = trafficResult.x;
       van.mesh.position.z = trafficResult.z;
-      if (jobActive) spillMeter.triggerCrash();
+      if (jobActive) {
+        spillMeter.triggerCrash();
+        if (Math.random() < 0.3) { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💥 Watch it ${pn}!`, 0xFF3333); }
+      }
     }
 
     waypointSystem.update(dt, vanX, vanZ);
@@ -685,6 +694,7 @@ async function main() {
                   // Show TD — no silent catch fallthrough; surface errors visibly
                   towerDefence.show(tdCfg, (tdResult) => {
                     if (tdResult.won) {
+                      { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88); }
                       finishJob(1, true);
                     } else {
                       // TD lost — contract stolen
@@ -705,6 +715,7 @@ async function main() {
                 }, 1800);
               } else {
                 // Regular job — scaffold result determines pay
+                { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88); }
                 finishJob(1, false);
               }
             });

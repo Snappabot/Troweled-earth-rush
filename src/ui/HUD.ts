@@ -1,4 +1,5 @@
 import type { Job } from '../gameplay/JobManager';
+import type { PlayerCharacter } from './CharacterCreator';
 
 export const ONE_BTC = 100_000_000; // sats
 
@@ -21,6 +22,7 @@ function initials(name: string): string {
 }
 
 export class HUD {
+  private playerChar: PlayerCharacter | null = null;
   private btcAchieved = false;
   private speedText!: HTMLDivElement;
   private moneyEl!: HTMLDivElement;
@@ -232,6 +234,14 @@ export class HUD {
 
   /** Return the money/BTC panel element for mounting in GameMenu */
   getMoneyPanel(): HTMLDivElement { return this.moneyPanel; }
+
+  /** Store the player's chosen character so game events can use their name. */
+  setPlayerCharacter(pc: PlayerCharacter): void {
+    this.playerChar = pc;
+  }
+
+  /** Retrieve the player character (null if not yet set). */
+  getPlayerChar(): PlayerCharacter | null { return this.playerChar; }
 
   /** Hide or show all HUD elements (e.g. during cinematic) */
   setVisible(visible: boolean): void {
