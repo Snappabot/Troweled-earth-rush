@@ -724,16 +724,16 @@ export class IntroSequence {
         ctx.beginPath();
         ctx.ellipse(ax + side * 10, groundY - hh * 0.66, 13, hh * 0.09, side * 0.2, 0, Math.PI * 2);
         ctx.fill();
-        // Forearm — ends just below hip (hh*0.44 = pants top, add ~hh*0.08 below)
+        // Forearm — ends at waist level
         ctx.beginPath();
-        ctx.roundRect(ax - 11, groundY - hh * 0.55, 22, hh * 0.16, 6);
+        ctx.roundRect(ax - 11, groundY - hh * 0.55, 22, hh * 0.11, 6);
         ctx.fill();
       };
       drawMuscleArm(cx - 30, -1);
       drawMuscleArm(cx + 30,  1);
 
-      // Forearm ends at groundY - hh*0.39; hand starts clearly below that
-      const handY = groundY - hh * 0.34; // well below forearm, no overlap
+      // Forearm ends at groundY - hh*0.44; hand sits right at waist
+      const handY = groundY - hh * 0.42;
 
       // ── Left hand (fist) ──────────────────────────────────────────────────
       ctx.fillStyle = skin;
@@ -1415,20 +1415,10 @@ export class IntroSequence {
         break;
       }
       case 'jarrad': {
-        // Phone glow in right hand
-        ctx.fillStyle = skin;
-        ctx.fillRect(cx + 19, groundY - hh * 0.70, 10, hh * 0.22);
-        ctx.fillStyle = '#1a1a2a';
-        ctx.fillRect(cx + 28, groundY - hh * 0.73, 18, 28);
-        ctx.fillStyle = '#4488FF';
-        ctx.shadowColor = '#4488FF';
-        ctx.shadowBlur = 18;
-        ctx.fillRect(cx + 30, groundY - hh * 0.71, 14, 24);
-        ctx.shadowBlur = 0;
-        // Screen glow spill on face
-        ctx.fillStyle = '#4488FF18';
+        // Subtle screen glow spill on face from the phone in hand (no duplicate phone drawing)
+        ctx.fillStyle = '#4488FF12';
         ctx.beginPath();
-        ctx.ellipse(cx + 20, groundY - hh * 0.87, 30, 40, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx + 16, groundY - hh * 0.87, 26, 36, 0, 0, Math.PI * 2);
         ctx.fill();
         break;
       }
