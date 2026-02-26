@@ -690,15 +690,25 @@ export class IntroSequence {
     const shirtCol = '#111111';  // black TEM shirt
     const pantCol  = '#1a1a2a';
 
-    // Boots
+    // Boots — Tsuyoshi gets wider swordsman stance
     ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(cx - 19, groundY - 22, 16, 22);
-    ctx.fillRect(cx + 3,  groundY - 22, 16, 22);
+    if (sc.id === 'tsuyoshi') {
+      ctx.fillRect(cx - 28, groundY - 22, 17, 22);
+      ctx.fillRect(cx + 11,  groundY - 22, 17, 22);
+    } else {
+      ctx.fillRect(cx - 19, groundY - 22, 16, 22);
+      ctx.fillRect(cx + 3,  groundY - 22, 16, 22);
+    }
 
     // Pants
     ctx.fillStyle = pantCol;
-    ctx.fillRect(cx - 18, groundY - hh * 0.44, 16, hh * 0.44 - 20);
-    ctx.fillRect(cx + 2,  groundY - hh * 0.44, 16, hh * 0.44 - 20);
+    if (sc.id === 'tsuyoshi') {
+      ctx.fillRect(cx - 27, groundY - hh * 0.44, 17, hh * 0.44 - 20);
+      ctx.fillRect(cx + 10,  groundY - hh * 0.44, 17, hh * 0.44 - 20);
+    } else {
+      ctx.fillRect(cx - 18, groundY - hh * 0.44, 16, hh * 0.44 - 20);
+      ctx.fillRect(cx + 2,  groundY - hh * 0.44, 16, hh * 0.44 - 20);
+    }
 
     // Black TEM shirt — Jarrad gets broader chest to match muscular build
     const chestW = sc.id === 'jarrad' ? 54 : 40;
@@ -762,6 +772,30 @@ export class IntroSequence {
       ctx.roundRect(phX - 4, handY - 7, 4, 6, 1);
       ctx.fill();
 
+    } else if (sc.id === 'tsuyoshi') {
+      // ── Tsuyoshi: swordsman grip — both arms angle inward to grip point ──
+      ctx.fillStyle = shirtCol;
+      // Left sleeve angled right-down toward center grip
+      ctx.save();
+      ctx.translate(cx - 22, groundY - hh * 0.78);
+      ctx.rotate(0.52);
+      ctx.fillRect(-6, 0, 12, hh * 0.30);
+      ctx.restore();
+      // Right sleeve angled left-down toward center grip
+      ctx.save();
+      ctx.translate(cx + 22, groundY - hh * 0.78);
+      ctx.rotate(-0.52);
+      ctx.fillRect(-6, 0, 12, hh * 0.30);
+      ctx.restore();
+      // Both hands at grip (overlapping center, just below belt)
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.ellipse(cx - 6, groundY - hh * 0.47, 9, 8, 0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cx + 7, groundY - hh * 0.44, 9, 8, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+
     } else {
       ctx.fillStyle = shirtCol;
       ctx.fillRect(cx - 32, groundY - hh * 0.78, 13, hh * 0.32);
@@ -777,10 +811,12 @@ export class IntroSequence {
       ctx.fill();
     }
 
-    // Head
+    // Head — Tsuyoshi gets a narrower, less-round face
     ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.ellipse(cx, groundY - hh * 0.87, hh * 0.075, hh * 0.09, 0, 0, Math.PI * 2);
+    const _headRx = sc.id === 'tsuyoshi' ? hh * 0.062 : hh * 0.075;
+    const _headRy = sc.id === 'tsuyoshi' ? hh * 0.094 : hh * 0.09;
+    ctx.ellipse(cx, groundY - hh * 0.87, _headRx, _headRy, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Character-specific hair + prop
@@ -1188,52 +1224,57 @@ export class IntroSequence {
       }
 
       case 'tsuyoshi': {
-        // ── REAL MOHAWK — shaved sides, jet black center strip, tall spikes ──
-        const mohBlack = '#080808';
-        const mohW = hr * 0.52;
-        const baseY = hy - hr * 0.2;
+        // ── Short jet-black spiky hair — sides covered, top swept-back spikes ──
+        const hBlack = '#060606';
+        const hBase = hy - hr * 0.1;
 
-        // Shaved sides (skin showing)
-        ctx.fillStyle = skin;
+        // Side hair coverage (not shaved — full black hair on sides)
+        ctx.fillStyle = hBlack;
         ctx.beginPath();
-        ctx.arc(cx - hr * 0.85, hy - hr * 0.5, hr * 0.55, 0, Math.PI * 2);
+        ctx.ellipse(cx - hr * 0.75, hy - hr * 0.35, hr * 0.62, hr * 0.72, -0.15, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(cx + hr * 0.85, hy - hr * 0.5, hr * 0.55, 0, Math.PI * 2);
+        ctx.ellipse(cx + hr * 0.75, hy - hr * 0.35, hr * 0.62, hr * 0.72, 0.15, 0, Math.PI * 2);
         ctx.fill();
 
-        // Central strip base
-        ctx.fillStyle = mohBlack;
-        ctx.fillRect(cx - mohW / 2, baseY - hr * 0.3, mohW, hr * 0.55);
+        // Hair base cap covering top of head
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.55, hr * 1.05, Math.PI, 0);
+        ctx.fill();
 
-        // Tall irregular spikes
-        const tSpikes = [
-          { ox: -0.28, h: hr * 1.55, tw: 0.22, tilt: -0.18 },
-          { ox: -0.10, h: hr * 2.10, tw: 0.20, tilt: -0.06 },
-          { ox:  0.06, h: hr * 2.40, tw: 0.22, tilt:  0.04 },
-          { ox:  0.20, h: hr * 1.90, tw: 0.19, tilt:  0.12 },
-          { ox:  0.32, h: hr * 1.40, tw: 0.18, tilt:  0.20 },
+        // Defined sharp spikes swept slightly back (samurai/anime style)
+        const spikes = [
+          { ox: -hr * 0.55, h: hr * 1.10, bw: hr * 0.38, tilt: -0.30 },
+          { ox: -hr * 0.22, h: hr * 1.55, bw: hr * 0.32, tilt: -0.14 },
+          { ox:  hr * 0.08, h: hr * 1.75, bw: hr * 0.34, tilt:  0.00 },
+          { ox:  hr * 0.35, h: hr * 1.45, bw: hr * 0.30, tilt:  0.16 },
+          { ox:  hr * 0.58, h: hr * 0.95, bw: hr * 0.26, tilt:  0.28 },
         ];
-        ctx.fillStyle = mohBlack;
-        tSpikes.forEach(s => {
-          const sx = cx + s.ox * mohW * 3;
-          const bw = s.tw * mohW * 2.5;
+        ctx.fillStyle = hBlack;
+        spikes.forEach(s => {
           ctx.beginPath();
-          ctx.moveTo(sx - bw / 2, baseY);
-          ctx.lineTo(sx + bw / 2, baseY);
-          ctx.lineTo(sx + Math.sin(s.tilt) * s.h * 0.5, baseY - s.h);
+          ctx.moveTo(cx + s.ox - s.bw / 2, hBase);
+          ctx.lineTo(cx + s.ox + s.bw / 2, hBase);
+          ctx.lineTo(cx + s.ox + s.tilt * s.h * 0.6, hBase - s.h);
           ctx.closePath();
           ctx.fill();
         });
 
-        // Blue-black sheen on tallest spike
-        ctx.fillStyle = 'rgba(80,80,160,0.18)';
+        // Subtle blue-black sheen on top spikes
+        ctx.fillStyle = 'rgba(60,60,140,0.14)';
         ctx.beginPath();
-        ctx.moveTo(cx - 1, baseY);
-        ctx.lineTo(cx + 3, baseY);
-        ctx.lineTo(cx + 2, baseY - hr * 2.0);
+        ctx.moveTo(cx - hr * 0.1, hBase);
+        ctx.lineTo(cx + hr * 0.15, hBase);
+        ctx.lineTo(cx + hr * 0.08, hBase - hr * 1.5);
         ctx.closePath();
         ctx.fill();
+
+        // Small facial features — defined jawline hint (thin stroke)
+        ctx.strokeStyle = '#2a1a08';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, hy + hr * 0.3, hr * 0.62, 0.2, Math.PI - 0.2);
+        ctx.stroke();
         break;
       }
 
@@ -1385,19 +1426,69 @@ export class IntroSequence {
         break;
       }
       case 'tsuyoshi': {
-        // Bucket held down
-        ctx.fillStyle = skin;
-        ctx.fillRect(cx - 33, groundY - hh * 0.44, 8, hh * 0.22);
-        ctx.fillStyle = '#446688';
+        // ── Katana — diagonal sword held at grip, blade pointing up-right ──
+        ctx.save();
+        // Pivot at grip point (both hands)
+        ctx.translate(cx, groundY - hh * 0.45);
+        ctx.rotate(-Math.PI * 0.30); // tilt: blade up-right ~54°
+
+        // Blade (long, thin, silver)
+        const bladeLen = hh * 0.58;
+        const grad = ctx.createLinearGradient(-3, -bladeLen, 3, 0);
+        grad.addColorStop(0, '#e8eef8');
+        grad.addColorStop(0.4, '#c8d4e4');
+        grad.addColorStop(1, '#a0aec0');
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.moveTo(cx - 44, groundY - hh * 0.22);
-        ctx.lineTo(cx - 28, groundY - hh * 0.22);
-        ctx.lineTo(cx - 30, groundY - hh * 0.04);
-        ctx.lineTo(cx - 42, groundY - hh * 0.04);
+        ctx.moveTo(-2.5, 0);
+        ctx.lineTo(2.5, 0);
+        ctx.lineTo(1, -bladeLen);     // tip narrows
+        ctx.lineTo(-1, -bladeLen);
+        ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = '#88AACC';
+        // Edge highlight
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fillRect(0.5, -bladeLen + 4, 1.2, bladeLen - 8);
+        // Blade tip shine
+        ctx.fillStyle = '#f0f6ff';
+        ctx.beginPath();
+        ctx.moveTo(-1, -bladeLen);
+        ctx.lineTo(1, -bladeLen);
+        ctx.lineTo(0, -bladeLen - hr * 0.18);
+        ctx.closePath();
+        ctx.fill();
+
+        // Tsuba (guard) — flat oval crossguard
+        ctx.fillStyle = '#9A8840';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#6A5820';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Grip / handle
+        const gripH = hh * 0.12;
+        ctx.fillStyle = '#3a1800';
+        ctx.beginPath();
+        ctx.roundRect(-4, 2, 8, gripH, 2);
+        ctx.fill();
+        // Wrap (alternating dark strips)
+        ctx.strokeStyle = '#1a0800';
         ctx.lineWidth = 2;
-        ctx.strokeRect(cx - 44, groundY - hh * 0.22, 16, 2);
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          ctx.moveTo(-4, 4 + i * (gripH / 5));
+          ctx.lineTo(4,  6 + i * (gripH / 5));
+          ctx.stroke();
+        }
+        // Pommel
+        ctx.fillStyle = '#9A8840';
+        ctx.beginPath();
+        ctx.ellipse(0, 2 + gripH, 5, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
         break;
       }
       case 'connie': {
