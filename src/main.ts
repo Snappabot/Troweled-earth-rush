@@ -12,6 +12,7 @@ import { HUD } from './ui/HUD';
 import { MiniGameManager } from './minigames/MiniGameManager';
 import { AchievementGallery } from './ui/AchievementGallery';
 import { PedestrianSystem } from './entities/PedestrianSystem';
+import { TrafficSystem } from './entities/TrafficSystem';
 import { CoffeeShop } from './entities/CoffeeShop';
 import { BladderMeter } from './gameplay/BladderMeter';
 import { Mikayla } from './entities/Mikayla';
@@ -164,6 +165,7 @@ async function main() {
   };
 
   // ── Traffic + Pedestrian systems ────────────────────────────────────────────
+  const traffic    = new TrafficSystem(engine.scene);
   const pedestrians = new PedestrianSystem(engine.scene);
 
   // ── Coffee shop + Bladder mechanic ──────────────────────────────────────────
@@ -375,6 +377,14 @@ async function main() {
 
     pedestrians.update(dt, vanX, vanZ);
 
+    // ── Traffic system ────────────────────────────────────────────────────────
+    traffic.update(dt, vanX, vanZ);
+    const trafficResult = traffic.resolveVan(vanX, vanZ);
+    if (trafficResult.hit) {
+      van.mesh.position.x = trafficResult.x;
+      van.mesh.position.z = trafficResult.z;
+      if (jobActive) spillMeter.triggerCrash();
+    }
 
     waypointSystem.update(dt, vanX, vanZ);
 
