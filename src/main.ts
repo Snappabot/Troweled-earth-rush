@@ -136,15 +136,18 @@ async function main() {
             // Schedule random breaks — skipped entirely if Phil is in crew
             jobElapsed = 0;
             if (!crewBreakImmune()) {
-              const firstAt  = 20 + Math.random() * 60 + extraTime;
-              const secondAt = firstAt + 20 + Math.random() * 50;
-              if (Math.random() > 0.5) {
-                coffeeBreakAt = firstAt; toiletBreakAt = secondAt;
-              } else {
-                toiletBreakAt = firstAt; coffeeBreakAt = secondAt;
-              }
+              // Pick 2 of 3 break types randomly, assign to two time slots
+              const allBreaks: BreakKind[] = ['coffee', 'toilet', 'render'];
+              const shuffled = allBreaks.sort(() => Math.random() - 0.5);
+              const pick1 = shuffled[0], pick2 = shuffled[1];  // pick 2 of 3
+              const firstAt  = 25 + Math.random() * 50 + extraTime;
+              const secondAt = firstAt + 25 + Math.random() * 40;
+              coffeeBreakAt  = -1; toiletBreakAt = -1; renderBreakAt = -1;
+              if (pick1 === 'coffee' || pick2 === 'coffee')   coffeeBreakAt  = pick1 === 'coffee' ? firstAt : secondAt;
+              if (pick1 === 'toilet' || pick2 === 'toilet')   toiletBreakAt  = pick1 === 'toilet' ? firstAt : secondAt;
+              if (pick1 === 'render' || pick2 === 'render')   renderBreakAt  = pick1 === 'render' ? firstAt : secondAt;
             } else {
-              coffeeBreakAt = Infinity; toiletBreakAt = Infinity;
+              coffeeBreakAt = Infinity; toiletBreakAt = Infinity; renderBreakAt = Infinity;
             }
             breakActive = null;
             savedWaypoint = null;
@@ -239,7 +242,8 @@ async function main() {
   // Breaks can fire at any point during a job — random timing each run
   const COFFEE_POS = { x: -60, z: -100 };
   const TOILET_POS = { x: 100, z: 60 };
-  type BreakKind = 'coffee' | 'toilet';
+  const RENDER_SUPPLY_POS = { x: 180, z: -60 };
+  type BreakKind = 'coffee' | 'toilet' | 'render';
   // ── Opening cinematic state ──────────────────────────────────────────────────
   let cinematicActive = true;
   let cinematicTime   = 0;
@@ -251,6 +255,7 @@ async function main() {
   let jobElapsed = 0;
   let coffeeBreakAt = -1;  // seconds into job when coffee urge fires (-1 = done/unused)
   let toiletBreakAt = -1;  // seconds into job when toilet urge fires
+  let renderBreakAt = -1;   // seconds into job when Darren's supply run fires (-1 = done/unused)
   let breakActive: BreakKind | null = null;       // which break is currently active
   let savedWaypoint: { x: number; z: number } | null = null; // waypoint before break
 
@@ -442,7 +447,7 @@ async function main() {
       if (result?.failed) {
         spillMeter.level = 0;
         breakActive = null; savedWaypoint = null;
-        coffeeBreakAt = -1; toiletBreakAt = -1;
+        coffeeBreakAt = -1; toiletBreakAt = -1; renderBreakAt = -1;
         waypointSystem.setTarget(null);
         hud.updateTravelTimer(null);
         hud.showTimerFail(150_000);
@@ -500,11 +505,20 @@ async function main() {
         waypointSystem.setTarget(TOILET_POS);
         hud.showToast('🚽 Bursting! Find the toilet before you ruin the plastering!', 0xFF5722);
       }
+      else if (renderBreakAt > 0 && jobElapsed >= renderBreakAt) {
+        renderBreakAt = -1;
+        breakActive = 'render';
+        savedWaypoint = waypointSystem.currentTarget;
+        waypointSystem.setTarget(RENDER_SUPPLY_POS);
+        hud.showToast('🏗️ Darren called — swing by Render Supply Co!', 0x8AAA40);
+      }
     }
 
     // ── Break arrival ─────────────────────────────────────────────────────────
     if (jobManager.activeJob && breakActive && !jobCompleting) {
-      const breakPos = breakActive === 'coffee' ? COFFEE_POS : TOILET_POS;
+      const breakPos = breakActive === 'coffee' ? COFFEE_POS
+        : breakActive === 'toilet' ? TOILET_POS
+        : RENDER_SUPPLY_POS;
       const dx = vanX - breakPos.x;
       const dz = vanZ - breakPos.z;
       if (Math.sqrt(dx * dx + dz * dz) < 14) {
@@ -525,7 +539,7 @@ async function main() {
             },
             randomFrom(GAME_TIPS)
           );
-        } else {
+        } else if (kind === 'toilet') {
           bladderMeter.level = 0;
           bladderMeter.isUrgent = false;
           bladderMeter.caffeinated = false;
@@ -537,6 +551,26 @@ async function main() {
               jobCompleting = false;
             },
             randomFrom(GAME_TIPS)
+          );
+        } else if (kind === 'render') {
+          // Darren tops up render supplies — calms spill meter
+          spillMeter.calm(0.20);  // reduce spill by 20%
+          const DARREN_LINES = [
+            'Darren sorted you out — extra render loaded. Go get \'em!',
+            'Darren says you\'re his best customer. Supplies topped up!',
+            'Bags of render in the back. Darren always comes through.',
+            'Darren threw in some extra primer too. Ledge.',
+          ];
+          const line = DARREN_LINES[Math.floor(Math.random() * DARREN_LINES.length)];
+          dialoguePause.show(
+            '🏗️ Render Supply Co',
+            `Darren grins and loads up the van.\n\n"${line}"\n\n📦 Supplies topped up! Spill risk reduced.`,
+            () => {
+              if (restore) waypointSystem.setTarget(restore);
+              jobCompleting = false;
+              hud.showToast('📦 Render topped up — cheers Darren!', 0x8AAA40);
+            },
+            'Stack it or crack it.',
           );
         }
       }
@@ -698,7 +732,7 @@ async function main() {
                 hud.updateMoney(jobManager.money);
                 characters.showAllCrew();
                 breakActive = null; savedWaypoint = null;
-                coffeeBreakAt = -1; toiletBreakAt = -1;
+                coffeeBreakAt = -1; toiletBreakAt = -1; renderBreakAt = -1;
                 jobCompleting = false;
 
                 // ── Unlock a TEM project photo for the gallery ────────────
@@ -812,7 +846,7 @@ async function main() {
                       hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
                       characters.showAllCrew();
                       breakActive = null; savedWaypoint = null;
-                      coffeeBreakAt = -1; toiletBreakAt = -1;
+                      coffeeBreakAt = -1; toiletBreakAt = -1; renderBreakAt = -1;
                       jobCompleting = false;
                       jobManager.completeJob(arrived, 0);
                       hud.updateMoney(jobManager.money);

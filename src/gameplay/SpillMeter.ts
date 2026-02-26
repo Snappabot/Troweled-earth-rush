@@ -183,4 +183,10 @@ export class SpillMeter {
   triggerCrash(): void {
     this.addSpill(0.30);
   }
+
+  /** Reduce current spill by a fraction (0.0–1.0 of max level) */
+  calm(fraction: number): void {
+    // level is 0.0–1.0 where 1.0 = max, so max * fraction = fraction
+    this.level = Math.max(0, this.level - fraction);
+  }
 }

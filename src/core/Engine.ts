@@ -94,6 +94,7 @@ export class Engine {
     this.createCity();
     this.createTEHouses();
     this.buildWorkshop(-60, 60);  // TEM Workshop — clear block between z=40 and z=80 roads
+    this.buildRenderSupplyCo(180, -60);  // Render Supply Co — east outskirts
     this.createZebraCrossings();
     this.createRoadCorners();
     this.createStreetFurniture();
@@ -324,7 +325,7 @@ export class Engine {
 
     // ── Buildings in every block ──
     // Reserved blocks — custom buildings placed here, skip random generation
-    const reservedBlocks = new Set(['-80,40']); // TEM Workshop at (-60,60)
+    const reservedBlocks = new Set(['-80,40', '160,-80']); // TEM Workshop + Render Supply Co
 
     for (let bx = -RANGE; bx < RANGE; bx += GRID) {
       for (let bz = -RANGE; bz < RANGE; bz += GRID) {
@@ -2019,6 +2020,86 @@ export class Engine {
     this.scene.add(group);
     // Workshop is 30W × 20D — register a solid AABB collider
     this.collisionWorld.addBox(x, z, 11.5, 7.5);
+  }
+
+  private buildRenderSupplyCo(x: number, z: number): void {
+    const group = new THREE.Group();
+    const bodyCol  = 0x7A8A7A;  // Muted sage/green corrugated iron
+    const roofCol  = 0x4A5A4A;  // Darker roof
+    const signCol  = 0xFFF8E8;  // Cream sign board
+    const accentCol = 0xE8A020; // Warm amber brand accent
+
+    // Main building body (18W × 6H × 12D)
+    this.addBox(group, bodyCol, 18, 6, 12, 0, 3, 0);
+    // Base shadow strip
+    this.addBox(group, 0x2A2A20, 18.2, 0.3, 12.2, 0, 0.15, 0);
+    // Flat roof (supply warehouse style — no pitch)
+    this.addBox(group, roofCol, 18.5, 0.4, 12.5, 0, 6.2, 0);
+    // Roof edging/fascia
+    this.addBox(group, 0x333330, 18.5, 0.5, 0.2, 0, 6.1, -6.3);
+
+    // ── Corrugated iron texture hint — vertical ribs on side walls ────────────
+    for (let rx = -7; rx <= 7; rx += 2) {
+      this.addBox(group, 0x6A7A6A, 0.12, 6, 0.1, rx, 3, -6.09); // front ribs
+    }
+    for (let rz = -4; rz <= 4; rz += 2) {
+      this.addBox(group, 0x6A7A6A, 0.1, 6, 0.12, -9.09, 3, rz); // left side ribs
+      this.addBox(group, 0x6A7A6A, 0.1, 6, 0.12,  9.09, 3, rz); // right side ribs
+    }
+
+    // ── Sign board across front ────────────────────────────────────────────────
+    this.addBox(group, signCol, 14, 2.5, 0.4, 0, 5.5, -6.2);
+    this.addBox(group, 0xDDD0B0, 12.5, 1.8, 0.25, 0, 5.5, -6.22);
+    // Sign accent bars
+    this.addBox(group, accentCol, 14.2, 0.2, 0.42, 0, 6.62, -6.2);
+    this.addBox(group, accentCol, 14.2, 0.2, 0.42, 0, 4.38, -6.2);
+
+    // ── Wide roller door (access door, front face) ────────────────────────────
+    this.addBox(group, 0x3A4A3A, 8, 4, 0.22, 0, 2.0, -6.12);
+    // Door tracks
+    this.addBox(group, 0x252520, 0.18, 4, 0.22, -4.1, 2.0, -6.12);
+    this.addBox(group, 0x252520, 0.18, 4, 0.22,  4.1, 2.0, -6.12);
+    // Door slat lines
+    for (let hy = 1; hy <= 3; hy++) {
+      this.addBox(group, 0x2A3A2A, 7.8, 0.07, 0.25, 0, hy, -6.11);
+    }
+
+    // ── Small side entry door (pedestrian) ────────────────────────────────────
+    this.addBox(group, 0x5A4A30, 1.4, 3, 0.22, 5.5, 1.5, -6.12);
+    this.addBox(group, 0x4A3A20, 1.3, 0.1, 0.24, 5.5, 3.1, -6.11); // door lintel
+
+    // ── Concrete apron outside ────────────────────────────────────────────────
+    const apronMat = new THREE.MeshLambertMaterial({ color: 0x9A9890 });
+    const apron = new THREE.Mesh(new THREE.PlaneGeometry(20, 5), apronMat);
+    apron.rotation.x = -Math.PI / 2;
+    apron.position.set(0, 0.008, -8.8);
+    apron.receiveShadow = true;
+    group.add(apron);
+
+    // ── Supply drums/pallets outside ──────────────────────────────────────────
+    // Drum stack left of door
+    this.addCyl(group, 0x8A9A8A, 0.8, 0.85, 1.4, 10, -6, 0.7, -8.0);
+    this.addCyl(group, 0xAAAA90, 0.8, 0.85, 1.4, 10, -6, 2.15, -8.0);
+    this.addCyl(group, 0x888880, 0.88, 0.88, 0.1, 10, -6, 1.46, -8.0);
+    this.addCyl(group, 0x888880, 0.88, 0.88, 0.1, 10, -6, 3.0, -8.0);
+    // Pallet
+    this.addBox(group, 0x7A5A38, 4, 0.16, 2.2, -5.8, 0.08, -8.2);
+
+    // ── Small forklift hint (right side) ──────────────────────────────────────
+    this.addBox(group, accentCol, 2.0, 1.4, 3.0, 6.5, 0.7, -7.5); // body
+    this.addBox(group, 0x333330, 2.2, 0.15, 3.2, 6.5, 0.15, -7.5); // base
+    this.addBox(group, 0x555550, 0.12, 2.0, 0.12, 5.6, 1.5, -6.8); // left mast
+    this.addBox(group, 0x555550, 0.12, 2.0, 0.12, 7.4, 1.5, -6.8); // right mast
+    this.addBox(group, 0x555550, 1.8, 0.2, 0.6,  6.5, 1.5, -7.1); // forks
+
+    // ── Side signage panel ────────────────────────────────────────────────────
+    this.addBox(group, signCol, 0.3, 2.0, 4, -9.16, 3.5, 0);
+    this.addBox(group, accentCol, 0.32, 0.22, 4.2, -9.17, 4.6, 0);
+
+    group.position.set(x, 0, z);
+    this.scene.add(group);
+    // AABB collider
+    this.collisionWorld.addBox(x, z, 9, 6.5);
   }
 
   // ── Zebra Crossings (crosswalks) at every road intersection ──
