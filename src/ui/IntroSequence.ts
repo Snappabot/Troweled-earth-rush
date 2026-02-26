@@ -700,45 +700,6 @@ export class IntroSequence {
     ctx.fillRect(cx - 18, groundY - hh * 0.44, 16, hh * 0.44 - 20);
     ctx.fillRect(cx + 2,  groundY - hh * 0.44, 16, hh * 0.44 - 20);
 
-    // ── Jose: draw back/side dreads BEFORE shirt so they drape over shoulders ──
-    if (sc.id === 'jose') {
-      const jhy  = groundY - hh * 0.87;
-      const jhr  = hh * 0.075; // head horizontal radius
-      const dc   = '#3a1e00';
-      const dl   = '#5a3200';
-      const dcb  = '#2a1400';
-      // Side + back dreads that drape onto shoulders — drawn BEFORE shirt
-      const backDreads = [
-        { dx: -jhr * 1.1, swing: -10, len: hh * 0.42, w: 11, color: dc  },
-        { dx: -jhr * 0.7, swing:  -7, len: hh * 0.46, w: 10, color: dl  },
-        { dx:  jhr * 0.7, swing:   7, len: hh * 0.44, w: 10, color: dl  },
-        { dx:  jhr * 1.1, swing:   9, len: hh * 0.40, w: 11, color: dc  },
-        { dx: -jhr * 0.3, swing:  -3, len: hh * 0.50, w:  9, color: dcb },
-        { dx:  jhr * 0.3, swing:   3, len: hh * 0.48, w:  9, color: dc  },
-      ];
-      ctx.save();
-      ctx.lineCap = 'round';
-      backDreads.forEach(d => {
-        ctx.strokeStyle = d.color;
-        ctx.lineWidth = d.w;
-        const startX = cx + d.dx;
-        const startY = jhy + hh * 0.09; // bottom of head ellipse
-        ctx.beginPath();
-        ctx.moveTo(startX, startY);
-        ctx.bezierCurveTo(
-          startX + d.swing * 0.3, startY + d.len * 0.3,
-          startX + d.swing * 0.8, startY + d.len * 0.7,
-          startX + d.swing * 0.6, startY + d.len,
-        );
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(startX + d.swing * 0.6, startY + d.len, d.w * 0.5, 0, Math.PI * 2);
-        ctx.fillStyle = d.color;
-        ctx.fill();
-      });
-      ctx.restore();
-    }
-
     // Black TEM shirt — Jarrad gets broader chest to match muscular build
     const chestW = sc.id === 'jarrad' ? 54 : 40;
     ctx.fillStyle = shirtCol;
@@ -1106,39 +1067,35 @@ export class IntroSequence {
     switch (sc.id) {
 
       case 'jose': {
-        // ── Crown cap (drawn first so dreads hang over it on sides) ──────────
-        const dc  = '#3a1e00';  // slightly lighter for visibility vs bg
+        const dc  = '#3a1e00';
         const dl  = '#5a3200';
         const dca = '#6a4400';
-        ctx.fillStyle = dc;
-        ctx.beginPath();
-        ctx.arc(cx, hy - hr * 0.45, hr * 1.05, Math.PI, 0);
-        ctx.fill();
-        // Narrow side strips (don't extend too far down — keep dread roots visible)
-        ctx.fillRect(cx - hr * 1.05, hy - hr * 0.5, hr * 0.35, hr * 0.55);
-        ctx.fillRect(cx + hr * 0.7,  hy - hr * 0.5, hr * 0.35, hr * 0.55);
 
-        // ── Front dreads — hang from below the cap ────────────────────────
-        const dreadsStart = hy + hr * 0.05; // just below head center / cap edge
-        const frontDreads = [
-          { dx: -hr * 1.1, swing: -8,  len: hh * 0.32, w: 11, color: dc  },
-          { dx: -hr * 0.65,swing: -4,  len: hh * 0.36, w: 12, color: dl  },
-          { dx:  hr * 0.65,swing:  4,  len: hh * 0.36, w: 12, color: dl  },
-          { dx:  hr * 1.1, swing:  7,  len: hh * 0.30, w: 11, color: dc  },
-          { dx: -hr * 0.1, swing: -2,  len: hh * 0.34, w: 10, color: dca },
-          { dx:  hr * 0.1, swing:  2,  len: hh * 0.32, w: 10, color: dc  },
+        // ── 1. Dreads first — cap will cover roots ────────────────────────
+        // Dreads hang from the SIDES of the head only (dx ≥ hr*0.8),
+        // swinging outward so they frame the body without crossing the shirt.
+        const dreadsStart = hy + hr * 0.08; // bottom edge of head
+        const sideDreads = [
+          { dx: -hr * 1.2, swing: -14, len: hh * 0.38, w: 11, color: dc  },
+          { dx: -hr * 1.0, swing: -10, len: hh * 0.42, w: 12, color: dl  },
+          { dx: -hr * 0.85,swing:  -7, len: hh * 0.36, w: 10, color: dca },
+          { dx: -hr * 0.8, swing:  -5, len: hh * 0.32, w:  9, color: dl  },
+          { dx:  hr * 0.8, swing:   5, len: hh * 0.32, w:  9, color: dl  },
+          { dx:  hr * 0.85,swing:   7, len: hh * 0.36, w: 10, color: dca },
+          { dx:  hr * 1.0, swing:  10, len: hh * 0.42, w: 12, color: dl  },
+          { dx:  hr * 1.2, swing:  14, len: hh * 0.38, w: 11, color: dc  },
         ];
         ctx.save();
         ctx.lineCap = 'round';
-        frontDreads.forEach(d => {
+        sideDreads.forEach(d => {
           ctx.strokeStyle = d.color;
           ctx.lineWidth = d.w;
           const startX = cx + d.dx;
           ctx.beginPath();
           ctx.moveTo(startX, dreadsStart);
           ctx.bezierCurveTo(
-            startX + d.swing * 0.4, dreadsStart + d.len * 0.35,
-            startX + d.swing * 0.85, dreadsStart + d.len * 0.7,
+            startX + d.swing * 0.3, dreadsStart + d.len * 0.35,
+            startX + d.swing * 0.8, dreadsStart + d.len * 0.7,
             startX + d.swing * 0.65, dreadsStart + d.len,
           );
           ctx.stroke();
@@ -1150,14 +1107,20 @@ export class IntroSequence {
         });
         ctx.restore();
 
-        // Dread tie / headband
+        // ── 2. Crown cap — covers dread roots ────────────────────────────
+        ctx.fillStyle = dc;
+        ctx.beginPath();
+        ctx.arc(cx, hy - hr * 0.5, hr * 1.1, Math.PI, 0);
+        ctx.fill();
+
+        // ── 3. Headband ───────────────────────────────────────────────────
         ctx.strokeStyle = '#8B5A1A';
         ctx.lineWidth = 4;
         ctx.beginPath();
-        ctx.arc(cx, hy - hr * 0.05, hr * 1.10, Math.PI * 0.72, Math.PI * 1.98);
+        ctx.arc(cx, hy - hr * 0.05, hr * 1.10, Math.PI * 0.7, Math.PI * 1.9);
         ctx.stroke();
 
-        // ── Glasses (state fixed once per scene — no per-frame flicker) ──────
+        // ── 4. Glasses (state fixed once per scene — no per-frame flicker) ──
         if (this._joseGlasses) {
           ctx.strokeStyle = 'rgba(220,220,220,0.9)';
           ctx.lineWidth = 2.2;
