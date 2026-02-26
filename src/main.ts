@@ -197,14 +197,8 @@ async function main() {
         jobBoard.show(jobs);
       }
     },
-    () => marbellinoMixer.show((pts) => {
-      if (pts > 0) {
-        jobManager.money += pts * 1_000;   // reward sats per correct formula
-        hud.updateMoney(jobManager.money);
-        hud.showToast(`🎨 Formula cracked! +${(pts * 1000).toLocaleString()} sats`, 0x44DD88);
-      }
-    }),
-    () => contractWarsPanel.show(),
+    undefined, // Marbellino Mixer is mission-only (removed from menu)
+    undefined, // Contract Wars panel removed from menu (accessible post-match)
   );
   gameMenu.mountMoneyPanel(hud.getMoneyPanel());
   gameMenu.mountRadio(radio.getEl());

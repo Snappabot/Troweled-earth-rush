@@ -753,47 +753,76 @@ export class IntroSequence {
     if (sc.id === 'jarrad') {
       // ── Jarrad: thick muscular arms ──────────────────────────────────────────
       const drawMuscleArm = (ax: number, side: number) => {
-        // Upper arm (bicep bulge) — wide rounded rectangle
         ctx.fillStyle = shirtCol;
+        // Shoulder connector — fills gap between shirt edge and arm
         ctx.beginPath();
-        ctx.roundRect(ax - 14, groundY - hh * 0.78, 28, hh * 0.20, 8);
+        ctx.roundRect(ax - 12, groundY - hh * 0.80, 24, hh * 0.06, 4);
+        ctx.fill();
+        // Upper arm (bicep bulge) — wide rounded rectangle
+        ctx.beginPath();
+        ctx.roundRect(ax - 14, groundY - hh * 0.75, 28, hh * 0.20, 8);
         ctx.fill();
         // Bicep peak — convex ellipse on outer edge
         ctx.beginPath();
-        ctx.ellipse(ax + side * 10, groundY - hh * 0.68, 14, hh * 0.09, side * 0.25, 0, Math.PI * 2);
+        ctx.ellipse(ax + side * 10, groundY - hh * 0.65, 14, hh * 0.09, side * 0.25, 0, Math.PI * 2);
         ctx.fill();
-        // Forearm — slightly narrower
+        // Forearm — extend lower so it reaches hip, no skin gap
         ctx.beginPath();
-        ctx.roundRect(ax - 11, groundY - hh * 0.57, 22, hh * 0.16, 6);
+        ctx.roundRect(ax - 11, groundY - hh * 0.54, 22, hh * 0.30, 6);
         ctx.fill();
-        // Muscle highlight (lighter strip to show volume)
+        // Muscle highlight (darker strip to show volume)
         ctx.fillStyle = '#222222';
         ctx.beginPath();
-        ctx.ellipse(ax - side * 4, groundY - hh * 0.67, 5, hh * 0.07, side * 0.1, 0, Math.PI * 2);
+        ctx.ellipse(ax - side * 4, groundY - hh * 0.64, 5, hh * 0.07, side * 0.1, 0, Math.PI * 2);
         ctx.fill();
       };
       drawMuscleArm(cx - 30, -1); // left arm
       drawMuscleArm(cx + 30,  1); // right arm
+
+      // ── Left hand (skin fist) ─────────────────────────────────────────────
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.ellipse(cx - 30, groundY - hh * 0.24, 10, 9, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // ── Right hand: holding phone ─────────────────────────────────────────
+      const phX = cx + 30;
+      const phY = groundY - hh * 0.24;
+      // Fingers below phone (skin peek)
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.ellipse(phX, phY + 10, 8, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Phone body (dark with blue screen)
+      ctx.fillStyle = '#1A1A1F';
+      ctx.beginPath();
+      ctx.roundRect(phX - 8, phY - 14, 16, 28, 3);
+      ctx.fill();
+      // Phone screen (blue glow)
+      ctx.fillStyle = '#3A90FF';
+      ctx.beginPath();
+      ctx.roundRect(phX - 6, phY - 12, 12, 20, 2);
+      ctx.fill();
+      // Screen glare
+      ctx.fillStyle = 'rgba(255,255,255,0.25)';
+      ctx.beginPath();
+      ctx.roundRect(phX - 5, phY - 11, 5, 8, 1);
+      ctx.fill();
+
     } else {
       ctx.fillStyle = shirtCol;
       ctx.fillRect(cx - 32, groundY - hh * 0.78, 13, hh * 0.32);
       ctx.fillRect(cx + 19, groundY - hh * 0.78, 13, hh * 0.28);
-    }
 
-    // Hands (skin) — Jarrad gets big meaty hands to match
-    ctx.fillStyle = skin;
-    const handR = sc.id === 'jarrad' ? 10 : 7;
-    const handRy = sc.id === 'jarrad' ? 12 : 9;
-    const handLX = sc.id === 'jarrad' ? cx - 30 : cx - 26;
-    const handRX = sc.id === 'jarrad' ? cx + 30 : cx + 26;
-    const handLY = groundY - (sc.id === 'jarrad' ? hh * 0.41 : hh * 0.46);
-    const handRY = groundY - (sc.id === 'jarrad' ? hh * 0.41 : hh * 0.50);
-    ctx.beginPath();
-    ctx.ellipse(handLX, handLY, handR, handRy, 0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(handRX, handRY, handR, handRy, -0.2, 0, Math.PI * 2);
-    ctx.fill();
+      // Hands (skin)
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.ellipse(cx - 26, groundY - hh * 0.46, 7, 9, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cx + 26, groundY - hh * 0.50, 7, 9, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // Head
     ctx.fillStyle = skin;
