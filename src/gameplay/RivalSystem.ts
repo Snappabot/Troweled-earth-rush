@@ -78,22 +78,21 @@ export class RivalSystem {
     this.jobSitePos.set(jobSitePos.x, 0, jobSitePos.z);
     this.active = true;
 
-    // Pick 3 unique rivals
+    // Pick 1 rival — 1v1 to match mission structure
     let pool: RivalCrew[];
-    if (rivalCrews && rivalCrews.length >= 3) {
-      pool = rivalCrews.slice(0, 3);
+    if (rivalCrews && rivalCrews.length >= 1) {
+      pool = rivalCrews.slice(0, 1);
     } else {
-      // Shuffle RIVAL_CREWS and take first 3
       const shuffled = [...RIVAL_CREWS].sort(() => Math.random() - 0.5);
-      pool = shuffled.slice(0, 3);
+      pool = shuffled.slice(0, 1);
     }
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 1; i++) {
       const crew = pool[i];
-      const startPos = RIVAL_START_POINTS[i].clone();
+      const startPos = RIVAL_START_POINTS[0].clone();
 
-      // Park offset: side of job site (X axis offset by rival index * 4 units)
-      const parkOffset = new THREE.Vector3(i * 4 - 4, 0, 3);
+      // Park offset: side of job site
+      const parkOffset = new THREE.Vector3(5, 0, 3);
 
       // Speed multiplier: ±20% random variation
       const speedMult = 0.8 + Math.random() * 0.4;

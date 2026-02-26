@@ -252,7 +252,7 @@ export class HUD {
 
     const raceHeader = document.createElement('div');
     raceHeader.className = 'race-header';
-    raceHeader.textContent = 'RIVAL RACE';
+    raceHeader.textContent = '⚔️ CONTRACT WARS';
     this.raceStripEl.appendChild(raceHeader);
 
     this.racePosEl = document.createElement('div');
