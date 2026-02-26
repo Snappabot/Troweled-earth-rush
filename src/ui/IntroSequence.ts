@@ -753,78 +753,49 @@ export class IntroSequence {
 
     // Arms — regular crew gets simple sleeves; Jarrad gets full muscular arm drawing
     if (sc.id === 'jarrad') {
-      // ── Jarrad: thick muscular arms ──────────────────────────────────────────
-      // Use dark charcoal (#1E1E24) — NOT pure black, so it's visible vs dark bg
-      const armCol  = '#1E1E24';
-      const armRim  = '#3A3A50'; // subtle lighter edge for visibility
-
+      // ── Jarrad: thick muscular arms — pure black shirt ───────────────────
       const drawMuscleArm = (ax: number, side: number) => {
-        // ── Fill (dark charcoal) ─────────────────────────────────────────────
-        ctx.fillStyle = armCol;
-        // Shoulder bridge — connects shirt body to arm start
+        ctx.fillStyle = shirtCol; // pure black, same as shirt
+        // Upper arm (wide, with bicep peak)
         ctx.beginPath();
-        ctx.roundRect(ax - 13, groundY - hh * 0.81, 26, hh * 0.10, 4);
+        ctx.roundRect(ax - 14, groundY - hh * 0.76, 28, hh * 0.20, 8);
         ctx.fill();
-        // Upper arm
         ctx.beginPath();
-        ctx.roundRect(ax - 15, groundY - hh * 0.74, 30, hh * 0.22, 9);
+        ctx.ellipse(ax + side * 10, groundY - hh * 0.66, 13, hh * 0.09, side * 0.2, 0, Math.PI * 2);
         ctx.fill();
-        // Bicep peak
+        // Forearm — ends just below hip (hh*0.44 = pants top, add ~hh*0.08 below)
         ctx.beginPath();
-        ctx.ellipse(ax + side * 11, groundY - hh * 0.63, 15, hh * 0.10, side * 0.25, 0, Math.PI * 2);
-        ctx.fill();
-        // Forearm — runs all the way to hand level
-        ctx.beginPath();
-        ctx.roundRect(ax - 12, groundY - hh * 0.52, 24, hh * 0.28, 7);
-        ctx.fill();
-
-        // ── Outline (rim) so arm reads against dark background ──────────────
-        ctx.strokeStyle = armRim;
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.roundRect(ax - 15, groundY - hh * 0.74, 30, hh * 0.22, 9);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.roundRect(ax - 12, groundY - hh * 0.52, 24, hh * 0.28, 7);
-        ctx.stroke();
-
-        // Muscle highlight
-        ctx.fillStyle = '#2E2E3A';
-        ctx.beginPath();
-        ctx.ellipse(ax - side * 4, groundY - hh * 0.63, 5, hh * 0.07, side * 0.1, 0, Math.PI * 2);
+        ctx.roundRect(ax - 11, groundY - hh * 0.55, 22, hh * 0.16, 6);
         ctx.fill();
       };
       drawMuscleArm(cx - 30, -1);
       drawMuscleArm(cx + 30,  1);
 
-      // ── Left hand (fist, skin) ────────────────────────────────────────────
+      // ── Left hand (fist) ──────────────────────────────────────────────────
+      const handY = groundY - hh * 0.39;
       ctx.fillStyle = skin;
       ctx.beginPath();
-      ctx.ellipse(cx - 30, groundY - hh * 0.25, 10, 9, 0.2, 0, Math.PI * 2);
+      ctx.ellipse(cx - 30, handY, 10, 9, 0.2, 0, Math.PI * 2);
       ctx.fill();
 
       // ── Right hand: phone ─────────────────────────────────────────────────
       const phX = cx + 30;
-      const phY = groundY - hh * 0.25;
-      // Grip fingers
+      const phY = handY;
       ctx.fillStyle = skin;
       ctx.beginPath();
-      ctx.ellipse(phX, phY + 8, 9, 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(phX, phY + 7, 9, 7, 0, 0, Math.PI * 2);
       ctx.fill();
-      // Phone body
       ctx.fillStyle = '#18181F';
       ctx.beginPath();
-      ctx.roundRect(phX - 8, phY - 16, 16, 26, 3);
+      ctx.roundRect(phX - 7, phY - 14, 14, 22, 3);
       ctx.fill();
-      // Screen
       ctx.fillStyle = '#2A80FF';
       ctx.beginPath();
-      ctx.roundRect(phX - 6, phY - 14, 12, 18, 2);
+      ctx.roundRect(phX - 5, phY - 12, 10, 16, 2);
       ctx.fill();
-      // Glare
       ctx.fillStyle = 'rgba(255,255,255,0.22)';
       ctx.beginPath();
-      ctx.roundRect(phX - 5, phY - 13, 5, 7, 1);
+      ctx.roundRect(phX - 4, phY - 11, 4, 6, 1);
       ctx.fill();
 
     } else {
