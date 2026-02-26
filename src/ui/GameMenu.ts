@@ -124,6 +124,11 @@ export class GameMenu {
   }
 
   /** Inject HUD money/BTC panel into the menu */
+  setVisible(visible: boolean): void {
+    this.btn.style.display = visible ? 'block' : 'none';
+    if (!visible) this._close();
+  }
+
   mountMoneyPanel(el: HTMLElement): void {
     el.style.cssText += `position:relative; top:auto; right:auto; align-items:flex-start;`;
     this.moneySlot.appendChild(el);

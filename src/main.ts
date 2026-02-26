@@ -209,6 +209,10 @@ async function main() {
   gameMenu.mountMoneyPanel(hud.getMoneyPanel());
   gameMenu.mountRadio(radio.getEl());
 
+  // ── Hide UI during opening cinematic ─────────────────────────────────────
+  hud.setVisible(false);
+  gameMenu.setVisible(false);
+
   // Guard to prevent job completion firing more than once per arrival
   let jobCompleting = false;
 
@@ -280,7 +284,14 @@ async function main() {
       engine.camera.camera.position.set(camX, camY, camZ);
       engine.camera.camera.lookAt(vanX, 1.5, vanZ);
 
-      if (t >= 1) cinematicActive = false;
+      if (t >= 1) {
+        cinematicActive = false;
+        // Reveal UI
+        hud.setVisible(true);
+        gameMenu.setVisible(true);
+        // Hint toast
+        hud.showToast('☰  Tap the menu to pick up contracts!', 0xC4920A);
+      }
       return; // skip all gameplay during cinematic
     }
 

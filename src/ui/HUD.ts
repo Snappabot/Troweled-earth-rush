@@ -32,6 +32,8 @@ export class HUD {
   private timerFailOverlay!: HTMLDivElement;
   private crewPanelEl!: HTMLDivElement;
   private moneyPanel!: HTMLDivElement;  // exposed to GameMenu
+  private speedContainer!: HTMLDivElement;
+  private jobPanel!: HTMLDivElement;
   private activeJob: Job | null = null;
   private activePhase: 1 | 2 | 3 = 1;
   private flashTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -62,7 +64,8 @@ export class HUD {
     }
 
     // ── Speed display — bottom-left ──────────────────────────────────────────
-    const speedContainer = document.createElement('div');
+    this.speedContainer = document.createElement('div');
+    const speedContainer = this.speedContainer;
     speedContainer.style.cssText = `
       position: fixed;
       bottom: 20px;
@@ -124,7 +127,8 @@ export class HUD {
     this.moneyPanel.appendChild(btcWrap);
 
     // ── Job strip + travel timer — fixed top-right, always visible ───────────
-    const jobPanel = document.createElement('div');
+    this.jobPanel = document.createElement('div');
+    const jobPanel = this.jobPanel;
     jobPanel.style.cssText = `
       position: fixed; top: 16px; right: 64px;
       display: flex; flex-direction: column; align-items: flex-end;
@@ -228,6 +232,14 @@ export class HUD {
 
   /** Return the money/BTC panel element for mounting in GameMenu */
   getMoneyPanel(): HTMLDivElement { return this.moneyPanel; }
+
+  /** Hide or show all HUD elements (e.g. during cinematic) */
+  setVisible(visible: boolean): void {
+    this.speedContainer.style.display = visible ? 'block' : 'none';
+    this.jobPanel.style.display       = visible ? 'block' : 'none';
+    this.crewPanelEl.style.display    = visible ? 'none'  : 'none'; // managed by setActiveJob
+    this.moneyPanel.style.display     = visible ? 'flex'  : 'none';
+  }
 
   /** Called every frame with speed (m/s) and spill level */
   update(speed: number, _spillPct: number): void {
