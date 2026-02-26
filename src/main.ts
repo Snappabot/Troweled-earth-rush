@@ -10,6 +10,7 @@ import { WaypointSystem } from './gameplay/WaypointSystem';
 import { JobBoard } from './ui/JobBoard';
 import { HUD } from './ui/HUD';
 import { MiniGameManager } from './minigames/MiniGameManager';
+import type { ScaffoldResult } from './minigames/MiniGameManager';
 import { AchievementGallery } from './ui/AchievementGallery';
 import { PedestrianSystem } from './entities/PedestrianSystem';
 import { TrafficSystem } from './entities/TrafficSystem';
@@ -744,8 +745,16 @@ async function main() {
                   tdAnnounce.remove();
                   towerDefence.show(tdCfg, (tdResult) => {
                     if (tdResult.won) {
-                      { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88); }
-                      finishJob(1, true);
+                      // Scaffold bonus round before finishing
+                      miniGameManager.startScaffold((scaffoldResult: ScaffoldResult) => {
+                        if (scaffoldResult.bonusSats > 0) {
+                          _jobSpillTotal -= scaffoldResult.bonusSats;
+                          _jobSpillTotal = Math.max(-arrived.pay * 0.5, _jobSpillTotal);
+                          hud.showToast(`🪣 +${Math.round(scaffoldResult.bonusSats / 1000)}K sats bonus!`, 0xFFD700);
+                        }
+                        { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88); }
+                        finishJob(1, true);
+                      });
                     } else {
                       // TD lost — contract stolen
                       radio.setVisible(true);
@@ -764,9 +773,16 @@ async function main() {
                   });
                 }, 1800);
               } else {
-                // Regular job — proceed directly to finish
-                { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88); }
-                finishJob(1, false);
+                // Regular job — scaffold bonus round then finish
+                miniGameManager.startScaffold((scaffoldResult: ScaffoldResult) => {
+                  if (scaffoldResult.bonusSats > 0) {
+                    _jobSpillTotal -= scaffoldResult.bonusSats;
+                    _jobSpillTotal = Math.max(-arrived.pay * 0.5, _jobSpillTotal);
+                    hud.showToast(`🪣 +${Math.round(scaffoldResult.bonusSats / 1000)}K sats bonus!`, 0xFFD700);
+                  }
+                  { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88); }
+                  finishJob(1, false);
+                });
               }
             });
           },
