@@ -93,7 +93,7 @@ export class Engine {
     this.createCityGround();
     this.createCity();
     this.createTEHouses();
-    this.buildWorkshop(-60, 27);  // TEM Workshop — fits cleanly in city block
+    this.buildWorkshop(-60, 60);  // TEM Workshop — clear block between z=40 and z=80 roads
     this.createZebraCrossings();
     this.createRoadCorners();
     this.createStreetFurniture();
