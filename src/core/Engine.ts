@@ -2005,10 +2005,10 @@ export class Engine {
     const wsTex = makeTEMRoofTexture(1024);
     const wsMat = new THREE.MeshBasicMaterial({
       map: wsTex, transparent: true, depthWrite: false,
-      side: THREE.DoubleSide,
+      side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
     });
     const doorLogo = new THREE.Mesh(new THREE.PlaneGeometry(7, 4.5), wsMat);
-    doorLogo.position.set(0, 2.5, -7.29);  // centred on door face
+    doorLogo.position.set(0, 2.5, -7.42);  // clear of door face (no z-fight)
     group.add(doorLogo);
 
     group.position.set(x, 0, z);
