@@ -710,29 +710,50 @@ export class IntroSequence {
     ctx.fillStyle = skin;
     ctx.fillRect(cx - 5, groundY - hh * 0.84, 10, hh * 0.06);
 
-    // Arms — black sleeves (Jarrad gets wider muscular arms)
-    const armW = sc.id === 'jarrad' ? 20 : 13;
-    ctx.fillStyle = shirtCol;
-    ctx.fillRect(cx - 32 - (sc.id === 'jarrad' ? 4 : 0), groundY - hh * 0.78, armW, hh * 0.32);
-    ctx.fillRect(cx + 19,                                  groundY - hh * 0.78, armW, hh * 0.28);
-    // Bicep bulge highlight for Jarrad
+    // Arms — regular crew gets simple sleeves; Jarrad gets full muscular arm drawing
     if (sc.id === 'jarrad') {
-      ctx.fillStyle = '#1e1e1e';
-      ctx.beginPath();
-      ctx.ellipse(cx - 30, groundY - hh * 0.68, armW * 0.55, hh * 0.06, 0.15, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(cx + 29, groundY - hh * 0.68, armW * 0.55, hh * 0.06, -0.15, 0, Math.PI * 2);
-      ctx.fill();
+      // ── Jarrad: thick muscular arms ──────────────────────────────────────────
+      const drawMuscleArm = (ax: number, side: number) => {
+        // Upper arm (bicep bulge) — wide rounded rectangle
+        ctx.fillStyle = shirtCol;
+        ctx.beginPath();
+        ctx.roundRect(ax - 14, groundY - hh * 0.78, 28, hh * 0.20, 8);
+        ctx.fill();
+        // Bicep peak — convex ellipse on outer edge
+        ctx.beginPath();
+        ctx.ellipse(ax + side * 10, groundY - hh * 0.68, 14, hh * 0.09, side * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+        // Forearm — slightly narrower
+        ctx.beginPath();
+        ctx.roundRect(ax - 11, groundY - hh * 0.57, 22, hh * 0.16, 6);
+        ctx.fill();
+        // Muscle highlight (lighter strip to show volume)
+        ctx.fillStyle = '#222222';
+        ctx.beginPath();
+        ctx.ellipse(ax - side * 4, groundY - hh * 0.67, 5, hh * 0.07, side * 0.1, 0, Math.PI * 2);
+        ctx.fill();
+      };
+      drawMuscleArm(cx - 30, -1); // left arm
+      drawMuscleArm(cx + 30,  1); // right arm
+    } else {
+      ctx.fillStyle = shirtCol;
+      ctx.fillRect(cx - 32, groundY - hh * 0.78, 13, hh * 0.32);
+      ctx.fillRect(cx + 19, groundY - hh * 0.78, 13, hh * 0.28);
     }
 
-    // Hands (skin)
+    // Hands (skin) — Jarrad gets big meaty hands to match
     ctx.fillStyle = skin;
+    const handR = sc.id === 'jarrad' ? 10 : 7;
+    const handRy = sc.id === 'jarrad' ? 12 : 9;
+    const handLX = sc.id === 'jarrad' ? cx - 30 : cx - 26;
+    const handRX = sc.id === 'jarrad' ? cx + 30 : cx + 26;
+    const handLY = groundY - (sc.id === 'jarrad' ? hh * 0.41 : hh * 0.46);
+    const handRY = groundY - (sc.id === 'jarrad' ? hh * 0.41 : hh * 0.50);
     ctx.beginPath();
-    ctx.ellipse(cx - 26, groundY - hh * 0.46, 7, 9, 0.2, 0, Math.PI * 2);
+    ctx.ellipse(handLX, handLY, handR, handRy, 0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(cx + 26, groundY - hh * 0.50, 7, 9, -0.2, 0, Math.PI * 2);
+    ctx.ellipse(handRX, handRY, handR, handRy, -0.2, 0, Math.PI * 2);
     ctx.fill();
 
     // Head
