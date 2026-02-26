@@ -323,8 +323,12 @@ export class Engine {
     }
 
     // ── Buildings in every block ──
+    // Reserved blocks — custom buildings placed here, skip random generation
+    const reservedBlocks = new Set(['-80,40']); // TEM Workshop at (-60,60)
+
     for (let bx = -RANGE; bx < RANGE; bx += GRID) {
       for (let bz = -RANGE; bz < RANGE; bz += GRID) {
+        if (reservedBlocks.has(`${bx},${bz}`)) continue;
         this.populateBlock(bx, bz, GRID, ROAD_W);
       }
     }
@@ -1869,7 +1873,7 @@ export class Engine {
     const roofCol  = 0x222220;  // Dark charcoal pitched roof
     const signCol  = 0xEEE8D8;  // Bright cream sign board
     const textCol  = 0x333330;  // Dark text/shadow on sign
-    const doorCol  = 0x111110;  // Roller door dark
+    const doorCol  = 0x2A2A28;  // Roller door — dark charcoal, visible against building
 
     // ── Main building body (22W × 8H × 14D) ────────────────────────────────
     this.addBox(group, bodyCol, 22, 8, 14, 0, 4, 0);
@@ -2007,7 +2011,7 @@ export class Engine {
       map: wsTex, transparent: true, depthWrite: false,
       side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1,
     });
-    const doorLogo = new THREE.Mesh(new THREE.PlaneGeometry(7, 4.5), wsMat);
+    const doorLogo = new THREE.Mesh(new THREE.PlaneGeometry(10, 4.6), wsMat);
     doorLogo.position.set(0, 2.5, -7.42);  // clear of door face (no z-fight)
     group.add(doorLogo);
 
