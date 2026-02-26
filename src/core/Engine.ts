@@ -93,7 +93,7 @@ export class Engine {
     this.createCityGround();
     this.createCity();
     this.createTEHouses();
-    this.buildWorkshop(10, 15);   // TEM Workshop — near spawn depot
+    this.buildWorkshop(-60, 27);  // TEM Workshop — fits cleanly in city block
     this.createZebraCrossings();
     this.createRoadCorners();
     this.createStreetFurniture();
@@ -1037,7 +1037,7 @@ export class Engine {
 
     // Concrete beam hints between roof edge and column tops
     this.addBox(g, 0x888880, 20, 0.3, 0.3, 0, 3.1, -10.2);
-    this.addBox(g, 0x888880, 20, 0.3, 0.3, 0, 3.1, -11.8);
+    this.addBox(g, 0x888880, 20, 0.3, 0.3, 0, 3.1, -8.8);
 
     g.position.set(x, 0, z);
     this.scene.add(g);
@@ -1859,7 +1859,7 @@ export class Engine {
 
   // ────────────────────────────────────────────────────────────────────────────
   // TEM WORKSHOP — large industrial landmark, prominent brand presence
-  // Near spawn at (10, 15). Phase 1 job pickup destination.
+  // At (-60, 27) — fits within city block, clear of roads. Phase 1 pickup.
   // ────────────────────────────────────────────────────────────────────────────
   private buildWorkshop(x: number, z: number): void {
     const group = new THREE.Group();
@@ -1871,134 +1871,134 @@ export class Engine {
     const textCol  = 0x333330;  // Dark text/shadow on sign
     const doorCol  = 0x111110;  // Roller door dark
 
-    // ── Main building body (30W × 8H × 20D) ────────────────────────────────
-    this.addBox(group, bodyCol, 30, 8, 20, 0, 4, 0);
+    // ── Main building body (22W × 8H × 14D) ────────────────────────────────
+    this.addBox(group, bodyCol, 22, 8, 14, 0, 4, 0);
 
     // Base reveal / shadow strip at ground level
-    this.addBox(group, 0x1A1A18, 30.2, 0.35, 20.2, 0, 0.18, 0);
+    this.addBox(group, 0x1A1A18, 22.2, 0.35, 14.2, 0, 0.18, 0);
 
     // ── Pitched roof — two angled panels ────────────────────────────────────
     const DEG12 = 12 * Math.PI / 180;
     const roofMat = new THREE.MeshLambertMaterial({ color: roofCol });
 
-    const roofFront = new THREE.Mesh(new THREE.BoxGeometry(30.5, 0.35, 11), roofMat);
+    const roofFront = new THREE.Mesh(new THREE.BoxGeometry(22.5, 0.35, 8), roofMat);
     roofFront.castShadow = true;
     roofFront.rotation.x = DEG12;
-    roofFront.position.set(0, 8.6, -4.5);
+    roofFront.position.set(0, 8.6, -3.2);
     group.add(roofFront);
 
-    const roofBack = new THREE.Mesh(new THREE.BoxGeometry(30.5, 0.35, 11), roofMat);
+    const roofBack = new THREE.Mesh(new THREE.BoxGeometry(22.5, 0.35, 8), roofMat);
     roofBack.castShadow = true;
     roofBack.rotation.x = -DEG12;
-    roofBack.position.set(0, 8.6, 4.5);
+    roofBack.position.set(0, 8.6, 3.2);
     group.add(roofBack);
 
     // Ridge cap
-    this.addBox(group, 0x111110, 30.5, 0.55, 0.8, 0, 9.3, 0);
+    this.addBox(group, 0x111110, 22.5, 0.55, 0.8, 0, 9.3, 0);
 
     // ── TEM sign board across front face ─────────────────────────────────────
     // Cream board background — wide and tall, positioned near roofline
-    this.addBox(group, signCol, 24, 3.2, 0.45, 0, 7.4, -10.23);
+    this.addBox(group, signCol, 18, 3.2, 0.45, 0, 7.4, -7.23);
     // Dark inner board (text shadow / brand dark fill)
-    this.addBox(group, textCol, 22, 2.5, 0.28, 0, 7.4, -10.25);
+    this.addBox(group, textCol, 16, 2.5, 0.28, 0, 7.4, -7.25);
     // Bright top cap strip (TEM brand highlight line)
-    this.addBox(group, 0xFFFAF0, 24.2, 0.22, 0.46, 0, 9.11, -10.23);
+    this.addBox(group, 0xFFFAF0, 18.2, 0.22, 0.46, 0, 9.11, -7.23);
     // Bottom cap strip
-    this.addBox(group, 0xFFFAF0, 24.2, 0.22, 0.46, 0, 5.89, -10.23);
+    this.addBox(group, 0xFFFAF0, 18.2, 0.22, 0.46, 0, 5.89, -7.23);
     // Left/right end caps
-    this.addBox(group, 0xFFFAF0, 0.22, 3.2, 0.46, -12.11, 7.4, -10.23);
-    this.addBox(group, 0xFFFAF0, 0.22, 3.2, 0.46,  12.11, 7.4, -10.23);
+    this.addBox(group, 0xFFFAF0, 0.22, 3.2, 0.46, -9.11, 7.4, -7.23);
+    this.addBox(group, 0xFFFAF0, 0.22, 3.2, 0.46,  9.11, 7.4, -7.23);
 
     // ── TEM brand accent bar (iron red) under sign ───────────────────────────
-    this.addBox(group, 0xC1666B, 24, 0.3, 0.44, 0, 5.75, -10.22);
+    this.addBox(group, 0xC1666B, 18, 0.3, 0.44, 0, 5.75, -7.22);
 
     // ── Conny's counter sign (bright yellow) above roller door ───────────────
-    this.addBox(group, 0xFFCC44, 8, 0.65, 0.35, 0, 5.5, -10.2);
-    this.addBox(group, 0x2A2A20, 7.5, 0.42, 0.38, 0, 5.5, -10.21);
+    this.addBox(group, 0xFFCC44, 8, 0.65, 0.35, 0, 5.5, -7.2);
+    this.addBox(group, 0x2A2A20, 7.5, 0.42, 0.38, 0, 5.5, -7.21);
 
     // ── Large roller door (very wide, front face) ─────────────────────────────
-    this.addBox(group, doorCol, 12, 5, 0.25, 0, 2.5, -10.15);
+    this.addBox(group, doorCol, 12, 5, 0.25, 0, 2.5, -7.15);
     // Door tracks either side
-    this.addBox(group, 0x222220, 0.2, 5, 0.25, -6.2, 2.5, -10.15);
-    this.addBox(group, 0x222220, 0.2, 5, 0.25,  6.2, 2.5, -10.15);
+    this.addBox(group, 0x222220, 0.2, 5, 0.25, -6.2, 2.5, -7.15);
+    this.addBox(group, 0x222220, 0.2, 5, 0.25,  6.2, 2.5, -7.15);
     // Door horizontal slat lines
     for (let hy = 1; hy <= 4; hy++) {
-      this.addBox(group, 0x1A1A18, 11.8, 0.08, 0.28, 0, hy, -10.14);
+      this.addBox(group, 0x1A1A18, 11.8, 0.08, 0.28, 0, hy, -7.14);
     }
     // Door header beam
-    this.addBox(group, 0x222220, 12.6, 0.4, 0.28, 0, 5.2, -10.14);
+    this.addBox(group, 0x222220, 12.6, 0.4, 0.28, 0, 5.2, -7.14);
 
     // ── Clerestory windows along top of both side walls ─────────────────────
     const glassCol = 0x334455;
-    for (let cz = -6; cz <= 6; cz += 4) {
-      // Right side wall (x = +15)
-      this.addBox(group, glassCol, 0.16, 1.2, 2.8, 15.09, 7.2, cz);
-      // Left side wall (x = -15)
-      this.addBox(group, glassCol, 0.16, 1.2, 2.8, -15.09, 7.2, cz);
+    for (let cz = -4; cz <= 4; cz += 4) {
+      // Right side wall (x = +11)
+      this.addBox(group, glassCol, 0.16, 1.2, 2.8, 11.09, 7.2, cz);
+      // Left side wall (x = -11)
+      this.addBox(group, glassCol, 0.16, 1.2, 2.8, -11.09, 7.2, cz);
     }
     // Clerestory frame strips (top/bottom on each side)
-    this.addBox(group, 0x222220, 0.2, 0.18, 20, 15.1, 7.9, 0);
-    this.addBox(group, 0x222220, 0.2, 0.18, 20, 15.1, 6.6, 0);
-    this.addBox(group, 0x222220, 0.2, 0.18, 20, -15.1, 7.9, 0);
-    this.addBox(group, 0x222220, 0.2, 0.18, 20, -15.1, 6.6, 0);
+    this.addBox(group, 0x222220, 0.2, 0.18, 14, 11.1, 7.9, 0);
+    this.addBox(group, 0x222220, 0.2, 0.18, 14, 11.1, 6.6, 0);
+    this.addBox(group, 0x222220, 0.2, 0.18, 14, -11.1, 7.9, 0);
+    this.addBox(group, 0x222220, 0.2, 0.18, 14, -11.1, 6.6, 0);
 
     // ── Downpipes at all four corners ────────────────────────────────────────
-    this.addCyl(group, 0x222220, 0.12, 0.12, 8, 5, -15, 4, -10);
-    this.addCyl(group, 0x222220, 0.12, 0.12, 8, 5,  15, 4, -10);
-    this.addCyl(group, 0x222220, 0.12, 0.12, 8, 5, -15, 4,  10);
-    this.addCyl(group, 0x222220, 0.12, 0.12, 8, 5,  15, 4,  10);
+    this.addCyl(group, 0x222220, 0.12, 0.12, 8, 5, -11, 4, -7);
+    this.addCyl(group, 0x222220, 0.12, 0.12, 8, 5,  11, 4, -7);
+    this.addCyl(group, 0x222220, 0.12, 0.12, 8, 5, -11, 4,  7);
+    this.addCyl(group, 0x222220, 0.12, 0.12, 8, 5,  11, 4,  7);
 
     // ── Material drums/buckets outside — right of roller door ────────────────
     // Terracotta drum stack
-    this.addCyl(group, 0xC49A7A, 0.85, 0.90, 1.5, 10,  9.5, 0.75, -11.5);
-    this.addCyl(group, 0x6A6A62, 0.85, 0.90, 1.5, 10,  9.5, 2.35, -11.5);
+    this.addCyl(group, 0xC49A7A, 0.85, 0.90, 1.5, 10,  9.5, 0.75, -8.5);
+    this.addCyl(group, 0x6A6A62, 0.85, 0.90, 1.5, 10,  9.5, 2.35, -8.5);
     // Lids
-    this.addCyl(group, 0x888880, 0.92, 0.92, 0.12, 10,  9.5, 1.56, -11.5);
-    this.addCyl(group, 0x888880, 0.92, 0.92, 0.12, 10,  9.5, 3.16, -11.5);
+    this.addCyl(group, 0x888880, 0.92, 0.92, 0.12, 10,  9.5, 1.56, -8.5);
+    this.addCyl(group, 0x888880, 0.92, 0.92, 0.12, 10,  9.5, 3.16, -8.5);
     // Extra drum beside the stack (slight offset)
-    this.addCyl(group, 0xC49A7A, 0.85, 0.90, 1.5, 10, 11.2, 0.75, -12.2);
-    this.addCyl(group, 0x888880, 0.92, 0.92, 0.12, 10, 11.2, 1.56, -12.2);
+    this.addCyl(group, 0xC49A7A, 0.85, 0.90, 1.5, 10, 11.2, 0.75, -9.2);
+    this.addCyl(group, 0x888880, 0.92, 0.92, 0.12, 10, 11.2, 1.56, -9.2);
     // Drum pallet
-    this.addBox(group, 0x7A5A38, 4.5, 0.18, 2.5, 10.2, 0.09, -11.8);
+    this.addBox(group, 0x7A5A38, 4.5, 0.18, 2.5, 10.2, 0.09, -8.8);
 
     // ── Conny's counter — just inside the roller door (service desk hint) ────
-    this.addBox(group, 0x8A7858, 6, 1, 2.2, 0, 0.5, -9.2);       // counter base
-    this.addBox(group, 0xC8B890, 6.3, 0.18, 2.4, 0, 1.09, -9.2); // counter top (pale timber)
+    this.addBox(group, 0x8A7858, 6, 1, 2.2, 0, 0.5, -6.2);       // counter base
+    this.addBox(group, 0xC8B890, 6.3, 0.18, 2.4, 0, 1.09, -6.2); // counter top (pale timber)
     // Clipboard / papers on counter
-    this.addBox(group, 0xEEEECC, 0.8, 0.05, 1.0, 0.8, 1.19, -9.3);
-    this.addBox(group, 0x444444, 0.12, 0.25, 0.12, 0.8, 1.22, -9.0);
+    this.addBox(group, 0xEEEECC, 0.8, 0.05, 1.0, 0.8, 1.19, -6.3);
+    this.addBox(group, 0x444444, 0.12, 0.25, 0.12, 0.8, 1.22, -6.0);
 
     // ── Parked mixing equipment — left side of building front ────────────────
     // Mixer body
-    this.addBox(group, 0x5A5A52, 2.8, 1.8, 2.8, -8.5, 0.9, -11.5);
+    this.addBox(group, 0x5A5A52, 2.8, 1.8, 2.8, -8.5, 0.9, -8.5);
     // Mixer drum (tilted cylinder suggesting a concrete mixer)
     const mixDrum = new THREE.Mesh(
       new THREE.CylinderGeometry(0.75, 0.75, 2.2, 10),
       new THREE.MeshLambertMaterial({ color: 0x888880 })
     );
     mixDrum.rotation.z = 35 * Math.PI / 180;
-    mixDrum.position.set(-8.5, 1.6, -11.5);
+    mixDrum.position.set(-8.5, 1.6, -8.5);
     mixDrum.castShadow = true;
     group.add(mixDrum);
     // Mixer wheel/axle hint
-    this.addCyl(group, 0x333330, 0.4, 0.4, 0.3, 8, -8.5, 0.2, -10.8);
+    this.addCyl(group, 0x333330, 0.4, 0.4, 0.3, 8, -8.5, 0.2, -7.8);
     // Second piece of equipment (larger boxy machine)
-    this.addBox(group, 0x4A4A44, 3.5, 2.2, 2.5, -11.5, 1.1, -13);
-    this.addBox(group, 0x888880, 3.0, 0.5, 2.0, -11.5, 2.35, -13);
+    this.addBox(group, 0x4A4A44, 3.5, 2.2, 2.5, -9, 1.1, -10);
+    this.addBox(group, 0x888880, 3.0, 0.5, 2.0, -9, 2.35, -10);
     // Hopper hint (funnel top)
-    this.addBox(group, 0x666660, 2.2, 1.2, 1.4, -11.5, 3.1, -13);
+    this.addBox(group, 0x666660, 2.2, 1.2, 1.4, -9, 3.1, -10);
 
     // ── Concrete apron / pad in front of roller door ──────────────────────────
     const apronMat = new THREE.MeshLambertMaterial({ color: 0x9A9890 });
-    const apron = new THREE.Mesh(new THREE.PlaneGeometry(20, 8), apronMat);
+    const apron = new THREE.Mesh(new THREE.PlaneGeometry(16, 6), apronMat);
     apron.rotation.x = -Math.PI / 2;
-    apron.position.set(0, 0.008, -14);
+    apron.position.set(0, 0.008, -10);
     apron.receiveShadow = true;
     group.add(apron);
 
     // ── Side signage: small TEM logo block on right side ─────────────────────
-    this.addBox(group, signCol, 0.3, 2.5, 6, 15.16, 4, 0);
-    this.addBox(group, textCol, 0.32, 2.0, 5.5, 15.17, 4, 0);
+    this.addBox(group, signCol, 0.3, 2.5, 5, 11.16, 4, 0);
+    this.addBox(group, textCol, 0.32, 2.0, 4.5, 11.17, 4, 0);
 
     // ── TEM tree logo on garage door ─────────────────────────────────────────
     // Door is 12W × 5H centred at (0, 2.5, -10.15); front face at z ≈ -10.28
@@ -2008,13 +2008,13 @@ export class Engine {
       side: THREE.DoubleSide,
     });
     const doorLogo = new THREE.Mesh(new THREE.PlaneGeometry(7, 4.5), wsMat);
-    doorLogo.position.set(0, 2.5, -10.29);  // centred on door face
+    doorLogo.position.set(0, 2.5, -7.29);  // centred on door face
     group.add(doorLogo);
 
     group.position.set(x, 0, z);
     this.scene.add(group);
     // Workshop is 30W × 20D — register a solid AABB collider
-    this.collisionWorld.addBox(x, z, 15.5, 10.5);
+    this.collisionWorld.addBox(x, z, 11.5, 7.5);
   }
 
   // ── Zebra Crossings (crosswalks) at every road intersection ──
