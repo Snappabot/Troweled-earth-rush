@@ -34,7 +34,6 @@ import { crewBreakImmune, crewPayMult, crewTimerBonus, getActiveCrew } from './d
 import { submitScore, getPlayerName, setPlayerName } from './services/LeaderboardService';
 import { PlayerNamePrompt } from './ui/PlayerNamePrompt';
 import { CharacterCreator } from './ui/CharacterCreator';
-import { MarbellinoMixer } from './minigames/MarbellinoMixer';
 import { BattleScreen } from './ui/BattleScreen';
 import { getRandomRival } from './data/RivalCrews';
 import { TowerDefence } from './minigames/TowerDefence';
@@ -196,7 +195,6 @@ async function main() {
   const rewardScreen = new RewardScreen();
 
   // ── Marbellino Mixer mini-game ─────────────────────────────────────────────
-  const marbellinoMixer = new MarbellinoMixer();
 
   // ── Game Menu (☰) — contains radio, money, photo, jobs, mixer, contract wars ──
   const radio = new TEMRadio();
@@ -536,14 +534,21 @@ async function main() {
           '🎨 Mix The Plaster!',
           `Jose and Connie are at the depot. The colour formula is up on the board.\n\nMix it right and load the van — then we go get the crew.`,
           () => {
-            // Launch Marbellino Mixer as the material-pickup game
-            marbellinoMixer.show((_pts) => {
-              // Mixer done — advance to crew pickup
+            // Launch 3D Workshop Shootout as the material-mixing game
+            const depotShootout = new WorkshopShootout();
+            depotShootout.show({
+              jobTitle:   jobManager.activeJob?.title ?? 'Mix Plaster',
+              crewIds:    getActiveCrew(),
+              playerName: playerChar.name,
+            }, (mixResult) => {
+              const mixMsg = mixResult.won
+                ? `Perfect mix — ${mixResult.colour ?? 'colour matched'}!\nBuckets in the van.`
+                : `Close enough! Buckets in the van.`;
               connie.playLaugh();
               const crewNames = jobManager.crewToPickup.join(' + ');
               dialoguePause.show(
                 '📦 Materials Loaded!',
-                `Perfect mix. Buckets in the van.\n\nNow go pick up the crew:\n👷 ${crewNames}\n\nYour waypoint will guide you.`,
+                `${mixMsg}\n\nNow go pick up the crew:\n👷 ${crewNames}\n\nYour waypoint will guide you.`,
                 () => {
                   jobManager.advanceToPhase2();
                   const firstCrew = jobManager.nextCrewNeeded();
