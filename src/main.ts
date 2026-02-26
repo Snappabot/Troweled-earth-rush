@@ -200,7 +200,7 @@ async function main() {
       }
     },
     undefined, // Marbellino Mixer is mission-only (removed from menu)
-    undefined, // Contract Wars panel removed from menu (accessible post-match)
+    () => contractWarsPanel.show(),
   );
   gameMenu.mountMoneyPanel(hud.getMoneyPanel());
   gameMenu.mountRadio(radio.getEl());
@@ -718,11 +718,7 @@ async function main() {
     hud.update(physics.speed, spillMeter.level);
   });
 
-  // Show job board on first load (mix in contested jobs 20% of the time)
-  setTimeout(() => {
-    const jobs = jobManager.getAvailableJobs();
-    jobBoard.show(jobs);
-  }, 1000);
+  // Job board is opened by the player via the menu — not auto-shown
 
   engine.start();
 }
