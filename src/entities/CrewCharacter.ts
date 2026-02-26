@@ -17,11 +17,12 @@ export interface CrewConfig {
   hiVisBands?: boolean;
   hasPhone?: boolean;   // holds phone in right hand, arm bent
   bigArms?: boolean;    // thick muscular upper arms + forearms
+  randomGlasses?: boolean; // 50% chance of wearing glasses each spawn
 }
 
 export const CREW_CONFIGS: Record<string, CrewConfig> = {
   Matt:     { name: 'Matt',     skinColor: 0xD4A880, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x2A2A2A, hairColor: 0x5C3A1E, hairStyle: 'short' },
-  Jose:     { name: 'Jose',     skinColor: 0xC49A70, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x2A2A2A, hairColor: 0x0A0A0A, hairStyle: 'dreadlocks' },
+  Jose:     { name: 'Jose',     skinColor: 0xC49A70, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x2A2A2A, hairColor: 0x0A0A0A, hairStyle: 'dreadlocks', glassesColor: 0x1A1A1A, randomGlasses: true },
   Jarrad:   { name: 'Jarrad',   skinColor: 0xD4A880, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x222230, hairColor: 0x1A1A1A, hairStyle: 'topknot', glassesColor: 0x222222, hasPhone: true, bigArms: true },
   Phil:     { name: 'Phil',     skinColor: 0xD4A880, shirtColor: 0xF0EDE8, shirtLogoColor: 0x111111, pantsColor: 0x3A5080, hairColor: 0xC0C0B8, hairStyle: 'silver', glassesColor: 0xA8A8A0 },
   Tsuyoshi: { name: 'Tsuyoshi', skinColor: 0xB88858, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x222220, hairColor: 0x0A0A0A, hairStyle: 'mohawk' },
@@ -159,8 +160,8 @@ export class CrewCharacter {
     // Hair
     this._buildHair(head, cfg, mat);
 
-    // Glasses
-    if (cfg.glassesColor !== undefined) {
+    // Glasses — randomGlasses: 50% chance each spawn
+    if (cfg.glassesColor !== undefined && (!cfg.randomGlasses || Math.random() < 0.5)) {
       addBox(head, cfg.glassesColor, 0.24, 0.055, 0.015, 0, 0.12, 0.21);
     }
 
