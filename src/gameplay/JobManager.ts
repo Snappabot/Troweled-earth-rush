@@ -205,7 +205,8 @@ const ALL_CREW_NAMES = ['Jose', 'Jarrad', 'Matt', 'Phil', 'Tsuyoshi', 'Fabio'];
 
 export class JobManager {
   /** Fixed workshop location — TEM depot (away from van spawn at 0,0) */
-  static readonly WORKSHOP_POS = { x: -60, z: 27 };
+  // Garage door front face: building centre z=27, roller door at local z≈-7.15 → world z≈20
+  static readonly WORKSHOP_POS = { x: -60, z: 20 };
 
   private jobs: Job[] = ALL_JOBS.map(j => ({ ...j }));
   activeJob: Job | null = null;
@@ -257,7 +258,7 @@ export class JobManager {
   checkPhase1Arrival(vanX: number, vanZ: number): boolean {
     const dx = vanX - JobManager.WORKSHOP_POS.x;
     const dz = vanZ - JobManager.WORKSHOP_POS.z;
-    return Math.sqrt(dx * dx + dz * dz) < 18;
+    return Math.sqrt(dx * dx + dz * dz) < 7; // must be at garage door, not just near building
   }
 
   /**
