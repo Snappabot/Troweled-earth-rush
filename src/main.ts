@@ -208,6 +208,7 @@ async function main() {
 
   // ── Game Menu (☰) — contains radio, money, photo, jobs, mixer, contract wars ──
   const radio = new TEMRadio();
+  input.setRadio(radio);  // wire radio button on-screen control
   const contractWarsPanel = new ContractWarsPanel();
   const photoReveal = new PhotoReveal();
   const gameMenu = new GameMenu(

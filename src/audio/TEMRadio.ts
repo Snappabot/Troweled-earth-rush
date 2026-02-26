@@ -813,4 +813,30 @@ export class TEMRadio {
     this.engine.stop();
     this.container.remove();
   }
+
+  // ── Public API for radio button in InputManager ────────────────────────────
+
+  /** Toggle radio on/off — returns new on state */
+  togglePower(): boolean { this._togglePower(); return this.on; }
+
+  /** Advance to next station — returns new station name */
+  nextStation(): string { this._changeStation(1); return STATIONS[this.stationIdx].name; }
+
+  /** Get current station name */
+  getStationName(): string { return STATIONS[this.stationIdx].name; }
+
+  /** Get current station accent color */
+  getStationColor(): string { return STATIONS[this.stationIdx].color; }
+
+  /** Is radio currently on? */
+  isOn(): boolean { return this.on; }
+
+  /** Get/set volume 0–100 */
+  getVolume(): number { return Number(this.volumeSlider.value); }
+  setVolumeLevel(v: number): void {
+    const clamped = Math.max(0, Math.min(100, Math.round(v)));
+    this.volumeSlider.value = String(clamped);
+    this.engine.setVolume(clamped / 100 * 0.18);
+    this._renderStation();
+  }
 }

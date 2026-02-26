@@ -1,4 +1,5 @@
 import nipplejs from 'nipplejs';
+import type { TEMRadio } from '../audio/TEMRadio';
 
 export class InputManager {
   keys: Record<string, boolean> = {};
@@ -8,6 +9,10 @@ export class InputManager {
   horn = false;
   private joystickManager: nipplejs.JoystickManager | null = null;
   private hornTimeout: ReturnType<typeof setTimeout> | null = null;
+  private radio: TEMRadio | null = null;
+  private radioBtnEl: HTMLDivElement | null = null;
+  private radioPopupEl: HTMLDivElement | null = null;
+  private radioPopupTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     window.addEventListener('keydown', (e) => {
@@ -135,42 +140,188 @@ export class InputManager {
       gasBtn.style.background = 'rgba(50, 200, 50, 0.6)';
     }, { passive: false });
 
-    // HORN button — above GAS
-    const hornBtn = document.createElement('div');
-    hornBtn.style.cssText = `
+    // ── RADIO button — replaces horn, above GAS ────────────────────────────
+    const radioBtn = document.createElement('div');
+    radioBtn.style.cssText = `
       position: fixed;
       bottom: 250px;
       right: 30px;
       width: 70px;
       height: 70px;
       border-radius: 50%;
-      background: rgba(255, 200, 50, 0.6);
-      border: 3px solid rgba(255, 230, 100, 0.8);
+      background: rgba(200, 140, 30, 0.6);
+      border: 3px solid rgba(255, 200, 80, 0.8);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
-      font-family: monospace;
-      font-weight: bold;
-      font-size: 20px;
+      font-size: 22px;
       z-index: 100;
       touch-action: none;
       user-select: none;
+      transition: transform 0.1s, background 0.15s;
     `;
-    hornBtn.textContent = '📯';
-    document.body.appendChild(hornBtn);
+    radioBtn.textContent = '🔇';
+    document.body.appendChild(radioBtn);
+    this.radioBtnEl = radioBtn;
 
-    hornBtn.addEventListener('touchstart', (e) => {
+    // ── Radio popup (station name + volume) — above the button ────────────
+    const radioPopup = document.createElement('div');
+    radioPopup.style.cssText = `
+      position: fixed;
+      bottom: 332px;
+      right: 8px;
+      background: rgba(0,0,0,0.82);
+      border: 1.5px solid rgba(200,168,106,0.4);
+      border-radius: 14px;
+      padding: 8px 10px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      z-index: 200;
+      min-width: 130px;
+      backdrop-filter: blur(6px);
+      pointer-events: auto;
+      touch-action: manipulation;
+    `;
+    document.body.appendChild(radioPopup);
+    this.radioPopupEl = radioPopup;
+
+    const popupStation = document.createElement('div');
+    popupStation.style.cssText = `font-size:11px; font-weight:800; letter-spacing:1px; color:#C8A86A; text-align:center;`;
+    radioPopup.appendChild(popupStation);
+
+    const volRow = document.createElement('div');
+    volRow.style.cssText = `display:flex; align-items:center; gap:8px;`;
+
+    const volDown = document.createElement('div');
+    volDown.textContent = '−';
+    volDown.style.cssText = `
+      width:32px; height:32px; border-radius:50%;
+      background:rgba(255,255,255,0.1); border:1.5px solid rgba(255,255,255,0.25);
+      display:flex; align-items:center; justify-content:center;
+      font-size:18px; font-weight:900; color:#fff; cursor:pointer;
+      touch-action:manipulation;
+    `;
+
+    const volLabel = document.createElement('div');
+    volLabel.style.cssText = `font-size:11px; color:rgba(200,168,106,0.8); min-width:32px; text-align:center;`;
+    volLabel.textContent = '55%';
+
+    const volUp = document.createElement('div');
+    volUp.textContent = '+';
+    volUp.style.cssText = volDown.style.cssText;
+
+    volRow.appendChild(volDown);
+    volRow.appendChild(volLabel);
+    volRow.appendChild(volUp);
+    radioPopup.appendChild(volRow);
+
+    const powerRow = document.createElement('div');
+    powerRow.style.cssText = `font-size:10px; color:rgba(200,168,106,0.55); text-align:center;`;
+    powerRow.textContent = 'hold to turn off';
+    radioPopup.appendChild(powerRow);
+
+    // ── Helper: update button + popup to reflect current radio state ────────
+    const syncBtn = () => {
+      if (!this.radio) return;
+      const on = this.radio.isOn();
+      radioBtn.textContent = on ? '📻' : '🔇';
+      radioBtn.style.background = on ? 'rgba(200,140,30,0.75)' : 'rgba(80,80,80,0.55)';
+      radioBtn.style.borderColor = on ? 'rgba(255,200,80,0.8)' : 'rgba(150,150,150,0.4)';
+    };
+
+    const showPopup = () => {
+      if (!this.radio) return;
+      const on = this.radio.isOn();
+      popupStation.textContent = on ? this.radio.getStationName() : '— OFF —';
+      popupStation.style.color = on ? this.radio.getStationColor() : '#888';
+      const vol = this.radio.getVolume();
+      volLabel.textContent = vol + '%';
+      powerRow.textContent = on ? 'hold to turn off' : 'hold to turn on';
+      radioPopup.style.display = 'flex';
+      if (this.radioPopupTimeout) clearTimeout(this.radioPopupTimeout);
+      this.radioPopupTimeout = setTimeout(() => {
+        radioPopup.style.display = 'none';
+      }, 3500);
+    };
+
+    // Volume − button
+    const adjustVol = (delta: number) => {
+      if (!this.radio) return;
+      const newVol = Math.max(0, Math.min(100, this.radio.getVolume() + delta));
+      this.radio.setVolumeLevel(newVol);
+      volLabel.textContent = newVol + '%';
+      if (this.radioPopupTimeout) clearTimeout(this.radioPopupTimeout);
+      this.radioPopupTimeout = setTimeout(() => { radioPopup.style.display = 'none'; }, 3500);
+    };
+    volDown.addEventListener('touchstart', (e) => { e.stopPropagation(); adjustVol(-10); }, { passive: false });
+    volUp.addEventListener('touchstart',   (e) => { e.stopPropagation(); adjustVol(+10); }, { passive: false });
+    volDown.addEventListener('click', () => adjustVol(-10));
+    volUp.addEventListener('click',   () => adjustVol(+10));
+
+    // ── Touch handling — tap vs long-press ─────────────────────────────────
+    let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+    let didLongPress = false;
+
+    radioBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
-      this.triggerHorn();
-      hornBtn.style.background = 'rgba(255, 200, 50, 0.95)';
-      hornBtn.style.transform = 'scale(1.1)';
+      didLongPress = false;
+      radioBtn.style.transform = 'scale(1.08)';
+      longPressTimer = setTimeout(() => {
+        didLongPress = true;
+        if (this.radio) {
+          this.radio.togglePower();
+          syncBtn();
+          showPopup();
+        }
+        radioBtn.style.transform = 'scale(1.0)';
+      }, 600);
     }, { passive: false });
-    hornBtn.addEventListener('touchend', (e) => {
+
+    radioBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
-      hornBtn.style.background = 'rgba(255, 200, 50, 0.6)';
-      hornBtn.style.transform = 'scale(1.0)';
+      radioBtn.style.transform = 'scale(1.0)';
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      if (!didLongPress && this.radio) {
+        if (!this.radio.isOn()) {
+          this.radio.togglePower(); // turn on
+        } else {
+          this.radio.nextStation(); // cycle station
+        }
+        syncBtn();
+        showPopup();
+      }
     }, { passive: false });
+
+    // Mouse fallback (desktop)
+    radioBtn.addEventListener('mousedown', () => {
+      didLongPress = false;
+      longPressTimer = setTimeout(() => {
+        didLongPress = true;
+        if (this.radio) { this.radio.togglePower(); syncBtn(); showPopup(); }
+      }, 600);
+    });
+    radioBtn.addEventListener('mouseup', () => {
+      if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
+      if (!didLongPress && this.radio) {
+        if (!this.radio.isOn()) { this.radio.togglePower(); }
+        else { this.radio.nextStation(); }
+        syncBtn();
+        showPopup();
+      }
+    });
+  }
+
+  /** Wire up the radio — call from main.ts after TEMRadio is created */
+  setRadio(radio: TEMRadio): void {
+    this.radio = radio;
+    // Sync button icon to initial state
+    if (this.radioBtnEl) {
+      this.radioBtnEl.textContent = radio.isOn() ? '📻' : '🔇';
+      this.radioBtnEl.style.background = radio.isOn() ? 'rgba(200,140,30,0.75)' : 'rgba(80,80,80,0.55)';
+    }
   }
 
   get forward() { return this.keys['ArrowUp'] || this.keys['KeyW'] || this.accelerating; }
