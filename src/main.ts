@@ -690,33 +690,15 @@ async function main() {
               });
             };
 
-            // ── Stage 1: Workshop Shootout (all jobs) ────────────────────
-            const shootout = new WorkshopShootout();
-            shootout.show({
-              jobTitle:  arrived.title,
-              crewIds:   getActiveCrew(),
-              playerName: playerChar.name,
-            }, (shootoutResult) => {
-              if (!shootoutResult.won) {
-                // Lost the shootout — job stolen by Connie
-                hud.showToast('💨 Connie blocked the job! Contract lost.', 0xFF4400);
-                jobCompleting = false;
-                radio.setVisible(true);
-                breakActive = null; savedWaypoint = null;
-                coffeeBreakAt = -1; toiletBreakAt = -1;
-                hud.setActiveJob(null, 1);
-                hud.updateCrewStatus([], [], false);
-                characters.showAllCrew();
-                jobManager.completeJob(arrived, 0);
-                hud.updateMoney(jobManager.money);
-                setTimeout(() => {
-                  const available = jobManager.getAvailableJobs();
-                  if (available.length > 0) jobBoard.show(available);
-                }, 3500);
-                return;
+            // ── Stage 1: Jarrad's Scaffold Climb ─────────────────────────
+            miniGameManager.startScaffold((scaffoldResult: ScaffoldResult) => {
+              if (scaffoldResult.bonusSats > 0) {
+                _jobSpillTotal -= scaffoldResult.bonusSats;
+                _jobSpillTotal = Math.max(-arrived.pay * 0.5, _jobSpillTotal);
+                hud.showToast(`🏗️ +${Math.round(scaffoldResult.bonusSats / 1000)}K scaffold bonus!`, 0xFFD700);
               }
 
-              // ── Won Shootout — Stage 2: Tower Defence (contested jobs) ──
+              // ── Stage 2: Tower Defence (contested jobs only) ─────────────
               if (arrived.isContested) {
                 const tdAnnounce = document.createElement('div');
                 tdAnnounce.style.cssText = `
@@ -745,16 +727,9 @@ async function main() {
                   tdAnnounce.remove();
                   towerDefence.show(tdCfg, (tdResult) => {
                     if (tdResult.won) {
-                      // Scaffold bonus round before finishing
-                      miniGameManager.startScaffold((scaffoldResult: ScaffoldResult) => {
-                        if (scaffoldResult.bonusSats > 0) {
-                          _jobSpillTotal -= scaffoldResult.bonusSats;
-                          _jobSpillTotal = Math.max(-arrived.pay * 0.5, _jobSpillTotal);
-                          hud.showToast(`🪣 +${Math.round(scaffoldResult.bonusSats / 1000)}K sats bonus!`, 0xFFD700);
-                        }
-                        { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88); }
-                        finishJob(1, true);
-                      });
+                      const pn = hud.getPlayerChar()?.name ?? 'Driver';
+                      hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88);
+                      finishJob(1, true);
                     } else {
                       // TD lost — contract stolen
                       radio.setVisible(true);
@@ -773,18 +748,12 @@ async function main() {
                   });
                 }, 1800);
               } else {
-                // Regular job — scaffold bonus round then finish
-                miniGameManager.startScaffold((scaffoldResult: ScaffoldResult) => {
-                  if (scaffoldResult.bonusSats > 0) {
-                    _jobSpillTotal -= scaffoldResult.bonusSats;
-                    _jobSpillTotal = Math.max(-arrived.pay * 0.5, _jobSpillTotal);
-                    hud.showToast(`🪣 +${Math.round(scaffoldResult.bonusSats / 1000)}K sats bonus!`, 0xFFD700);
-                  }
-                  { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88); }
-                  finishJob(1, false);
-                });
+                // Regular job — straight to photo reveal
+                const pn = hud.getPlayerChar()?.name ?? 'Driver';
+                hud.showToast(`💰 Nice work ${pn}! Paid!`, 0x44DD88);
+                finishJob(1, false);
               }
-            });
+            }); // end startScaffold
           },
           randomFrom(BRAND_SLOGANS)
         );
