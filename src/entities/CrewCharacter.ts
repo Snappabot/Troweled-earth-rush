@@ -177,12 +177,35 @@ export class CrewCharacter {
           add(new THREE.BoxGeometry(0.11, 0.18, 0.13),  0.19, 0.06, 0);
         }
         break;
-      case 'dreadlocks':
+      case 'dreadlocks': {
+        // Dark cap covering top/sides of head
         add(new THREE.SphereGeometry(0.215, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.5), 0, 0.10, 0);
-        for (const [ox, oz] of [[-0.12, 0], [0.12, 0], [0, -0.16], [-0.08, -0.10], [0.08, -0.10]]) {
-          add(new THREE.CylinderGeometry(0.035, 0.022, 0.38, 6), ox, -0.07, oz as number);
+        // Side coverage pads — fill out the sides so no skin shows
+        add(new THREE.BoxGeometry(0.10, 0.20, 0.18), -0.19, 0.00, -0.04);
+        add(new THREE.BoxGeometry(0.10, 0.20, 0.18),  0.19, 0.00, -0.04);
+        // Shoulder-length dreadlocks — 10 locks, angled naturally outward/downward
+        const lockDefs: [number, number, number, number, number, number][] = [
+          // x,    y,    z,    rotX,  rotZ, length
+          [-0.17, -0.20,  0.04,  0.18,  0.22, 0.62], // left-front
+          [ 0.17, -0.20,  0.04,  0.18, -0.22, 0.62], // right-front
+          [-0.19, -0.20, -0.06,  0.05,  0.25, 0.65], // left
+          [ 0.19, -0.20, -0.06,  0.05, -0.25, 0.65], // right
+          [-0.13, -0.24, -0.16,  0.00,  0.16, 0.63], // back-left
+          [ 0.13, -0.24, -0.16,  0.00, -0.16, 0.63], // back-right
+          [ 0.00, -0.26, -0.19, -0.06,  0.00, 0.66], // back-centre
+          [-0.07, -0.24, -0.19, -0.04,  0.10, 0.60], // back-left-2
+          [ 0.07, -0.24, -0.19, -0.04, -0.10, 0.60], // back-right-2
+          [ 0.00, -0.20,  0.06,  0.20,  0.00, 0.55], // front-centre
+        ];
+        for (const [lx, ly, lz, rx, rz, len] of lockDefs) {
+          const strand = new THREE.Mesh(new THREE.CylinderGeometry(0.038, 0.020, len, 6), hm);
+          strand.position.set(lx, ly, lz);
+          strand.rotation.x = rx;
+          strand.rotation.z = rz;
+          head.add(strand);
         }
         break;
+      }
       case 'mohawk':
         add(new THREE.BoxGeometry(0.09, 0.26, 0.40), 0, 0.28, 0);
         break;
