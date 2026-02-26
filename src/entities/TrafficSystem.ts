@@ -147,24 +147,15 @@ export class TrafficSystem {
         aheadDist = rawDist;
       }
 
-      // Broad proximity stop — any car within 7 units of the van stops dead
-      // (prevents the van getting sandwiched at intersections)
-      const proximityDist = Math.sqrt(
-        (vanX - carX) * (vanX - carX) + (vanZ - carZ) * (vanZ - carZ),
-      );
-      if (proximityDist < 7) {
-        car.currentSpeed = 0;
-      } else {
-        // Lane-based braking (original logic)
-        const vanInLane = lateralDist < 5;
-        const vanAhead = aheadDist > 0 && aheadDist < BRAKE_DISTANCE;
+      // Lane-based braking — yield only when van is directly ahead in lane
+      const vanInLane = lateralDist < 5;
+      const vanAhead = aheadDist > 0 && aheadDist < BRAKE_DISTANCE;
 
-        if (vanInLane && vanAhead) {
-          const t = Math.max(0, (aheadDist - STOP_DISTANCE) / (BRAKE_DISTANCE - STOP_DISTANCE));
-          car.currentSpeed = car.baseSpeed * t;
-        } else {
-          car.currentSpeed = Math.min(car.baseSpeed, car.currentSpeed + RESUME_RATE * dt);
-        }
+      if (vanInLane && vanAhead) {
+        const t = Math.max(0, (aheadDist - STOP_DISTANCE) / (BRAKE_DISTANCE - STOP_DISTANCE));
+        car.currentSpeed = car.baseSpeed * t;
+      } else {
+        car.currentSpeed = Math.min(car.baseSpeed, car.currentSpeed + RESUME_RATE * dt);
       }
 
       // ── Nudge decay ────────────────────────────────────────────────────────
@@ -211,22 +202,31 @@ export class TrafficSystem {
       if (Math.abs(dx) < hw && Math.abs(dz) < hd) {
         const overlapX = hw - Math.abs(dx);
         const overlapZ = hd - Math.abs(dz);
+        const ESCAPE = 6; // extra clearance units pushed on the car
 
         if (overlapX < overlapZ) {
-          // Push van out on X axis
           const pushSign = dx < 0 ? -1 : 1;
-          rx += pushSign * overlapX;
-          // Nudge car the other way along its travel axis
-          if (car.axis === 'x') car.nudgeVel += pushSign * NUDGE_FORCE * -1 * car.dir;
+          rx += pushSign * overlapX; // push van out
+          // Teleport car away along ITS axis so it clears the van immediately
+          if (car.axis === 'x') {
+            car.pos -= pushSign * (overlapX + ESCAPE);
+          } else {
+            // Z-axis car blocking X — bounce it forward along Z (its travel dir)
+            car.pos += car.dir * (overlapZ + ESCAPE);
+          }
         } else {
-          // Push van out on Z axis
           const pushSign = dz < 0 ? -1 : 1;
-          rz += pushSign * overlapZ;
-          if (car.axis === 'z') car.nudgeVel += pushSign * NUDGE_FORCE * -1 * car.dir;
+          rz += pushSign * overlapZ; // push van out
+          if (car.axis === 'z') {
+            car.pos -= pushSign * (overlapZ + ESCAPE);
+          } else {
+            car.pos += car.dir * (overlapX + ESCAPE);
+          }
         }
 
-        // Stop the car dead on impact
-        car.currentSpeed = 0;
+        // Resume at full speed so the car drives away, not parks on the van
+        car.currentSpeed = car.baseSpeed;
+        car.nudgeVel = 0;
         hit = true;
       }
     } // end car loop
