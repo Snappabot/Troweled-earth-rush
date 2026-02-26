@@ -61,7 +61,7 @@ export class ContractWarsPanel {
       { icon: '⚔️', title: 'Spot a Contested Job', desc: 'On the Job Board, look for gold-bordered cards marked ⚔️ CONTRACT WAR. These are contested — a rival crew wants the same gig.' },
       { icon: '🏗️', title: 'Beat The Scaffold', desc: 'Accept the job and race up the scaffold before time runs out. Dodge Connie\'s plaster globs — she\'s armed, bionic, and merciless.' },
       { icon: '🗼', title: 'Defend Your Territory', desc: 'After the scaffold, drop into Tower Defence mode. Place your crew as towers along the path and hold off the rival attack. Towers auto-fire — position matters.' },
-      { icon: '⏱️', title: 'Fastest Crew Wins', desc: 'Your combined scaffold + tower defence time is your score. Beat the existing record to top the leaderboard. The contract — and the BTC — goes to the fastest.' },
+      { icon: '💰', title: 'Best Payout Wins', desc: 'Your net payout is your score — full contract value minus spill penalties and crash damage. Keep the bucket clean and the van straight. Highest earner tops the board.' },
       { icon: '💡', title: 'Pick Your Crew Wisely', desc: 'Each crew member has unique perks that boost scaffold speed, tower range, or damage. Mix and match before accepting a contested job.' },
     ];
 

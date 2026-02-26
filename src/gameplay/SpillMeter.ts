@@ -3,8 +3,8 @@ export class SpillMeter {
   level = 0; // 0.0–1.0
   spillRateMultiplier = 1.0;
 
-  /** Called with a penalty amount (sats) whenever the bucket spills. */
-  onSpill?: (penalty: number) => void;
+  /** Called whenever the bucket spills — caller calculates the penalty. */
+  onSpill?: () => void;
 
   private container: HTMLDivElement;
   private fill: HTMLDivElement;
@@ -163,7 +163,7 @@ export class SpillMeter {
       this.spillFlashing = true;
       this.level = 0.5;
 
-      this.onSpill?.(50_000); // 50K sats penalty per spill
+      this.onSpill?.(); // penalty calculated by caller (30% of contract)
 
       this.container.classList.add('spill-flash');
       setTimeout(() => {

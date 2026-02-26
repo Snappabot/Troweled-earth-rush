@@ -50,7 +50,7 @@ export async function getLeaderboard(jobTitle: string, limit = 5): Promise<Score
     try {
       const clean = encodeURIComponent(jobTitle.replace(/^⚔️\s*/, '').trim());
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/${TABLE}?job_title=ilike.*${clean}*&order=completion_time_s.asc&limit=${limit}`,
+        `${SUPABASE_URL}/rest/v1/${TABLE}?job_title=ilike.*${clean}*&order=payout.desc&limit=${limit}`,
         {
           headers: {
             'apikey': SUPABASE_KEY!,
@@ -70,7 +70,7 @@ export async function getLeaderboard(jobTitle: string, limit = 5): Promise<Score
   // Fallback: local scores for this job
   return _getLocal()
     .filter(s => s.job_title.toLowerCase().includes(jobTitle.replace(/^⚔️\s*/, '').trim().toLowerCase()))
-    .sort((a, b) => a.completion_time_s - b.completion_time_s)
+    .sort((a, b) => b.payout - a.payout)
     .slice(0, limit);
 }
 

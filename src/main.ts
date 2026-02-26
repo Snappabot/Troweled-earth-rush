@@ -31,7 +31,7 @@ import { StartMenu } from './ui/StartMenu';
 import { GameMenu } from './ui/GameMenu';
 import { CrewSelector } from './ui/CrewSelector';
 import { crewBreakImmune, crewPayMult, crewTimerBonus, getActiveCrew } from './data/CrewPerks';
-import { submitScore, getPlayerName } from './services/LeaderboardService';
+import { submitScore, getPlayerName, setPlayerName } from './services/LeaderboardService';
 import { PlayerNamePrompt } from './ui/PlayerNamePrompt';
 import { CharacterCreator } from './ui/CharacterCreator';
 import { MarbellinoMixer } from './minigames/MarbellinoMixer';
@@ -60,6 +60,7 @@ async function main() {
   const introAudio = await new IntroSequence().play();
   await new StartMenu().show(introAudio);
   const playerChar = await new CharacterCreator().show();
+  setPlayerName(playerChar.name); // persist for leaderboard
 
   const engine = new Engine();
   await engine.init();
@@ -161,11 +162,16 @@ async function main() {
     });
   });
 
-  // ── Spill penalty callback ───────────────────────────────────────────────────
-  spillMeter.onSpill = (penalty: number) => {
+  // ── Spill penalty — 30% of active contract ───────────────────────────────────
+  spillMeter.onSpill = () => {
+    const contractPay = jobManager.activeJob?.pay ?? 0;
+    const penalty = contractPay > 0 ? Math.round(contractPay * 0.30) : 30_000;
+    _jobSpillTotal += penalty;
     jobManager.money = Math.max(0, jobManager.money - penalty);
     hud.updateMoney(jobManager.money);
     hud.showSpillPenalty(penalty);
+    const pn = hud.getPlayerChar()?.name ?? 'Driver';
+    hud.showToast(`🪣 SPILL! ${pn} lost ${Math.round(penalty/1000)}K sats!`, 0xFF4400);
   };
 
   // ── Traffic + Pedestrian systems ────────────────────────────────────────────
@@ -219,6 +225,7 @@ async function main() {
   // ── Contested job tracking for leaderboard ────────────────────────────────
   let _contestedJobTitle   = '';
   let _contestedStartTime  = 0;   // Date.now() when job mini-game starts
+  let _jobSpillTotal       = 0;   // cumulative sats lost to spills this job
   const _namePrompt = new PlayerNamePrompt();
 
   // ── Random break interrupt system ─────────────────────────────────────────────
@@ -390,8 +397,15 @@ async function main() {
       van.mesh.position.x = trafficResult.x;
       van.mesh.position.z = trafficResult.z;
       if (jobActive) {
-        spillMeter.triggerCrash();
-        if (Math.random() < 0.3) { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`💥 Watch it ${pn}!`, 0xFF3333); }
+        spillMeter.triggerCrash(); // +30% to spill meter; may trigger 30% contract penalty
+        const crashFee = 15_000;   // flat material damage fee
+        _jobSpillTotal += crashFee;
+        jobManager.money = Math.max(0, jobManager.money - crashFee);
+        hud.updateMoney(jobManager.money);
+      }
+      if (Math.random() < 0.3) {
+        const pn = hud.getPlayerChar()?.name ?? 'Driver';
+        hud.showToast(`💥 Watch it ${pn}! -15K sats`, 0xFF3333);
       }
     }
 
@@ -623,6 +637,7 @@ async function main() {
             hud.updateCrewStatus([], [], false);
             radio.setVisible(false);
             _contestedStartTime = Date.now();
+            _jobSpillTotal = 0; // reset spill tracker for this job
 
             // ── Shared job-complete handler ────────────────────────────────
             const finishJob = (finalQuality: number, isContestWin = false) => {
@@ -630,13 +645,13 @@ async function main() {
               photoReveal.show(arrived.title, () => {
                 radio.setVisible(true);
                 if (isContestWin) {
-                  const completionSecs = (Date.now() - _contestedStartTime) / 1000;
+                  const netPayout = Math.max(0, arrived.pay - _jobSpillTotal);
                   submitScore({
-                    player_name:       getPlayerName() ?? 'TEM Crew',
+                    player_name:       playerChar.name || getPlayerName() || 'TEM Crew',
                     job_title:         _contestedJobTitle.replace(/^⚔️\s*/, '').trim(),
                     crew_ids:          getActiveCrew(),
-                    completion_time_s: Math.round(completionSecs),
-                    payout:            Math.max(0, arrived.pay),
+                    completion_time_s: Math.round((Date.now() - _contestedStartTime) / 1000),
+                    payout:            netPayout,
                   });
                 }
                 const earned = jobManager.completeJob(arrived, finalQuality);
