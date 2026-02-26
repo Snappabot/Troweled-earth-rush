@@ -2096,6 +2096,82 @@ export class Engine {
     this.addBox(group, signCol, 0.3, 2.0, 4, -9.16, 3.5, 0);
     this.addBox(group, accentCol, 0.32, 0.22, 4.2, -9.17, 4.6, 0);
 
+    // ── Render Supply Co pylon sign — roadside, right of building ──────────
+    // Two steel posts
+    this.addCyl(group, 0x444440, 0.18, 0.18, 8, 8, 13, 4, -11);
+    this.addCyl(group, 0x444440, 0.18, 0.18, 8, 8, 11, 4, -11);
+    // Cross brace
+    this.addBox(group, 0x444440, 2.0, 0.18, 0.18, 12, 7.2, -11);
+
+    // Sign board — canvas texture with RSC branding
+    const rscCv = document.createElement('canvas');
+    rscCv.width = 512; rscCv.height = 360;
+    const rc = rscCv.getContext('2d')!;
+
+    // Background — dark crimson
+    rc.fillStyle = '#8B1212';
+    rc.fillRect(0, 0, 512, 360);
+
+    // White border
+    rc.strokeStyle = '#FFFFFF';
+    rc.lineWidth = 10;
+    rc.strokeRect(6, 6, 500, 348);
+
+    // Inner thin border
+    rc.strokeStyle = 'rgba(255,255,255,0.4)';
+    rc.lineWidth = 3;
+    rc.strokeRect(16, 16, 480, 328);
+
+    // "Render" — large italic serif
+    rc.save();
+    rc.fillStyle = '#FFFFFF';
+    rc.font = 'italic 900 118px Georgia, "Times New Roman", serif';
+    rc.textAlign = 'center';
+    rc.textBaseline = 'alphabetic';
+    // Shadow for depth
+    rc.shadowColor = 'rgba(0,0,0,0.6)';
+    rc.shadowOffsetX = 4; rc.shadowOffsetY = 4; rc.shadowBlur = 8;
+    rc.fillText('Render', 256, 200);
+    rc.restore();
+
+    // "SUPPLY CO" banner strip
+    rc.fillStyle = '#6B0E0E';
+    rc.fillRect(30, 224, 452, 60);
+    rc.strokeStyle = '#FFFFFF';
+    rc.lineWidth = 2;
+    rc.strokeRect(30, 224, 452, 60);
+
+    // "SUPPLY CO" text
+    rc.save();
+    rc.fillStyle = '#FFFFFF';
+    rc.font = 'bold 36px Arial, sans-serif';
+    rc.textAlign = 'center';
+    rc.textBaseline = 'middle';
+    rc.letterSpacing = '6px';
+    rc.fillText('SUPPLY CO', 256, 254);
+    rc.restore();
+
+    // Tagline
+    rc.fillStyle = 'rgba(255,255,255,0.65)';
+    rc.font = '18px Arial, sans-serif';
+    rc.textAlign = 'center';
+    rc.textBaseline = 'middle';
+    rc.fillText('NOT JUST RENDER', 256, 316);
+
+    const rscTex = new THREE.CanvasTexture(rscCv);
+    const rscMat = new THREE.MeshBasicMaterial({ map: rscTex, side: THREE.DoubleSide });
+    const rscSign = new THREE.Mesh(new THREE.PlaneGeometry(6, 4.2), rscMat);
+    rscSign.position.set(12, 7.2, -11.05);
+    group.add(rscSign);
+
+    // Sign surround frame (crimson box slightly larger than plane)
+    this.addBox(group, 0x8B1212, 6.2, 4.4, 0.15, 12, 7.2, -10.95);
+    // Frame border strips (white)
+    this.addBox(group, 0xFFFFFF, 6.4, 0.12, 0.18, 12, 9.45, -10.94);
+    this.addBox(group, 0xFFFFFF, 6.4, 0.12, 0.18, 12, 5.0,  -10.94);
+    this.addBox(group, 0xFFFFFF, 0.12, 4.6, 0.18,  9.0, 7.2, -10.94);
+    this.addBox(group, 0xFFFFFF, 0.12, 4.6, 0.18, 15.0, 7.2, -10.94);
+
     group.position.set(x, 0, z);
     this.scene.add(group);
     // AABB collider
