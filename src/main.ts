@@ -67,6 +67,11 @@ async function main() {
 
   const input = new InputManager();
   const van = new VanModel(engine.scene);
+
+  // ── Start van near the edge of the map (NE corner, road intersection) ───────
+  van.mesh.position.set(200, 0, 200);
+  van.heading = Math.PI * 1.25; // facing south-west toward city centre
+
   const spillMeter = new SpillMeter();
   const hud = new HUD();
   const dialoguePause = new DialoguePause();
@@ -217,6 +222,14 @@ async function main() {
   const COFFEE_POS = { x: -60, z: -100 };
   const TOILET_POS = { x: 100, z: 60 };
   type BreakKind = 'coffee' | 'toilet';
+  // ── Opening cinematic state ──────────────────────────────────────────────────
+  let cinematicActive = true;
+  let cinematicTime   = 0;
+  const CINEMATIC_DURATION = 5.0; // seconds
+
+  const _eio = (t: number) => t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t;
+  const _lrp = (a: number, b: number, t: number) => a + (b - a) * t;
+
   let jobElapsed = 0;
   let coffeeBreakAt = -1;  // seconds into job when coffee urge fires (-1 = done/unused)
   let toiletBreakAt = -1;  // seconds into job when toilet urge fires
@@ -227,6 +240,49 @@ async function main() {
   engine.onUpdate((dt: number) => {
     const vanX = van.mesh.position.x;
     const vanZ = van.mesh.position.z;
+
+    // ── Opening cinematic fly-over ────────────────────────────────────────────
+    if (cinematicActive) {
+      cinematicTime = Math.min(cinematicTime + dt, CINEMATIC_DURATION);
+      const t = cinematicTime / CINEMATIC_DURATION;
+
+      let camX: number, camY: number, camZ: number;
+
+      if (t < 0.35) {
+        // Phase 1: High wide-angle overview sweeping down toward city
+        const p = _eio(t / 0.35);
+        camX = _lrp(vanX * 0.1,  vanX + 10, p);   // start near map centre, move to van
+        camY = _lrp(220, 95, p);
+        camZ = _lrp(vanZ * 0.1,  vanZ + 40, p);
+      } else if (t < 0.72) {
+        // Phase 2: Orbit down around van
+        const p   = _eio((t - 0.35) / 0.37);
+        const ang = _lrp(Math.PI * 0.9, Math.PI * -0.15, p);
+        const rad = _lrp(75, 34, p);
+        camX = vanX + Math.sin(ang) * rad;
+        camY = _lrp(95, 43, p);
+        camZ = vanZ + Math.cos(ang) * rad;
+      } else {
+        // Phase 3: Settle into normal follow position (behind + above van)
+        const p      = _eio((t - 0.72) / 0.28);
+        const endAng = Math.PI * -0.15;
+        const fromX  = vanX + Math.sin(endAng) * 34;
+        const fromY  = 43;
+        const fromZ  = vanZ + Math.cos(endAng) * 34;
+        // Normal follow: camera is behind van (heading ~1.25π ≈ SW), 28 units back, 38 high
+        const behX   = Math.sin(van.heading) * -28;
+        const behZ   = -Math.cos(van.heading) * -28;
+        camX = _lrp(fromX, vanX + behX, p);
+        camY = _lrp(fromY, 38, p);
+        camZ = _lrp(fromZ, vanZ + behZ, p);
+      }
+
+      engine.camera.camera.position.set(camX, camY, camZ);
+      engine.camera.camera.lookAt(vanX, 1.5, vanZ);
+
+      if (t >= 1) cinematicActive = false;
+      return; // skip all gameplay during cinematic
+    }
 
     // ── Dialogue pause — freeze game, check for resume input ─────────────────
     if (dialoguePause.isActive) {
