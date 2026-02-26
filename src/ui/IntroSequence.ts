@@ -1078,16 +1078,24 @@ export class IntroSequence {
         // Dreads hang from the SIDES of the head only (dx ≥ hr*0.8),
         // swinging outward so they frame the body without crossing the shirt.
         const dreadsStart = hy + hr * 0.08; // bottom edge of head
-        // Shoulder-length dreads — end around shirt collar/shoulder level
+        // Many thin individual dreads — shoulder length, spread wide
         const sideDreads = [
-          { dx: -hr * 1.2, swing: -10, len: hh * 0.20, w: 11, color: dc  },
-          { dx: -hr * 1.0, swing:  -7, len: hh * 0.23, w: 12, color: dl  },
-          { dx: -hr * 0.85,swing:  -5, len: hh * 0.19, w: 10, color: dca },
-          { dx: -hr * 0.8, swing:  -3, len: hh * 0.17, w:  9, color: dl  },
-          { dx:  hr * 0.8, swing:   3, len: hh * 0.17, w:  9, color: dl  },
-          { dx:  hr * 0.85,swing:   5, len: hh * 0.19, w: 10, color: dca },
-          { dx:  hr * 1.0, swing:   7, len: hh * 0.23, w: 12, color: dl  },
-          { dx:  hr * 1.2, swing:  10, len: hh * 0.20, w: 11, color: dc  },
+          // Left side (7 strands fanning out)
+          { dx: -hr * 0.5, swing:  -3, len: hh * 0.17, w: 4, color: dc  },
+          { dx: -hr * 0.8, swing:  -5, len: hh * 0.20, w: 4, color: dl  },
+          { dx: -hr * 1.0, swing:  -7, len: hh * 0.22, w: 4, color: dca },
+          { dx: -hr * 1.2, swing:  -9, len: hh * 0.20, w: 4, color: dc  },
+          { dx: -hr * 1.4, swing: -11, len: hh * 0.18, w: 3, color: dl  },
+          { dx: -hr * 1.6, swing: -13, len: hh * 0.16, w: 3, color: dc  },
+          { dx: -hr * 1.8, swing: -15, len: hh * 0.14, w: 3, color: dca },
+          // Right side (7 strands mirrored)
+          { dx:  hr * 0.5, swing:   3, len: hh * 0.17, w: 4, color: dc  },
+          { dx:  hr * 0.8, swing:   5, len: hh * 0.20, w: 4, color: dl  },
+          { dx:  hr * 1.0, swing:   7, len: hh * 0.22, w: 4, color: dca },
+          { dx:  hr * 1.2, swing:   9, len: hh * 0.20, w: 4, color: dc  },
+          { dx:  hr * 1.4, swing:  11, len: hh * 0.18, w: 3, color: dl  },
+          { dx:  hr * 1.6, swing:  13, len: hh * 0.16, w: 3, color: dc  },
+          { dx:  hr * 1.8, swing:  15, len: hh * 0.14, w: 3, color: dca },
         ];
         ctx.save();
         ctx.lineCap = 'round';
