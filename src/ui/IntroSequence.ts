@@ -690,25 +690,15 @@ export class IntroSequence {
     const shirtCol = '#111111';  // black TEM shirt
     const pantCol  = '#1a1a2a';
 
-    // Boots — Tsuyoshi gets wider swordsman stance
+    // Boots
     ctx.fillStyle = '#0a0a0a';
-    if (sc.id === 'tsuyoshi') {
-      ctx.fillRect(cx - 28, groundY - 22, 17, 22);
-      ctx.fillRect(cx + 11,  groundY - 22, 17, 22);
-    } else {
-      ctx.fillRect(cx - 19, groundY - 22, 16, 22);
-      ctx.fillRect(cx + 3,  groundY - 22, 16, 22);
-    }
+    ctx.fillRect(cx - 19, groundY - 22, 16, 22);
+    ctx.fillRect(cx + 3,  groundY - 22, 16, 22);
 
     // Pants
     ctx.fillStyle = pantCol;
-    if (sc.id === 'tsuyoshi') {
-      ctx.fillRect(cx - 27, groundY - hh * 0.44, 17, hh * 0.44 - 20);
-      ctx.fillRect(cx + 10,  groundY - hh * 0.44, 17, hh * 0.44 - 20);
-    } else {
-      ctx.fillRect(cx - 18, groundY - hh * 0.44, 16, hh * 0.44 - 20);
-      ctx.fillRect(cx + 2,  groundY - hh * 0.44, 16, hh * 0.44 - 20);
-    }
+    ctx.fillRect(cx - 18, groundY - hh * 0.44, 16, hh * 0.44 - 20);
+    ctx.fillRect(cx + 2,  groundY - hh * 0.44, 16, hh * 0.44 - 20);
 
     // Black TEM shirt — Jarrad gets broader chest to match muscular build
     const chestW = sc.id === 'jarrad' ? 54 : 40;
@@ -773,27 +763,34 @@ export class IntroSequence {
       ctx.fill();
 
     } else if (sc.id === 'tsuyoshi') {
-      // ── Tsuyoshi: swordsman grip — both arms angle inward to grip point ──
+      // ── Tsuyoshi: side-on profile, facing left — sword arm extends forward ──
+      // Back arm (right side, stub behind torso)
       ctx.fillStyle = shirtCol;
-      // Left sleeve angled right-down toward center grip
-      ctx.save();
-      ctx.translate(cx - 22, groundY - hh * 0.78);
-      ctx.rotate(0.52);
-      ctx.fillRect(-6, 0, 12, hh * 0.30);
-      ctx.restore();
-      // Right sleeve angled left-down toward center grip
-      ctx.save();
-      ctx.translate(cx + 22, groundY - hh * 0.78);
-      ctx.rotate(-0.52);
-      ctx.fillRect(-6, 0, 12, hh * 0.30);
-      ctx.restore();
-      // Both hands at grip (overlapping center, just below belt)
+      ctx.fillRect(cx + 18, groundY - hh * 0.78, 10, hh * 0.26);
       ctx.fillStyle = skin;
       ctx.beginPath();
-      ctx.ellipse(cx - 6, groundY - hh * 0.47, 9, 8, 0.1, 0, Math.PI * 2);
+      ctx.ellipse(cx + 23, groundY - hh * 0.52, 7, 6, 0, 0, Math.PI * 2);
       ctx.fill();
+
+      // Front arm (left, sword arm) — angled trapezoid from shoulder down-left to grip
+      // No rotation needed: draw as filled polygon
+      const aTopInner = cx - 10, aTopOuter = cx - 22;
+      const aBotInner = cx - 38, aBotOuter = cx - 48;
+      const aTopY = groundY - hh * 0.76;
+      const aBotY = groundY - hh * 0.50;
+      ctx.fillStyle = shirtCol;
       ctx.beginPath();
-      ctx.ellipse(cx + 7, groundY - hh * 0.44, 9, 8, -0.1, 0, Math.PI * 2);
+      ctx.moveTo(aTopInner, aTopY);
+      ctx.lineTo(aTopOuter, aTopY);
+      ctx.lineTo(aBotOuter, aBotY);
+      ctx.lineTo(aBotInner, aBotY);
+      ctx.closePath();
+      ctx.fill();
+
+      // Front hand at grip
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.ellipse(cx - 43, groundY - hh * 0.50, 9, 8, 0.3, 0, Math.PI * 2);
       ctx.fill();
 
     } else {
@@ -811,16 +808,20 @@ export class IntroSequence {
       ctx.fill();
     }
 
-    // Head — Tsuyoshi gets a narrower, less-round face
+    // Head
     ctx.fillStyle = skin;
     ctx.beginPath();
-    const _headRx = sc.id === 'tsuyoshi' ? hh * 0.062 : hh * 0.075;
+    // Tsuyoshi side-on: narrower face, head shifted right (away from facing direction)
+    const _headCx = sc.id === 'tsuyoshi' ? cx + 6 : cx;
+    const _headRx = sc.id === 'tsuyoshi' ? hh * 0.058 : hh * 0.075;
     const _headRy = sc.id === 'tsuyoshi' ? hh * 0.094 : hh * 0.09;
-    ctx.ellipse(cx, groundY - hh * 0.87, _headRx, _headRy, 0, 0, Math.PI * 2);
+    ctx.ellipse(_headCx, groundY - hh * 0.87, _headRx, _headRy, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Character-specific hair + prop
-    this._drawHairAndProp(ctx, sc, cx, groundY, hh, skin);
+    // Tsuyoshi: pass head-shifted cx so hair aligns with side-on head
+    const _propCx = sc.id === 'tsuyoshi' ? cx + 6 : cx;
+    this._drawHairAndProp(ctx, sc, _propCx, groundY, hh, skin);
 
     // (accent rim light removed — matched bg colour and looked like a seam)
 
@@ -1418,69 +1419,58 @@ export class IntroSequence {
         break;
       }
       case 'tsuyoshi': {
-        // ── Katana — diagonal sword held at grip, blade pointing up-right ──
-        ctx.save();
-        // Pivot at grip point (both hands)
-        ctx.translate(cx, groundY - hh * 0.45);
-        ctx.rotate(-Math.PI * 0.30); // tilt: blade up-right ~54°
+        // ── Katana — side-on, pointing LEFT from front hand ──
+        // Hand is at (cx - 43, groundY - hh*0.50) in shifted coords
+        // Note: cx here is already cx+6 (shifted from _drawCharSilhouette)
+        const gripX = cx - 43;
+        const gripY = groundY - hh * 0.50;
+        const bladeLen = hh * 0.52;
 
-        // Blade (long, thin, silver)
-        const bladeLen = hh * 0.58;
-        const grad = ctx.createLinearGradient(-3, -bladeLen, 3, 0);
-        grad.addColorStop(0, '#e8eef8');
-        grad.addColorStop(0.4, '#c8d4e4');
-        grad.addColorStop(1, '#a0aec0');
-        ctx.fillStyle = grad;
+        // Handle (grip) — vertical, hand wraps around it
+        const gripH = hh * 0.12;
+        ctx.fillStyle = '#3a1800';
         ctx.beginPath();
-        ctx.moveTo(-2.5, 0);
-        ctx.lineTo(2.5, 0);
-        ctx.lineTo(1, -bladeLen);     // tip narrows
-        ctx.lineTo(-1, -bladeLen);
-        ctx.closePath();
+        ctx.roundRect(gripX - 4, gripY - gripH / 2, 8, gripH, 2);
         ctx.fill();
-        // Edge highlight
-        ctx.fillStyle = 'rgba(255,255,255,0.55)';
-        ctx.fillRect(0.5, -bladeLen + 4, 1.2, bladeLen - 8);
-        // Blade tip shine
-        ctx.fillStyle = '#f0f6ff';
-        ctx.beginPath();
-        ctx.moveTo(-1, -bladeLen);
-        ctx.lineTo(1, -bladeLen);
-        ctx.lineTo(0, -bladeLen - hr * 0.18);
-        ctx.closePath();
-        ctx.fill();
+        // Wrap strips
+        ctx.strokeStyle = '#1a0800';
+        ctx.lineWidth = 1.5;
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath();
+          ctx.moveTo(gripX - 4, gripY - gripH / 2 + 4 + i * (gripH / 5));
+          ctx.lineTo(gripX + 4, gripY - gripH / 2 + 6 + i * (gripH / 5));
+          ctx.stroke();
+        }
 
-        // Tsuba (guard) — flat oval crossguard
+        // Tsuba (guard) — vertical oval between grip and blade
         ctx.fillStyle = '#9A8840';
         ctx.beginPath();
-        ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
+        ctx.ellipse(gripX - 5, gripY, 5, 10, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#6A5820';
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // Grip / handle
-        const gripH = hh * 0.12;
-        ctx.fillStyle = '#3a1800';
+        // Blade — horizontal, pointing LEFT from tsuba
+        const bladeTopY = gripY - 2.5;
+        const bladeBotY = gripY + 2.5;
+        const bladeTipX = gripX - 5 - bladeLen;
+        const grad = ctx.createLinearGradient(bladeTipX, 0, gripX - 5, 0);
+        grad.addColorStop(0, '#e8eef8');
+        grad.addColorStop(0.5, '#c8d8f0');
+        grad.addColorStop(1, '#a0aec0');
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.roundRect(-4, 2, 8, gripH, 2);
+        ctx.moveTo(gripX - 5, bladeTopY);
+        ctx.lineTo(gripX - 5, bladeBotY);
+        ctx.lineTo(bladeTipX + 8, bladeBotY - 1); // taper
+        ctx.lineTo(bladeTipX, gripY);              // tip point
+        ctx.lineTo(bladeTipX + 8, bladeTopY + 1);
+        ctx.closePath();
         ctx.fill();
-        // Wrap (alternating dark strips)
-        ctx.strokeStyle = '#1a0800';
-        ctx.lineWidth = 2;
-        for (let i = 0; i < 5; i++) {
-          ctx.beginPath();
-          ctx.moveTo(-4, 4 + i * (gripH / 5));
-          ctx.lineTo(4,  6 + i * (gripH / 5));
-          ctx.stroke();
-        }
-        // Pommel
-        ctx.fillStyle = '#9A8840';
-        ctx.beginPath();
-        ctx.ellipse(0, 2 + gripH, 5, 4, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.restore();
+        // Edge highlight (top edge)
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        ctx.fillRect(bladeTipX + 10, bladeTopY, bladeLen - 18, 1.2);
         break;
       }
       case 'connie': {
