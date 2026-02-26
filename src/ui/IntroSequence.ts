@@ -732,8 +732,10 @@ export class IntroSequence {
       drawMuscleArm(cx - 30, -1);
       drawMuscleArm(cx + 30,  1);
 
+      // Forearm ends at groundY - hh*0.39; hand starts clearly below that
+      const handY = groundY - hh * 0.34; // well below forearm, no overlap
+
       // ── Left hand (fist) ──────────────────────────────────────────────────
-      const handY = groundY - hh * 0.39;
       ctx.fillStyle = skin;
       ctx.beginPath();
       ctx.ellipse(cx - 30, handY, 10, 9, 0.2, 0, Math.PI * 2);
@@ -741,22 +743,23 @@ export class IntroSequence {
 
       // ── Right hand: phone ─────────────────────────────────────────────────
       const phX = cx + 30;
-      const phY = handY;
+      // Skin grip (below phone)
       ctx.fillStyle = skin;
       ctx.beginPath();
-      ctx.ellipse(phX, phY + 7, 9, 7, 0, 0, Math.PI * 2);
+      ctx.ellipse(phX, handY + 8, 9, 7, 0, 0, Math.PI * 2);
       ctx.fill();
+      // Phone sits in hand — starts at handY, hangs down
       ctx.fillStyle = '#18181F';
       ctx.beginPath();
-      ctx.roundRect(phX - 7, phY - 14, 14, 22, 3);
+      ctx.roundRect(phX - 7, handY - 10, 14, 22, 3);
       ctx.fill();
       ctx.fillStyle = '#2A80FF';
       ctx.beginPath();
-      ctx.roundRect(phX - 5, phY - 12, 10, 16, 2);
+      ctx.roundRect(phX - 5, handY - 8, 10, 16, 2);
       ctx.fill();
       ctx.fillStyle = 'rgba(255,255,255,0.22)';
       ctx.beginPath();
-      ctx.roundRect(phX - 4, phY - 11, 4, 6, 1);
+      ctx.roundRect(phX - 4, handY - 7, 4, 6, 1);
       ctx.fill();
 
     } else {
@@ -1067,23 +1070,24 @@ export class IntroSequence {
     switch (sc.id) {
 
       case 'jose': {
-        const dc  = '#3a1e00';
-        const dl  = '#5a3200';
-        const dca = '#6a4400';
+        const dc  = '#120800';  // near-black dark brown
+        const dl  = '#1C0E00';
+        const dca = '#241200';
 
         // ── 1. Dreads first — cap will cover roots ────────────────────────
         // Dreads hang from the SIDES of the head only (dx ≥ hr*0.8),
         // swinging outward so they frame the body without crossing the shirt.
         const dreadsStart = hy + hr * 0.08; // bottom edge of head
+        // Shoulder-length dreads — end around shirt collar/shoulder level
         const sideDreads = [
-          { dx: -hr * 1.2, swing: -14, len: hh * 0.38, w: 11, color: dc  },
-          { dx: -hr * 1.0, swing: -10, len: hh * 0.42, w: 12, color: dl  },
-          { dx: -hr * 0.85,swing:  -7, len: hh * 0.36, w: 10, color: dca },
-          { dx: -hr * 0.8, swing:  -5, len: hh * 0.32, w:  9, color: dl  },
-          { dx:  hr * 0.8, swing:   5, len: hh * 0.32, w:  9, color: dl  },
-          { dx:  hr * 0.85,swing:   7, len: hh * 0.36, w: 10, color: dca },
-          { dx:  hr * 1.0, swing:  10, len: hh * 0.42, w: 12, color: dl  },
-          { dx:  hr * 1.2, swing:  14, len: hh * 0.38, w: 11, color: dc  },
+          { dx: -hr * 1.2, swing: -10, len: hh * 0.20, w: 11, color: dc  },
+          { dx: -hr * 1.0, swing:  -7, len: hh * 0.23, w: 12, color: dl  },
+          { dx: -hr * 0.85,swing:  -5, len: hh * 0.19, w: 10, color: dca },
+          { dx: -hr * 0.8, swing:  -3, len: hh * 0.17, w:  9, color: dl  },
+          { dx:  hr * 0.8, swing:   3, len: hh * 0.17, w:  9, color: dl  },
+          { dx:  hr * 0.85,swing:   5, len: hh * 0.19, w: 10, color: dca },
+          { dx:  hr * 1.0, swing:   7, len: hh * 0.23, w: 12, color: dl  },
+          { dx:  hr * 1.2, swing:  10, len: hh * 0.20, w: 11, color: dc  },
         ];
         ctx.save();
         ctx.lineCap = 'round';
@@ -1107,8 +1111,8 @@ export class IntroSequence {
         });
         ctx.restore();
 
-        // ── 2. Crown cap — covers dread roots ────────────────────────────
-        ctx.fillStyle = dc;
+        // ── 2. Crown cap — covers dread roots (near-black) ───────────────
+        ctx.fillStyle = '#0E0600'; // slightly darker than dc for depth
         ctx.beginPath();
         ctx.arc(cx, hy - hr * 0.5, hr * 1.1, Math.PI, 0);
         ctx.fill();
