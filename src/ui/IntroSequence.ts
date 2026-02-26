@@ -698,9 +698,10 @@ export class IntroSequence {
     ctx.fillRect(cx - 18, groundY - hh * 0.44, 16, hh * 0.44 - 20);
     ctx.fillRect(cx + 2,  groundY - hh * 0.44, 16, hh * 0.44 - 20);
 
-    // Black TEM shirt
+    // Black TEM shirt — Jarrad gets broader chest to match muscular build
+    const chestW = sc.id === 'jarrad' ? 50 : 40;
     ctx.fillStyle = shirtCol;
-    ctx.fillRect(cx - 20, groundY - hh * 0.80, 40, hh * 0.37);
+    ctx.fillRect(cx - chestW / 2, groundY - hh * 0.80, chestW, hh * 0.37);
 
     // TEM logo on chest — white tree
     this._drawTEMLogoOnShirt(ctx, cx, groundY - hh * 0.70);
@@ -709,10 +710,21 @@ export class IntroSequence {
     ctx.fillStyle = skin;
     ctx.fillRect(cx - 5, groundY - hh * 0.84, 10, hh * 0.06);
 
-    // Arms — black sleeves
+    // Arms — black sleeves (Jarrad gets wider muscular arms)
+    const armW = sc.id === 'jarrad' ? 20 : 13;
     ctx.fillStyle = shirtCol;
-    ctx.fillRect(cx - 32, groundY - hh * 0.78, 13, hh * 0.32);
-    ctx.fillRect(cx + 19, groundY - hh * 0.78, 13, hh * 0.28);
+    ctx.fillRect(cx - 32 - (sc.id === 'jarrad' ? 4 : 0), groundY - hh * 0.78, armW, hh * 0.32);
+    ctx.fillRect(cx + 19,                                  groundY - hh * 0.78, armW, hh * 0.28);
+    // Bicep bulge highlight for Jarrad
+    if (sc.id === 'jarrad') {
+      ctx.fillStyle = '#1e1e1e';
+      ctx.beginPath();
+      ctx.ellipse(cx - 30, groundY - hh * 0.68, armW * 0.55, hh * 0.06, 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(cx + 29, groundY - hh * 0.68, armW * 0.55, hh * 0.06, -0.15, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // Hands (skin)
     ctx.fillStyle = skin;
