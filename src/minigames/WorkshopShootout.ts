@@ -288,58 +288,87 @@ export class WorkshopShootout {
     skip.addEventListener('click', () => this._end(true));
     this.overlay.appendChild(skip);
 
-    // ── TOP HUD bar ───────────────────────────────────────────────────────────
+    // ── TOP HUD — two-row layout, no overlap ─────────────────────────────────
     const hud = document.createElement('div');
     hud.style.cssText = `
       position:absolute;top:0;left:0;right:0;z-index:12100;
-      background:rgba(0,0,0,0.72);padding:8px 70px 7px 12px;
-      display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+      background:rgba(0,0,0,0.82);backdrop-filter:blur(4px);
+      display:flex;flex-direction:column;gap:0;
     `;
 
-    // Job title
+    // Row 1: job title + timer
+    const row1 = document.createElement('div');
+    row1.style.cssText = `
+      display:flex;align-items:center;justify-content:space-between;
+      padding:6px 95px 4px 12px; /* right gap clears the SKIP button */
+    `;
     const jobLbl = document.createElement('span');
-    jobLbl.style.cssText = `color:#C8A86A;font-size:clamp(11px,1.8vw,14px);font-weight:800;letter-spacing:0.5px;flex-shrink:0;`;
+    jobLbl.style.cssText = `color:#C8A86A;font-size:13px;font-weight:800;letter-spacing:0.3px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65%;`;
     jobLbl.textContent = this.jobTitle;
-    hud.appendChild(jobLbl);
-
-    // Target swatch + name
-    const targetWrap = document.createElement('div');
-    targetWrap.style.cssText = `display:flex;align-items:center;gap:6px;flex-shrink:0;`;
-    const tsw = document.createElement('div');
-    tsw.style.cssText = `width:26px;height:26px;border-radius:6px;border:2px solid rgba(200,168,106,0.5);background:${this.target.hex};flex-shrink:0;`;
-    const tName = document.createElement('span');
-    tName.style.cssText = `color:#fff;font-size:clamp(11px,1.8vw,14px);font-weight:900;`;
-    tName.textContent = this.target.name;
-    const tFormula = Object.entries(this.target.shots).filter(([,v])=>v>0).map(([k,v])=>`${k}:${v}`).join(' ');
-    const tHint = document.createElement('span');
-    tHint.style.cssText = `color:rgba(255,255,255,0.45);font-size:clamp(10px,1.5vw,12px);`;
-    tHint.textContent = `(${tFormula})`;
-    targetWrap.appendChild(tsw); targetWrap.appendChild(tName); targetWrap.appendChild(tHint);
-    hud.appendChild(targetWrap);
-
-    // Spacer
-    const sp = document.createElement('div');
-    sp.style.cssText = `flex:1;min-width:0;`;
-    hud.appendChild(sp);
-
-    // Match %
-    this.matchPctEl = document.createElement('span');
-    this.matchPctEl.style.cssText = `color:#C8A86A;font-size:clamp(12px,2vw,15px);font-weight:900;flex-shrink:0;`;
-    this.matchPctEl.textContent = '—';
-    hud.appendChild(this.matchPctEl);
-
-    // Timer
     this.timerEl = document.createElement('span');
-    this.timerEl.style.cssText = `color:#fff;font-size:clamp(13px,2.2vw,16px);font-weight:900;min-width:36px;text-align:right;flex-shrink:0;`;
+    this.timerEl.style.cssText = `color:#fff;font-size:15px;font-weight:900;flex-shrink:0;`;
     this.timerEl.textContent = `${GAME_TIME}s`;
-    hud.appendChild(this.timerEl);
+    row1.appendChild(jobLbl);
+    row1.appendChild(this.timerEl);
+    hud.appendChild(row1);
+
+    // Row 2: colour swatch + name + formula | match %
+    const row2 = document.createElement('div');
+    row2.style.cssText = `
+      display:flex;align-items:center;justify-content:space-between;
+      padding:4px 12px 7px 12px;gap:8px;
+    `;
+
+    // Left: big swatch + colour info stacked
+    const targetWrap = document.createElement('div');
+    targetWrap.style.cssText = `display:flex;align-items:center;gap:8px;min-width:0;`;
+
+    const tsw = document.createElement('div');
+    tsw.style.cssText = `
+      width:40px;height:40px;border-radius:8px;flex-shrink:0;
+      background:${this.target.hex};
+      border:2px solid rgba(255,255,255,0.3);
+      box-shadow:0 0 8px ${this.target.hex}88;
+    `;
+
+    const tInfo = document.createElement('div');
+    tInfo.style.cssText = `display:flex;flex-direction:column;gap:1px;min-width:0;`;
+
+    const tName = document.createElement('span');
+    tName.style.cssText = `color:#fff;font-size:14px;font-weight:900;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+    tName.textContent = this.target.name;
+
+    const tFormula = Object.entries(this.target.shots)
+      .filter(([,v]) => v > 0).map(([k,v]) => `${k}:${v}`).join(' · ');
+    const tHint = document.createElement('span');
+    tHint.style.cssText = `color:rgba(255,255,255,0.5);font-size:11px;font-weight:600;letter-spacing:0.5px;`;
+    tHint.textContent = tFormula;
+
+    tInfo.appendChild(tName);
+    tInfo.appendChild(tHint);
+    targetWrap.appendChild(tsw);
+    targetWrap.appendChild(tInfo);
+
+    // Right: match % (large, clear)
+    this.matchPctEl = document.createElement('div');
+    this.matchPctEl.style.cssText = `
+      flex-shrink:0;text-align:right;
+      color:#C8A86A;font-size:22px;font-weight:900;line-height:1;
+    `;
+    this.matchPctEl.textContent = '—';
+
+    row2.appendChild(targetWrap);
+    row2.appendChild(this.matchPctEl);
+    hud.appendChild(row2);
 
     this.overlay.appendChild(hud);
 
-    // ── Match bar (under HUD) ─────────────────────────────────────────────────
+    // ── Match bar — sits flush below the two-row HUD ──────────────────────────
     const matchBar = document.createElement('div');
     matchBar.style.cssText = `
-      position:absolute;top:44px;left:0;right:0;z-index:12100;height:5px;
+      position:absolute;top:90px;left:0;right:0;z-index:12100;height:5px;
       background:rgba(255,255,255,0.07);
     `;
     this.matchBarEl = document.createElement('div');
@@ -350,9 +379,9 @@ export class WorkshopShootout {
     // ── Hint line ────────────────────────────────────────────────────────────
     this.hintEl = document.createElement('div');
     this.hintEl.style.cssText = `
-      position:absolute;top:50px;left:50%;transform:translateX(-50%);z-index:12100;
-      color:rgba(200,168,106,0.8);font-size:clamp(11px,1.8vw,13px);font-weight:700;
-      background:rgba(0,0,0,0.5);padding:2px 10px;border-radius:10px;
+      position:absolute;top:96px;left:50%;transform:translateX(-50%);z-index:12100;
+      color:rgba(200,168,106,0.85);font-size:12px;font-weight:700;
+      background:rgba(0,0,0,0.55);padding:3px 12px;border-radius:12px;
       pointer-events:none;white-space:nowrap;
     `;
     this.hintEl.textContent = this.target.hint;
