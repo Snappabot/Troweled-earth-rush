@@ -822,15 +822,7 @@ export class IntroSequence {
     // Character-specific hair + prop
     this._drawHairAndProp(ctx, sc, cx, groundY, hh, skin);
 
-    // Accent rim light on left edge
-    ctx.strokeStyle = sc.accentColor;
-    ctx.lineWidth = 3;
-    ctx.globalAlpha = fadeIn * 0.8;
-    ctx.beginPath();
-    ctx.moveTo(cx - 20, groundY - hh * 0.44);
-    ctx.lineTo(cx - 20, groundY - hh * 0.80);
-    ctx.lineTo(cx - 10, groundY - hh * 0.84);
-    ctx.stroke();
+    // (accent rim light removed — matched bg colour and looked like a seam)
 
     ctx.restore();
   }
