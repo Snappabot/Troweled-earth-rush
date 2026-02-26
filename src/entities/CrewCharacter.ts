@@ -16,12 +16,13 @@ export interface CrewConfig {
   glassesColor?: number;
   hiVisBands?: boolean;
   hasPhone?: boolean;   // holds phone in right hand, arm bent
+  bigArms?: boolean;    // thick muscular upper arms + forearms
 }
 
 export const CREW_CONFIGS: Record<string, CrewConfig> = {
   Matt:     { name: 'Matt',     skinColor: 0xD4A880, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x2A2A2A, hairColor: 0x5C3A1E, hairStyle: 'short' },
   Jose:     { name: 'Jose',     skinColor: 0xC49A70, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x2A2A2A, hairColor: 0x0A0A0A, hairStyle: 'dreadlocks' },
-  Jarrad:   { name: 'Jarrad',   skinColor: 0xD4A880, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x222230, hairColor: 0x1A1A1A, hairStyle: 'topknot', glassesColor: 0x222222, hasPhone: true },
+  Jarrad:   { name: 'Jarrad',   skinColor: 0xD4A880, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x222230, hairColor: 0x1A1A1A, hairStyle: 'topknot', glassesColor: 0x222222, hasPhone: true, bigArms: true },
   Phil:     { name: 'Phil',     skinColor: 0xD4A880, shirtColor: 0xF0EDE8, shirtLogoColor: 0x111111, pantsColor: 0x3A5080, hairColor: 0xC0C0B8, hairStyle: 'silver', glassesColor: 0xA8A8A0 },
   Tsuyoshi: { name: 'Tsuyoshi', skinColor: 0xB88858, shirtColor: 0x0A0A0A, shirtLogoColor: 0xFFFFFF, pantsColor: 0x222220, hairColor: 0x0A0A0A, hairStyle: 'mohawk' },
   Fabio:    { name: 'Fabio',    skinColor: 0xBE8E60, shirtColor: 0x1B7EC4, shirtLogoColor: 0xFFFFFF, pantsColor: 0x282830, hairColor: 0x1A1008, hairStyle: 'bun', glassesColor: 0x2A1A08 },
@@ -105,17 +106,24 @@ export class CrewCharacter {
     // Pelvis
     addBox(hip, cfg.pantsColor, 0.44, 0.20, 0.26, 0, 0, 0);
 
-    // Upper arms
-    addCyl(lShoulder, cfg.shirtColor, 0.08, 0.34, 0, -0.17, 0);
-    addCyl(rShoulder, cfg.shirtColor, 0.08, 0.34, 0, -0.17, 0);
+    // Upper arms — bigger radius for bigArms characters
+    const uArmR = cfg.bigArms ? 0.13 : 0.08;
+    const fArmR = cfg.bigArms ? 0.11 : 0.07;
+    addCyl(lShoulder, cfg.shirtColor, uArmR, 0.34, 0, -0.17, 0);
+    addCyl(rShoulder, cfg.shirtColor, uArmR, 0.34, 0, -0.17, 0);
+    // Bicep bulge for bigArms
+    if (cfg.bigArms) {
+      addCyl(lShoulder, cfg.shirtColor, uArmR * 1.15, 0.14, 0, -0.10, 0);
+      addCyl(rShoulder, cfg.shirtColor, uArmR * 1.15, 0.14, 0, -0.10, 0);
+    }
     if (cfg.hiVisBands) {
       addBox(lShoulder, 0xFFFFFF, 0.18, 0.06, 0.18, 0, -0.10, 0);
       addBox(rShoulder, 0xFFFFFF, 0.18, 0.06, 0.18, 0, -0.10, 0);
     }
 
     // Forearms + hands
-    addCyl(lForeArm, cfg.skinColor, 0.07, 0.30, 0, -0.15, 0);
-    addCyl(rForeArm, cfg.skinColor, 0.07, 0.30, 0, -0.15, 0);
+    addCyl(lForeArm, cfg.skinColor, fArmR, 0.30, 0, -0.15, 0);
+    addCyl(rForeArm, cfg.skinColor, fArmR, 0.30, 0, -0.15, 0);
     addBox(lForeArm, cfg.skinColor, 0.13, 0.11, 0.09, 0, -0.32, 0);
     addBox(rForeArm, cfg.skinColor, 0.13, 0.11, 0.09, 0, -0.32, 0);
 
