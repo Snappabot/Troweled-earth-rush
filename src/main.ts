@@ -24,7 +24,7 @@ import { CREW_CONFIGS } from './entities/CrewCharacter';
 import type { Job } from './gameplay/JobManager';
 import { preloadTEMLogo } from './utils/LogoLoader';
 import { BRAND_SLOGANS, GAME_TIPS, JOB_OPENERS, randomFrom } from './data/Slogans';
-import { isAllCollected } from './minigames/TrowelingGame';
+import { isAllCollected, markCollected, getCollected, PHOTO_ACHIEVEMENTS } from './minigames/TrowelingGame';
 import { RewardScreen } from './ui/RewardScreen';
 import { TEMRadio } from './audio/TEMRadio';
 import { IntroSequence } from './ui/IntroSequence';
@@ -679,7 +679,60 @@ async function main() {
                 breakActive = null; savedWaypoint = null;
                 coffeeBreakAt = -1; toiletBreakAt = -1;
                 jobCompleting = false;
-                if (isAllCollected() && !RewardScreen.isUnlocked()) {
+
+                // ── Unlock a TEM project photo for the gallery ────────────
+                const _uncollected = PHOTO_ACHIEVEMENTS.filter(p => !getCollected().includes(p.id));
+                const _photo = _uncollected.length > 0
+                  ? _uncollected[Math.floor(Math.random() * _uncollected.length)]
+                  : null;
+                const _isNew = _photo ? markCollected(_photo.id) : false;
+                const _count = getCollected().length;
+                const _total = PHOTO_ACHIEVEMENTS.length;
+                const _allDone = isAllCollected();
+
+                if (_isNew && _photo) {
+                  // Show photo unlock card
+                  const card = document.createElement('div');
+                  card.style.cssText = `
+                    position:fixed;inset:0;z-index:15000;background:rgba(0,0,0,0.88);
+                    display:flex;flex-direction:column;align-items:center;justify-content:center;
+                    font-family:system-ui,sans-serif;padding:24px;
+                  `;
+                  card.innerHTML = `
+                    <div style="color:#C8A86A;font-size:13px;font-weight:800;letter-spacing:2px;margin-bottom:12px;">
+                      📸 PHOTO UNLOCKED
+                    </div>
+                    <img src="${_photo.file}" style="
+                      width:min(320px,85vw);aspect-ratio:4/3;object-fit:cover;
+                      border-radius:12px;border:3px solid #C8A86A;
+                      box-shadow:0 8px 32px rgba(200,168,106,0.4);margin-bottom:14px;
+                    " onerror="this.style.display='none'">
+                    <div style="color:#fff;font-size:18px;font-weight:900;margin-bottom:6px;">${_photo.name}</div>
+                    <div style="color:#aaa;font-size:13px;margin-bottom:${_allDone ? 16 : 22}px;">
+                      ${_count} / ${_total} collected
+                    </div>
+                    ${_allDone ? `<div style="color:#2ECC40;font-size:14px;font-weight:800;margin-bottom:16px;">
+                      🎁 Full collection — 5% off in the TEM app!
+                    </div>` : ''}
+                    <button style="
+                      background:#C1666B;color:#fff;border:none;border-radius:24px;
+                      padding:14px 40px;font-size:16px;font-weight:900;cursor:pointer;
+                      touch-action:manipulation;
+                    " id="photo-unlock-ok">✓ AWESOME</button>
+                  `;
+                  document.body.appendChild(card);
+                  card.querySelector('#photo-unlock-ok')!.addEventListener('click', () => {
+                    card.remove();
+                    if (_allDone && !RewardScreen.isUnlocked()) {
+                      setTimeout(() => rewardScreen.trigger(), 500);
+                    } else {
+                      setTimeout(() => {
+                        const available = jobManager.getAvailableJobs();
+                        if (available.length > 0) jobBoard.show(available);
+                      }, 800);
+                    }
+                  });
+                } else if (_allDone && !RewardScreen.isUnlocked()) {
                   setTimeout(() => rewardScreen.trigger(), 2000);
                 } else {
                   setTimeout(() => {
