@@ -11,7 +11,7 @@ export interface PlayerCharacter {
   hairColor: string; // hex colour
 }
 
-const SKIN_TONES = ['#F5CBA7', '#E0A87C', '#C8856A', '#A0522D', '#5C3317'];
+const SKIN_TONES = ['#F5CBA7', '#E0A87C', '#C8856A', '#A0522D', '#5C3317', '#FDE68A'];
 
 const HAIR_COLORS = [
   '#1a0a00',  // Black
@@ -111,11 +111,11 @@ export class CharacterCreator {
     `;
 
     this.previewCanvas = document.createElement('canvas');
-    this.previewCanvas.width  = 120;
-    this.previewCanvas.height = 220;
+    this.previewCanvas.width  = 160;
+    this.previewCanvas.height = 280;
     this.previewCanvas.style.cssText = `
-      width: 120px;
-      height: 220px;
+      width: 160px;
+      height: 280px;
       display: block;
     `;
     this.ctx = this.previewCanvas.getContext('2d')!;
@@ -199,15 +199,18 @@ export class CharacterCreator {
     const swatchRow = document.createElement('div');
     swatchRow.style.cssText = `
       display: flex;
-      gap: 12px;
+      gap: 10px;
+      flex-wrap: wrap;
       margin-bottom: 22px;
+      max-width: 320px;
     `;
 
     SKIN_TONES.forEach((tone, i) => {
+      const isYellow = tone === '#FDE68A';
       const swatch = document.createElement('div');
       swatch.style.cssText = `
-        width: 44px;
-        height: 44px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         background: ${tone};
         cursor: pointer;
@@ -216,6 +219,7 @@ export class CharacterCreator {
         transition: border-color 0.15s, transform 0.1s;
         box-sizing: border-box;
         flex-shrink: 0;
+        ${isYellow ? 'box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25);' : ''}
       `;
       swatch.addEventListener('click', () => {
         this.skinTone = tone;
@@ -393,39 +397,85 @@ export class CharacterCreator {
     const H    = this.previewCanvas.height;  // 220
     const skin = this.skinTone;
 
-    // Background
-    ctx.fillStyle = '#08080f';
+    // Background — dark navy so dark clothes are visible
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0, '#1a2035');
+    bgGrad.addColorStop(1, '#0e1220');
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, W, H);
 
+    // Floor line
+    ctx.fillStyle = 'rgba(212,160,64,0.15)';
+    ctx.fillRect(0, H - 14, W, 1);
+
     // Ground shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.beginPath();
-    ctx.ellipse(W / 2, H - 6, 26, 6, 0, 0, Math.PI * 2);
+    ctx.ellipse(W / 2, H - 8, 30, 7, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // ── Measurements (proportional to height) ────────────────────────────────
-    const hh   = H * 0.88;       // effective character height
+    const hh   = H * 0.88;
     const cx   = W / 2;
-    const base = H - 2;           // feet level
+    const base = H - 4;
 
-    // Boots
-    ctx.fillStyle = '#0a0a0a';
-    ctx.fillRect(cx - 17, base - 22, 14, 22);
-    ctx.fillRect(cx + 3,  base - 22, 14, 22);
+    // Boots — dark brown, visible against navy
+    ctx.fillStyle = '#2a1a0c';
+    ctx.fillRect(cx - 19, base - 24, 16, 24);
+    ctx.fillRect(cx + 3,  base - 24, 16, 24);
+    // Boot sole highlight
+    ctx.fillStyle = '#3a2a1a';
+    ctx.fillRect(cx - 20, base - 4, 18, 4);
+    ctx.fillRect(cx + 2,  base - 4, 18, 4);
 
-    // Pants
-    ctx.fillStyle = '#1a1a2a';
-    ctx.fillRect(cx - 16, base - hh * 0.44, 14, hh * 0.44 - 20);
-    ctx.fillRect(cx + 2,  base - hh * 0.44, 14, hh * 0.44 - 20);
+    // Pants — dark navy blue, visible
+    ctx.fillStyle = '#1e2a44';
+    ctx.fillRect(cx - 17, base - hh * 0.44, 15, hh * 0.44 - 22);
+    ctx.fillRect(cx + 2,  base - hh * 0.44, 15, hh * 0.44 - 22);
+    // Belt
+    ctx.fillStyle = '#5a3a1a';
+    ctx.fillRect(cx - 18, base - hh * 0.44, 36, hh * 0.04);
 
-    // Shirt (black, 40px wide)
-    ctx.fillStyle = '#111111';
-    ctx.fillRect(cx - 20, base - hh * 0.80, 40, hh * 0.37);
+    // Shirt — charcoal with visible edge (TEM style)
+    ctx.fillStyle = '#1c1c1c';
+    ctx.fillRect(cx - 21, base - hh * 0.81, 42, hh * 0.38);
+    // Shirt collar hint
+    ctx.fillStyle = '#C1666B';
+    ctx.fillRect(cx - 5, base - hh * 0.81, 10, 3);
 
-    // Arms (black sleeves, 13px wide each)
-    ctx.fillStyle = '#111111';
-    ctx.fillRect(cx - 30, base - hh * 0.78, 13, hh * 0.30);
-    ctx.fillRect(cx + 17, base - hh * 0.78, 13, hh * 0.26);
+    // Arms — charcoal sleeves
+    ctx.fillStyle = '#1c1c1c';
+    ctx.fillRect(cx - 32, base - hh * 0.79, 14, hh * 0.31);
+    ctx.fillRect(cx + 18, base - hh * 0.79, 14, hh * 0.27);
+
+    // ── TEM tree logo on shirt ──────────────────────────────────────────────
+    const lx = cx;
+    const ly = base - hh * 0.63;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillStyle   = 'rgba(255,255,255,0.75)';
+    ctx.lineCap = 'round';
+    const sc = 1.1; // logo scale
+    // Circle border
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.arc(lx, ly, 9 * sc, 0, Math.PI * 2); ctx.stroke();
+    // Trunk
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(lx, ly + 6 * sc); ctx.lineTo(lx, ly); ctx.stroke();
+    ctx.lineWidth = 1.0;
+    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx, ly - 5 * sc); ctx.stroke();
+    // Branches
+    ctx.lineWidth = 0.8;
+    const brs: [number,number,number,number][] = [
+      [lx, ly - 1*sc, lx - 6*sc, ly - 4*sc], [lx, ly - 1*sc, lx + 6*sc, ly - 4*sc],
+      [lx, ly - 4*sc, lx - 5*sc, ly - 8*sc], [lx, ly - 4*sc, lx + 5*sc, ly - 8*sc],
+      [lx, ly - 7*sc, lx - 4*sc, ly-11*sc],  [lx, ly - 7*sc, lx + 4*sc, ly-11*sc],
+    ];
+    for (const [x1,y1,x2,y2] of brs) {
+      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x2, y2, 1.2*sc, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
 
     // Hands (skin, small ellipses)
     ctx.fillStyle = skin;
