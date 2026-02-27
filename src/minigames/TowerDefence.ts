@@ -76,29 +76,40 @@ interface LevelDef {
   paths: [number, number][][];  // multiple paths, each is array of [gx, gz] waypoints
 }
 
+// All levels share a central house at grid [11,6] — enemies approach from
+// different entry points and all converge on the house in the centre.
 const LEVELS: LevelDef[] = [
   {
+    // 1 entry — learn the mechanic
     name: 'BRUNSWICK',
-    subtitle: '1 path — keep it clean',
+    subtitle: 'defend the house',
     paths: [
-      [[-1,2],[4,2],[4,6],[8,6],[8,3],[12,3],[12,8],[16,8],[16,5],[21,5]],
+      // West entry — horseshoe curve, enters from left
+      [[-1,6],[3,6],[3,2],[7,2],[7,6],[11,6]],
     ],
   },
   {
+    // 2 entries — west + east flanks
     name: 'FOOTSCRAY',
-    subtitle: '2 paths — split defence',
+    subtitle: 'two fronts',
     paths: [
-      [[-1,3],[5,3],[5,7],[10,7],[10,4],[15,4],[15,8],[21,8]],
-      [[-1,9],[4,9],[4,6],[10,6],[10,4],[15,4],[15,8],[21,8]],
+      // West entry — same horseshoe as level 1
+      [[-1,6],[3,6],[3,2],[7,2],[7,6],[10,6],[11,6]],
+      // East entry — hooks south then back north
+      [[22,6],[17,6],[17,10],[13,10],[13,7],[11,7],[11,6]],
     ],
   },
   {
+    // 3 entries — west, east, and north all converge on the house
     name: 'ST KILDA',
-    subtitle: '3 paths — chaos',
+    subtitle: '3 entries — hold the house',
     paths: [
-      [[-1,2],[5,2],[5,6],[9,6],[9,3],[14,3],[14,6],[21,6]],
-      [[-1,6],[5,6],[5,3],[9,3],[9,6],[14,6],[21,6]],
-      [[10,-1],[10,4],[14,4],[14,6],[21,6]],
+      // West entry
+      [[-1,6],[3,6],[3,2],[7,2],[7,6],[10,6],[11,6]],
+      // East entry — loops south
+      [[22,6],[17,6],[17,10],[13,10],[13,7],[11,7],[11,6]],
+      // North entry — drops down then J-curves in from the top
+      [[11,-1],[11,3],[8,3],[8,5],[11,5],[11,6]],
     ],
   },
 ];
