@@ -415,7 +415,7 @@ export class CharacterCreator {
     ctx.fill();
 
     // ── Measurements (proportional to height) ────────────────────────────────
-    const hh   = H * 0.88;
+    const hh   = H * 0.70;
     const cx   = W / 2;
     const base = H - 4;
 
@@ -448,34 +448,45 @@ export class CharacterCreator {
     ctx.fillRect(cx - 32, base - hh * 0.79, 14, hh * 0.31);
     ctx.fillRect(cx + 18, base - hh * 0.79, 14, hh * 0.27);
 
-    // ── TEM tree logo on shirt ──────────────────────────────────────────────
-    const lx = cx;
-    const ly = base - hh * 0.63;
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillStyle   = 'rgba(255,255,255,0.75)';
-    ctx.lineCap = 'round';
-    const sc = 1.1; // logo scale
-    // Circle border
-    ctx.lineWidth = 0.8;
-    ctx.beginPath(); ctx.arc(lx, ly, 9 * sc, 0, Math.PI * 2); ctx.stroke();
-    // Trunk
-    ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(lx, ly + 6 * sc); ctx.lineTo(lx, ly); ctx.stroke();
-    ctx.lineWidth = 1.0;
-    ctx.beginPath(); ctx.moveTo(lx, ly); ctx.lineTo(lx, ly - 5 * sc); ctx.stroke();
-    // Branches
-    ctx.lineWidth = 0.8;
-    const brs: [number,number,number,number][] = [
-      [lx, ly - 1*sc, lx - 6*sc, ly - 4*sc], [lx, ly - 1*sc, lx + 6*sc, ly - 4*sc],
-      [lx, ly - 4*sc, lx - 5*sc, ly - 8*sc], [lx, ly - 4*sc, lx + 5*sc, ly - 8*sc],
-      [lx, ly - 7*sc, lx - 4*sc, ly-11*sc],  [lx, ly - 7*sc, lx + 4*sc, ly-11*sc],
-    ];
-    for (const [x1,y1,x2,y2] of brs) {
-      ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(x2, y2, 1.2*sc, 0, Math.PI*2); ctx.fill();
+    // ── TEM tree logo on shirt (full tree, same as game) ───────────────────
+    {
+      const lx = cx;
+      const ly = base - hh * 0.63;
+      const logoSize = 42; // diameter in canvas pixels
+      const s = logoSize / 256;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.82)';
+      ctx.fillStyle   = 'rgba(255,255,255,0.82)';
+      ctx.lineCap     = 'round';
+      ctx.translate(lx, ly);
+      ctx.scale(s, s);
+      ctx.translate(-128, -128);
+      // Circle border
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(128, 128, 118, 0, Math.PI * 2); ctx.stroke();
+      // Trunk
+      ctx.lineWidth = 11;
+      ctx.beginPath(); ctx.moveTo(128, 225); ctx.lineTo(128, 148); ctx.stroke();
+      ctx.lineWidth = 7;
+      ctx.beginPath(); ctx.moveTo(128, 148); ctx.lineTo(128, 96); ctx.stroke();
+      // Branches
+      const temBrs: [number,number,number,number][] = [
+        [128,178,76,152],  [128,178,180,152],
+        [128,160,64,134],  [128,160,192,134],
+        [128,142,76,116],  [128,142,180,116],
+        [128,124,88, 99],  [128,124,168, 99],
+        [128,110,98, 84],  [128,110,158, 84],
+        [128, 98,110, 70], [128, 98,146, 70],
+        [128, 88,118, 56], [128, 88,138, 56],
+      ];
+      ctx.lineWidth = 4;
+      for (const [x1,y1,x2,y2] of temBrs) {
+        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(x2,y2,5,0,Math.PI*2); ctx.fill();
+      }
+      ctx.beginPath(); ctx.arc(128, 88, 5, 0, Math.PI*2); ctx.fill();
+      ctx.restore();
     }
-    ctx.restore();
 
     // Hands (skin, small ellipses)
     ctx.fillStyle = skin;
