@@ -189,6 +189,22 @@ async function main() {
   const traffic    = new TrafficSystem(engine.scene);
   const pedestrians = new PedestrianSystem(engine.scene);
 
+  // ── Splat callbacks ──────────────────────────────────────────────────────────
+  pedestrians.onSplat = (sats: number, name?: string) => {
+    jobManager.money += sats;
+    hud.updateMoney(jobManager.money);
+    if (name === 'veronica') {
+      hud.showToast("💸 She's gonna need that alimony now!", 0xFF69B4);
+    } else if (name === 'kangaroo') {
+      hud.showToast('🦘 +10K! Roo down!', 0xC8A05A);
+    } else {
+      hud.showToast('💀 +10K sats!', 0xAA0000);
+    }
+  };
+  pedestrians.onVeronicaYell = () => {
+    hud.showToast('😤 JOSE! Pay me the alimony... I mean ALL the money! 💸', 0xFF1493);
+  };
+
   // ── Coffee shop + Bladder mechanic ──────────────────────────────────────────
   const coffeeShop = new CoffeeShop(engine.scene);
   const bladderMeter = new BladderMeter();
