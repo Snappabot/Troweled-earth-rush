@@ -55,14 +55,32 @@ export class CharacterCreator {
   private swatches:     HTMLDivElement[] = [];
   private hairSwatches: HTMLDivElement[] = [];
 
-  // ── Real TEM logo image for shirt ─────────────────────────────────────────
-  private _logoImg: HTMLImageElement | null = null;
+  // ── Real TEM logo — pre-processed to transparent background ──────────────
+  private _logoCanvas: HTMLCanvasElement | null = null;
 
   private _preloadLogo(): void {
     const base = (import.meta as any).env?.BASE_URL ?? './';
     const img = new Image();
-    img.onload  = () => { this._logoImg = img; this._drawPreview(); };
-    img.onerror = () => { /* fallback to drawn version */ };
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      // Same pixel processing as LogoLoader.makeTEMShirtTexture for dark shirts:
+      // bright (white tree) → opaque, dark (black bg) → transparent
+      const size = 128;
+      const cv = document.createElement('canvas');
+      cv.width = cv.height = size;
+      const c = cv.getContext('2d')!;
+      c.drawImage(img, 0, 0, size, size);
+      const id = c.getImageData(0, 0, size, size);
+      const d = id.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const brightness = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        d[i + 3] = Math.round(Math.min(255, brightness * 1.4));
+      }
+      c.putImageData(id, 0, 0);
+      this._logoCanvas = cv;
+      this._drawPreview();
+    };
+    img.onerror = () => { /* silent — no fallback needed */ };
     img.src = `${base}tem-logo-white.jpg`;
   }
 
@@ -460,18 +478,12 @@ export class CharacterCreator {
     ctx.fillRect(cx - 32, base - hh * 0.79, 14, hh * 0.31);
     ctx.fillRect(cx + 18, base - hh * 0.79, 14, hh * 0.27);
 
-    // ── TEM shirt logo — use the real tem-logo-white.jpg via screen blend ──
-    {
+    // ── TEM shirt logo — transparent-bg processed image, drawn normally ────
+    if (this._logoCanvas) {
       const lx = cx;
       const ly = base - hh * 0.63;
       const logoSz = 46;
-      if (this._logoImg) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        ctx.drawImage(this._logoImg, lx - logoSz / 2, ly - logoSz / 2, logoSz, logoSz);
-        ctx.restore();
-      }
-      // (no hand-drawn fallback — stays as dark shirt until image loads)
+      ctx.drawImage(this._logoCanvas, lx - logoSz / 2, ly - logoSz / 2, logoSz, logoSz);
     }
 
     // Hands (skin, small ellipses)
@@ -632,31 +644,38 @@ export class CharacterCreator {
 
       case 5: { // AFRO — bumpy perimeter circles
         const hc = this.hairColor;
-        const afroCy = headY - headRY * 0.15;
+        const afroCy = headY - headRY * 0.2;
         const afroCx = cx;
-        const R  = headRX * 1.85;
-        const Ry = headRY * 1.55;
+        const R  = headRX * 2.1;
+        const Ry = headRY * 1.8;
 
-        // Solid interior fill first
+        // Solid interior fill — slightly larger than head so skin is fully covered
         ctx.fillStyle = hc;
         ctx.beginPath();
-        ctx.ellipse(afroCx, afroCy, R * 0.78, Ry * 0.82, 0, 0, Math.PI * 2);
+        ctx.ellipse(afroCx, afroCy, R * 0.82, Ry * 0.85, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        // Bumpy perimeter — 18 overlapping circles varying slightly in size/position
-        for (let i = 0; i < 18; i++) {
-          const angle = (i / 18) * Math.PI * 2 - Math.PI / 2;
+        // Bumpy perimeter — 20 overlapping circles
+        for (let i = 0; i < 20; i++) {
+          const angle = (i / 20) * Math.PI * 2 - Math.PI / 2;
           const rScale = 0.88 + Math.sin(i * 2.7 + 1.1) * 0.10;
           const bx = afroCx + Math.cos(angle) * R * rScale;
           const by = afroCy + Math.sin(angle) * Ry * rScale;
-          const bSize = headRX * (0.38 + Math.sin(i * 1.9) * 0.09);
+          const bSize = headRX * (0.44 + Math.sin(i * 1.9) * 0.09);
           ctx.fillStyle = hc;
           ctx.beginPath();
           ctx.arc(bx, by, bSize, 0, Math.PI * 2);
           ctx.fill();
         }
 
-        // Inner texture — subtle darker curl hints
+        // Outline ring — ensures afro is visible even with dark hair on dark bg
+        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.ellipse(afroCx, afroCy, R * 0.95, Ry * 0.95, 0, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Inner texture — subtle curl hints
         ctx.globalAlpha = 0.18;
         ctx.fillStyle = '#000000';
         for (let i = 0; i < 9; i++) {
@@ -671,11 +690,11 @@ export class CharacterCreator {
         }
         ctx.globalAlpha = 1.0;
 
-        // Soft highlight
-        ctx.globalAlpha = 0.15;
+        // Soft highlight top-left
+        ctx.globalAlpha = 0.18;
         ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
-        ctx.ellipse(afroCx - headRX * 0.4, afroCy - headRY * 0.85, headRX * 0.65, headRY * 0.4, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(afroCx - headRX * 0.5, afroCy - headRY * 1.0, headRX * 0.7, headRY * 0.45, -0.3, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1.0;
         break;
