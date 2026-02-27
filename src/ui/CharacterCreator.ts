@@ -8,9 +8,23 @@ export interface PlayerCharacter {
   name: string;
   headStyle: number; // 0–9
   skinTone: string;  // hex colour
+  hairColor: string; // hex colour
 }
 
 const SKIN_TONES = ['#F5CBA7', '#E0A87C', '#C8856A', '#A0522D', '#5C3317'];
+
+const HAIR_COLORS = [
+  '#1a0a00',  // Black
+  '#3a1a00',  // Dark Brown
+  '#7a4010',  // Brown
+  '#C87830',  // Auburn
+  '#D4A840',  // Blonde
+  '#888888',  // Grey
+  '#FFFFFF',  // White/Silver
+  '#C8282A',  // Red
+  '#1848A0',  // Blue
+  '#8830A0',  // Purple
+];
 
 const HEAD_STYLES = [
   'BEANIE',
@@ -30,13 +44,16 @@ export class CharacterCreator {
   private previewCanvas!: HTMLCanvasElement;
   private ctx!: CanvasRenderingContext2D;
 
-  private headStyle  = 0;
-  private skinTone   = SKIN_TONES[0];
-  private playerName = '';
+  private headStyle    = 0;
+  private skinTone     = SKIN_TONES[0];
+  private hairColor    = HAIR_COLORS[0];
+  private hairColorIdx = 0;
+  private playerName   = '';
 
   private headLabel!: HTMLSpanElement;
   private confirmBtn!: HTMLButtonElement;
-  private swatches: HTMLDivElement[] = [];
+  private swatches:     HTMLDivElement[] = [];
+  private hairSwatches: HTMLDivElement[] = [];
 
   show(): Promise<PlayerCharacter> {
     return new Promise((resolve) => {
@@ -213,6 +230,49 @@ export class CharacterCreator {
     });
     this.overlay.appendChild(swatchRow);
 
+    // ── Hair colour ───────────────────────────────────────────────────────────
+    const hairLabel = document.createElement('div');
+    hairLabel.style.cssText = `
+      color: rgba(255,255,255,0.55);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    `;
+    hairLabel.textContent = 'HAIR COLOUR';
+    this.overlay.appendChild(hairLabel);
+
+    const hairRow = document.createElement('div');
+    hairRow.style.cssText = `display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; max-width: 320px;`;
+    this.hairSwatches = [];
+
+    HAIR_COLORS.forEach((col, i) => {
+      const sw = document.createElement('div');
+      sw.style.cssText = `
+        width: 36px; height: 36px; border-radius: 50%;
+        background: ${col};
+        cursor: pointer;
+        border: 3px solid ${i === 0 ? '#D4A040' : 'transparent'};
+        transition: border-color 0.15s, transform 0.1s;
+        box-sizing: border-box;
+        flex-shrink: 0;
+        ${col === '#FFFFFF' ? 'box-shadow: inset 0 0 0 1px rgba(0,0,0,0.3);' : ''}
+      `;
+      sw.addEventListener('click', () => {
+        this.hairColor    = col;
+        this.hairColorIdx = i;
+        this.hairSwatches.forEach((s, si) => {
+          s.style.borderColor = si === i ? '#D4A040' : 'transparent';
+          s.style.transform   = si === i ? 'scale(1.15)' : 'scale(1)';
+        });
+        this._drawPreview();
+      });
+      this.hairSwatches.push(sw);
+      hairRow.appendChild(sw);
+    });
+    this.overlay.appendChild(hairRow);
+
     // ── Name input ────────────────────────────────────────────────────────────
     const nameLabel = document.createElement('div');
     nameLabel.style.cssText = `
@@ -322,6 +382,7 @@ export class CharacterCreator {
       name:      this.playerName.trim(),
       headStyle: this.headStyle,
       skinTone:  this.skinTone,
+      hairColor: this.hairColor,
     });
   }
 
@@ -413,16 +474,18 @@ export class CharacterCreator {
 
       case 0: { // BEANIE
         // Dark grey rounded rect covering top ¾ of head, with ear flaps
-        ctx.fillStyle = '#333640';
+        ctx.fillStyle = this.hairColor;
         // Main beanie body (rounded, pulled down)
         ctx.beginPath();
         ctx.roundRect(cx - headRX * 1.1, headY - headRY * 1.6, headRX * 2.2, headRY * 1.9, 6);
         ctx.fill();
         // Folded brim cuff
-        ctx.fillStyle = '#2a2d36';
+        ctx.fillStyle = this.hairColor;
+        ctx.globalAlpha = 0.75;
         ctx.fillRect(cx - headRX * 1.15, headY - headRY * 0.05, headRX * 2.3, headRY * 0.38);
+        ctx.globalAlpha = 1.0;
         // Ear flaps (small rounded rects on each side)
-        ctx.fillStyle = '#333640';
+        ctx.fillStyle = this.hairColor;
         ctx.beginPath();
         ctx.roundRect(cx - headRX * 1.35, headY, headRX * 0.45, headRY * 0.6, 4);
         ctx.fill();
@@ -430,16 +493,18 @@ export class CharacterCreator {
         ctx.roundRect(cx + headRX * 0.9, headY, headRX * 0.45, headRY * 0.6, 4);
         ctx.fill();
         // Pom-pom on top
-        ctx.fillStyle = '#4a4f5c';
+        ctx.fillStyle = this.hairColor;
+        ctx.globalAlpha = 0.7;
         ctx.beginPath();
         ctx.arc(cx, headY - headRY * 1.55, headRX * 0.35, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 1.0;
         break;
       }
 
       case 1: { // SNAPBACK
         // Crown block (coloured)
-        ctx.fillStyle = '#1a2240';
+        ctx.fillStyle = this.hairColor;
         ctx.beginPath();
         ctx.roundRect(cx - headRX * 1.05, headY - headRY * 1.55, headRX * 2.1, headRY * 1.4, 5);
         ctx.fill();
@@ -449,17 +514,21 @@ export class CharacterCreator {
         ctx.arc(cx, headY - headRY * 1.5, 3, 0, Math.PI * 2);
         ctx.fill();
         // Flat brim (extending forward — right side for front-facing)
-        ctx.fillStyle = '#111820';
+        ctx.fillStyle = this.hairColor;
+        ctx.globalAlpha = 0.75;
         ctx.fillRect(cx - headRX * 1.05, headY - headRY * 0.15, headRX * 2.4, headRY * 0.28);
+        ctx.globalAlpha = 1.0;
         // Snapback adjustment stripe
-        ctx.fillStyle = '#2a3250';
+        ctx.fillStyle = this.hairColor;
+        ctx.globalAlpha = 0.55;
         ctx.fillRect(cx - headRX * 0.8, headY - headRY * 0.05, headRX * 1.6, headRY * 0.16);
+        ctx.globalAlpha = 1.0;
         break;
       }
 
       case 2: { // BACKWARDS CAP
         // Crown block (same as snapback but brim goes backwards)
-        ctx.fillStyle = '#402010';
+        ctx.fillStyle = this.hairColor;
         ctx.beginPath();
         ctx.roundRect(cx - headRX * 1.05, headY - headRY * 1.55, headRX * 2.1, headRY * 1.4, 5);
         ctx.fill();
@@ -469,8 +538,10 @@ export class CharacterCreator {
         ctx.arc(cx, headY - headRY * 1.5, 3, 0, Math.PI * 2);
         ctx.fill();
         // Brim at back (left side for backwards cap) — small rect sticking out behind
-        ctx.fillStyle = '#2a1408';
+        ctx.fillStyle = this.hairColor;
+        ctx.globalAlpha = 0.75;
         ctx.fillRect(cx - headRX * 1.05 - headRX * 1.1, headY - headRY * 0.15, headRX * 1.2, headRY * 0.25);
+        ctx.globalAlpha = 1.0;
         break;
       }
 
@@ -495,38 +566,77 @@ export class CharacterCreator {
 
       case 4: { // BUZZ CUT
         // Very short dark hair arc — tight to top of head
-        ctx.fillStyle = '#2a1a0a';
+        ctx.fillStyle = this.hairColor;
         ctx.beginPath();
         ctx.ellipse(cx, headY - headRY * 0.55, headRX * 1.02, headRY * 0.75, 0, Math.PI, 0);
         ctx.fill();
         // Tiny stubble texture on sides
-        ctx.fillStyle = '#1e1208';
+        ctx.fillStyle = this.hairColor;
+        ctx.globalAlpha = 0.75;
         ctx.beginPath();
         ctx.arc(cx - headRX * 0.8, headY - headRY * 0.1, headRX * 0.32, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
         ctx.arc(cx + headRX * 0.8, headY - headRY * 0.1, headRX * 0.32, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 1.0;
         break;
       }
 
-      case 5: { // AFRO
-        // Big dark brown filled ellipse (2× head width, 1.5× head height)
-        ctx.fillStyle = '#3a1a05';
+      case 5: { // AFRO — bumpy perimeter circles
+        const hc = this.hairColor;
+        const afroCy = headY - headRY * 0.15;
+        const afroCx = cx;
+        const R  = headRX * 1.85;
+        const Ry = headRY * 1.55;
+
+        // Solid interior fill first
+        ctx.fillStyle = hc;
         ctx.beginPath();
-        ctx.ellipse(cx, headY - headRY * 0.2, headRX * 2.0, headRY * 1.6, 0, 0, Math.PI * 2);
+        ctx.ellipse(afroCx, afroCy, R * 0.78, Ry * 0.82, 0, 0, Math.PI * 2);
         ctx.fill();
-        // Slight sheen/highlight
-        ctx.fillStyle = 'rgba(100,50,0,0.25)';
+
+        // Bumpy perimeter — 18 overlapping circles varying slightly in size/position
+        for (let i = 0; i < 18; i++) {
+          const angle = (i / 18) * Math.PI * 2 - Math.PI / 2;
+          const rScale = 0.88 + Math.sin(i * 2.7 + 1.1) * 0.10;
+          const bx = afroCx + Math.cos(angle) * R * rScale;
+          const by = afroCy + Math.sin(angle) * Ry * rScale;
+          const bSize = headRX * (0.38 + Math.sin(i * 1.9) * 0.09);
+          ctx.fillStyle = hc;
+          ctx.beginPath();
+          ctx.arc(bx, by, bSize, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Inner texture — subtle darker curl hints
+        ctx.globalAlpha = 0.18;
+        ctx.fillStyle = '#000000';
+        for (let i = 0; i < 9; i++) {
+          const angle = (i / 9) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.arc(
+            afroCx + Math.cos(angle) * R * 0.42,
+            afroCy + Math.sin(angle) * Ry * 0.38,
+            headRX * 0.22, 0, Math.PI * 2
+          );
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1.0;
+
+        // Soft highlight
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
-        ctx.ellipse(cx - headRX * 0.3, headY - headRY * 0.9, headRX * 0.8, headRY * 0.55, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(afroCx - headRX * 0.4, afroCy - headRY * 0.85, headRX * 0.65, headRY * 0.4, -0.3, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 1.0;
         break;
       }
 
       case 6: { // LONG HAIR
         // Dark strokes hanging past ears down toward collar
-        ctx.fillStyle = '#1a0e00';
+        ctx.fillStyle = this.hairColor;
         // Left hang
         ctx.beginPath();
         ctx.moveTo(cx - headRX * 0.9, headY - headRY * 0.8);
@@ -536,7 +646,7 @@ export class CharacterCreator {
           cx - headRX * 1.1, base - hh * 0.72
         );
         ctx.lineWidth = headRX * 1.4;
-        ctx.strokeStyle = '#1a0e00';
+        ctx.strokeStyle = this.hairColor;
         ctx.lineCap = 'round';
         ctx.stroke();
         // Right hang
@@ -551,7 +661,7 @@ export class CharacterCreator {
         ctx.lineCap = 'butt';
         ctx.lineWidth = 1;
         // Top hair cap
-        ctx.fillStyle = '#1a0e00';
+        ctx.fillStyle = this.hairColor;
         ctx.beginPath();
         ctx.arc(cx, headY - headRY * 0.55, headRX * 1.05, Math.PI, 0);
         ctx.fill();
@@ -561,7 +671,7 @@ export class CharacterCreator {
       case 7: { // BANDANA
         // Coloured strip across forehead + knot at back
         // Triangle top
-        ctx.fillStyle = '#CC2222';
+        ctx.fillStyle = this.hairColor;
         ctx.beginPath();
         ctx.moveTo(cx - headRX * 1.1, headY - headRY * 0.55);
         ctx.lineTo(cx + headRX * 1.1, headY - headRY * 0.55);
@@ -577,13 +687,15 @@ export class CharacterCreator {
           ctx.fill();
         }
         // Knot at back — two small circles
-        ctx.fillStyle = '#AA1111';
+        ctx.fillStyle = this.hairColor;
+        ctx.globalAlpha = 0.75;
         ctx.beginPath();
         ctx.arc(cx - headRX * 1.15, headY - headRY * 0.4, 3.5, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
         ctx.arc(cx + headRX * 1.15, headY - headRY * 0.4, 3.5, 0, Math.PI * 2);
         ctx.fill();
+        ctx.globalAlpha = 1.0;
         break;
       }
 
@@ -599,19 +711,23 @@ export class CharacterCreator {
 
       case 9: { // BUCKET HAT
         // Wide flat brim
-        ctx.fillStyle = '#4a6040';
+        ctx.fillStyle = this.hairColor;
         ctx.fillRect(cx - headRX * 1.7, headY - headRY * 0.1, headRX * 3.4, headRY * 0.32);
         // Dome on top
-        ctx.fillStyle = '#5a7250';
+        ctx.fillStyle = this.hairColor;
+        ctx.globalAlpha = 0.85;
         ctx.beginPath();
         ctx.ellipse(cx, headY - headRY * 0.6, headRX * 1.08, headRY * 0.78, 0, Math.PI, 0);
         ctx.fill();
+        ctx.globalAlpha = 1.0;
         // Band detail
-        ctx.strokeStyle = '#3a5032';
+        ctx.strokeStyle = this.hairColor;
+        ctx.globalAlpha = 0.55;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(cx, headY - headRY * 0.05, headRX * 1.05, Math.PI * 0.85, Math.PI * 1.15);
         ctx.stroke();
+        ctx.globalAlpha = 1.0;
         ctx.lineWidth = 1;
         break;
       }

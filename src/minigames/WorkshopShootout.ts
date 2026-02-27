@@ -9,6 +9,8 @@
  * Formula system copied directly from MarbellinoMixer.ts
  */
 
+import type { PlayerCharacter } from '../ui/CharacterCreator';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // FORMULA + PIGMENT DATA  (copied from MarbellinoMixer)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -162,6 +164,9 @@ export class WorkshopShootout {
   // ── Config
   private jobTitle   = '';
   private playerName = 'Player';
+  private playerChar: PlayerCharacter | null = null;
+
+  setPlayerChar(pc: PlayerCharacter): void { this.playerChar = pc; }
 
   // ── Callbacks
   private onDoneFn!: (r: ShootoutResult) => void;
@@ -1012,6 +1017,10 @@ export class WorkshopShootout {
     const isCelebrating = this.bkFlashT > 0;
     const yo = isCelebrating ? bounce * 1.8 : bounce;
 
+    const skin = this.playerChar?.skinTone  ?? '#C07050';
+    const hair = this.playerChar?.hairColor ?? '#2E1808';
+    const hs   = this.playerChar?.headStyle ?? 0;
+
     ctx.save();
     ctx.translate(px, py + yo);
     ctx.scale(-1, 1); // facing left (inward)
@@ -1038,13 +1047,52 @@ export class WorkshopShootout {
       ctx.save(); ctx.translate(tx as number, -16);
       ctx.rotate(rot as number);
       ctx.fillStyle = '#D4A030'; ctx.fillRect(-3, -22, 7, 22);
-      ctx.fillStyle = '#C07050'; ctx.fillRect(-3, -26, 7, 7);
+      ctx.fillStyle = skin; ctx.fillRect(-3, -26, 7, 7);
       ctx.restore();
     });
 
     // Head
-    ctx.fillStyle = '#C07050'; rr(ctx, -8, -36, 16, 16, 6); ctx.fill();
-    ctx.fillStyle = '#2E1808'; rr(ctx, -9, -39, 18, 9, 5); ctx.fill();
+    ctx.fillStyle = skin; rr(ctx, -8, -36, 16, 16, 6); ctx.fill();
+
+    // Head style (simplified mini version)
+    const hcx = 0, hcy = -28, hr = 8;
+    if (hs === 5) { // Afro
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2;
+        ctx.fillStyle = hair;
+        ctx.beginPath();
+        ctx.arc(hcx + Math.cos(a) * hr * 1.4, hcy + Math.sin(a) * hr * 1.1, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = hair;
+      ctx.beginPath();
+      ctx.ellipse(hcx, hcy, hr * 1.1, hr * 1.0, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (hs === 3) { // Hard Hat
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.ellipse(hcx, hcy - 4, hr * 1.2, hr * 1.1, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = '#E8C000';
+      ctx.fillRect(hcx - hr * 1.4, hcy - 1, hr * 2.8, 3);
+    } else if (hs === 6) { // Long hair
+      ctx.fillStyle = hair;
+      ctx.beginPath();
+      ctx.arc(hcx, hcy - 3, hr * 1.05, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(hcx - hr * 1.1, hcy - 3, 4, 18);
+      ctx.fillRect(hcx + hr * 0.8, hcy - 3, 4, 18);
+    } else if (hs === 8) { // Bald — shine only
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(hcx - 2, hcy - 4, 3, 2, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+    } else { // All other styles — simple cap/hair block on top
+      ctx.fillStyle = hair;
+      ctx.beginPath();
+      ctx.roundRect(hcx - hr * 1.05, hcy - hr * 1.4, hr * 2.1, hr * 1.1, 4);
+      ctx.fill();
+    }
 
     // Eye
     ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.ellipse(3, -30, 2, 2, 0, 0, Math.PI*2); ctx.fill();

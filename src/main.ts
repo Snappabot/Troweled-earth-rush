@@ -591,6 +591,7 @@ async function main() {
           () => {
             // Launch 3D Workshop Shootout as the material-mixing game
             const depotShootout = new WorkshopShootout();
+            depotShootout.setPlayerChar(playerChar);
             depotShootout.show({
               jobTitle:   jobManager.activeJob?.title ?? 'Mix Plaster',
               crewIds:    getActiveCrew(),
@@ -800,6 +801,7 @@ async function main() {
             };
 
             // ── Stage 1: Jarrad's Scaffold Climb ─────────────────────────
+            miniGameManager.setPlayerChar(playerChar);
             miniGameManager.startScaffold((scaffoldResult: ScaffoldResult) => {
               if (scaffoldResult.bonusSats > 0) {
                 _jobSpillTotal -= scaffoldResult.bonusSats;

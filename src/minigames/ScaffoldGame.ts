@@ -9,6 +9,7 @@
  */
 
 import type { MiniGameResult } from './MiniGameManager';
+import type { PlayerCharacter } from '../ui/CharacterCreator';
 
 // ── Public result interface ───────────────────────────────────────────────────
 export interface ScaffoldResult {
@@ -146,6 +147,10 @@ export class ScaffoldGame {
 
   // Callback
   private onCompleteFn!: (r: MiniGameResult) => void;
+
+  // Player character customisation
+  private playerChar: PlayerCharacter | null = null;
+  setPlayerChar(pc: PlayerCharacter): void { this.playerChar = pc; }
 
   // ── Entry point ──────────────────────────────────────────────────────────────
   start(onComplete: (r: MiniGameResult) => void): void {
@@ -758,17 +763,57 @@ export class ScaffoldGame {
     rrect(ctx,  hw * 0.66, -h * 0.77, hw * 0.40, h * 0.26, 4);  ctx.fill();
 
     // Neck + head
-    ctx.fillStyle = '#c49470';
+    const skin = this.playerChar?.skinTone  ?? '#c49470';
+    const hair = this.playerChar?.hairColor ?? '#181010';
+    const hs   = this.playerChar?.headStyle ?? 4;
+    ctx.fillStyle = skin;
     ctx.fillRect(-hw * 0.17, -h * 0.90, hw * 0.34, h * 0.12);
     ctx.beginPath();
     ctx.ellipse(0, -h * 1.02, hw * 0.42, hw * 0.46, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hair
-    ctx.fillStyle = '#181010';
+    // Hair base
+    ctx.fillStyle = hair;
     ctx.beginPath();
     ctx.ellipse(0, -h * 1.10, hw * 0.44, hw * 0.28, 0, Math.PI, Math.PI * 2);
     ctx.fill();
+
+    // Headstyle from playerChar
+    const hr = hw * 0.42;
+    if (hs === 5) { // Afro — bumpy
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2;
+        ctx.fillStyle = hair;
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * hr * 1.5, -h * 1.02 + Math.sin(a) * hr * 1.3, hr * 0.38, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = hair;
+      ctx.beginPath();
+      ctx.ellipse(0, -h * 1.02, hr * 1.1, hr * 1.0, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (hs === 3) { // Hard hat
+      ctx.fillStyle = '#FFD700';
+      ctx.beginPath();
+      ctx.ellipse(0, -h * 1.08, hr * 1.2, hr * 1.1, 0, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = '#E8C000';
+      ctx.fillRect(-hr * 1.5, -h * 1.0, hr * 3.0, hr * 0.3);
+    } else if (hs === 6) { // Long hair
+      ctx.fillStyle = hair;
+      ctx.fillRect(-hr * 1.1, -h * 1.10, hr * 0.4, h * 0.3);
+      ctx.fillRect(hr * 0.7,  -h * 1.10, hr * 0.4, h * 0.3);
+    } else if (hs === 8) { // Bald — just shine
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.beginPath();
+      ctx.ellipse(-hr * 0.2, -h * 1.08, hr * 0.35, hr * 0.2, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+    } else { // Cap/beanie/etc — simple block
+      ctx.fillStyle = hair;
+      ctx.beginPath();
+      ctx.roundRect(-hr * 1.1, -h * 1.20, hr * 2.2, hr * 0.85, 4);
+      ctx.fill();
+    }
 
     // Glasses
     ctx.strokeStyle = '#1a1a1a';

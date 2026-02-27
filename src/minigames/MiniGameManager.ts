@@ -1,6 +1,7 @@
 import { TrowelingGame } from './TrowelingGame';
 import { ScaffoldGame } from './ScaffoldGame';
 import type { ScaffoldResult } from './ScaffoldGame';
+import type { PlayerCharacter } from '../ui/CharacterCreator';
 
 export type MiniGameType = 'troweling' | 'scaffold';
 
@@ -18,6 +19,9 @@ export class MiniGameManager {
   private trowelingGame: TrowelingGame | null = null;
   private scaffoldGame: ScaffoldGame | null = null;
   private safetyTimer: ReturnType<typeof setTimeout> | null = null;
+  private playerChar: PlayerCharacter | null = null;
+
+  setPlayerChar(pc: PlayerCharacter): void { this.playerChar = pc; }
 
   constructor() {
     this.overlay = document.createElement('div');
@@ -118,6 +122,7 @@ export class MiniGameManager {
     setTimeout(() => {
       if (!this.active) return;
       this.scaffoldGame = new ScaffoldGame();
+      if (this.playerChar) this.scaffoldGame.setPlayerChar(this.playerChar);
       this.scaffoldGame.mount(this.overlay, (result) => {
         if (this.safetyTimer) clearTimeout(this.safetyTimer);
         try { this.stop(); } catch { this.active = false; }
