@@ -55,6 +55,17 @@ export class CharacterCreator {
   private swatches:     HTMLDivElement[] = [];
   private hairSwatches: HTMLDivElement[] = [];
 
+  // ── Real TEM logo image for shirt ─────────────────────────────────────────
+  private _logoImg: HTMLImageElement | null = null;
+
+  private _preloadLogo(): void {
+    const base = (import.meta as any).env?.BASE_URL ?? './';
+    const img = new Image();
+    img.onload  = () => { this._logoImg = img; this._drawPreview(); };
+    img.onerror = () => { /* fallback to drawn version */ };
+    img.src = `${base}tem-logo-white.jpg`;
+  }
+
   show(): Promise<PlayerCharacter> {
     return new Promise((resolve) => {
       this._build(resolve);
@@ -63,6 +74,7 @@ export class CharacterCreator {
 
   private _build(resolve: (pc: PlayerCharacter) => void): void {
     this._injectStyles();
+    this._preloadLogo();
 
     // ── Full-screen overlay ──────────────────────────────────────────────────
     this.overlay = document.createElement('div');
@@ -448,44 +460,18 @@ export class CharacterCreator {
     ctx.fillRect(cx - 32, base - hh * 0.79, 14, hh * 0.31);
     ctx.fillRect(cx + 18, base - hh * 0.79, 14, hh * 0.27);
 
-    // ── TEM tree logo on shirt (full tree, same as game) ───────────────────
+    // ── TEM shirt logo — use the real tem-logo-white.jpg via screen blend ──
     {
       const lx = cx;
       const ly = base - hh * 0.63;
-      const logoSize = 42; // diameter in canvas pixels
-      const s = logoSize / 256;
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255,255,255,0.82)';
-      ctx.fillStyle   = 'rgba(255,255,255,0.82)';
-      ctx.lineCap     = 'round';
-      ctx.translate(lx, ly);
-      ctx.scale(s, s);
-      ctx.translate(-128, -128);
-      // Circle border
-      ctx.lineWidth = 6;
-      ctx.beginPath(); ctx.arc(128, 128, 118, 0, Math.PI * 2); ctx.stroke();
-      // Trunk
-      ctx.lineWidth = 11;
-      ctx.beginPath(); ctx.moveTo(128, 225); ctx.lineTo(128, 148); ctx.stroke();
-      ctx.lineWidth = 7;
-      ctx.beginPath(); ctx.moveTo(128, 148); ctx.lineTo(128, 96); ctx.stroke();
-      // Branches
-      const temBrs: [number,number,number,number][] = [
-        [128,178,76,152],  [128,178,180,152],
-        [128,160,64,134],  [128,160,192,134],
-        [128,142,76,116],  [128,142,180,116],
-        [128,124,88, 99],  [128,124,168, 99],
-        [128,110,98, 84],  [128,110,158, 84],
-        [128, 98,110, 70], [128, 98,146, 70],
-        [128, 88,118, 56], [128, 88,138, 56],
-      ];
-      ctx.lineWidth = 4;
-      for (const [x1,y1,x2,y2] of temBrs) {
-        ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-        ctx.beginPath(); ctx.arc(x2,y2,5,0,Math.PI*2); ctx.fill();
+      const logoSz = 46;
+      if (this._logoImg) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.drawImage(this._logoImg, lx - logoSz / 2, ly - logoSz / 2, logoSz, logoSz);
+        ctx.restore();
       }
-      ctx.beginPath(); ctx.arc(128, 88, 5, 0, Math.PI*2); ctx.fill();
-      ctx.restore();
+      // (no hand-drawn fallback — stays as dark shirt until image loads)
     }
 
     // Hands (skin, small ellipses)
