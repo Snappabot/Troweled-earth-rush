@@ -23,7 +23,7 @@ export interface TDResult {
    CONSTANTS & DATA
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const GRID_W = 20;       // grid columns
+const GRID_W = 22;       // grid columns (wider for multi-path)
 const GRID_H = 12;       // grid rows
 const CELL   = 2;        // world units per cell
 const WORLD_W = GRID_W * CELL;
@@ -66,10 +66,84 @@ const ENEMIES: Record<string, EnemyDef> = {
   boss:      { name:'Rival Master',     hp:2000, speed:1.0, reward:150,color:'#8B0000', scale:1.4, special:'boss' },
 };
 
-// Winding path waypoints (in grid coords, will be scaled to world)
-const PATH_GRID: [number, number][] = [
-  [-1, 6], [3, 6], [3, 3], [7, 3], [7, 9], [11, 9], [11, 5], [15, 5], [15, 8], [21, 8]
+/* ═══════════════════════════════════════════════════════════════════════════
+   LEVEL DEFINITIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+interface LevelDef {
+  name: string;
+  subtitle: string;
+  paths: [number, number][][];  // multiple paths, each is array of [gx, gz] waypoints
+}
+
+const LEVELS: LevelDef[] = [
+  {
+    name: 'BRUNSWICK',
+    subtitle: '1 path — keep it clean',
+    paths: [
+      [[-1,2],[4,2],[4,6],[8,6],[8,3],[12,3],[12,8],[16,8],[16,5],[21,5]],
+    ],
+  },
+  {
+    name: 'FOOTSCRAY',
+    subtitle: '2 paths — split defence',
+    paths: [
+      [[-1,3],[5,3],[5,7],[10,7],[10,4],[15,4],[15,8],[21,8]],
+      [[-1,9],[4,9],[4,6],[10,6],[10,4],[15,4],[15,8],[21,8]],
+    ],
+  },
+  {
+    name: 'ST KILDA',
+    subtitle: '3 paths — chaos',
+    paths: [
+      [[-1,2],[5,2],[5,6],[9,6],[9,3],[14,3],[14,6],[21,6]],
+      [[-1,6],[5,6],[5,3],[9,3],[9,6],[14,6],[21,6]],
+      [[10,-1],[10,4],[14,4],[14,6],[21,6]],
+    ],
+  },
 ];
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BANTER SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+function randomFrom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+const BANTER: Record<string, string[]> = {
+  wave_start: [
+    "Send 'em boys! 🦈",
+    "This wall is MINE.",
+    "TEM can't stop what's coming.",
+    "Let's see your precious crew now.",
+    "My boys are hungry. Go!",
+    "Time to earn that contract.",
+  ],
+  enemy_reaches: [
+    "YES! Get in there! 💀",
+    "Ha! Your plaster is crumbling.",
+    "One step closer... keep going!",
+    "The wall is ours!",
+  ],
+  player_kills: [
+    "You got lucky.",
+    "One down, ten more coming.",
+    "Nice shot. Won't matter.",
+    "My boys don't stay dead.",
+  ],
+  boss_wave: [
+    "Meet the big guy. 😤",
+    "Our Render Master doesn't fall.",
+    "This one's personal.",
+    "Send the boss!",
+  ],
+  player_winning: [
+    "Alright alright... impressive.",
+    "Don't get comfortable.",
+    "Fine. But the contract's still mine.",
+  ],
+};
 
 // Wave definitions generator
 function generateWaves(difficulty: number): { enemies: { type: string; count: number }[]; delay: number }[] {
@@ -105,10 +179,77 @@ export class TowerDefence {
   private running = false;
   private animId = 0;
 
-  show(config: TDConfig, onComplete: (r: TDResult) => void): void {
+  async show(config: TDConfig, onComplete: (r: TDResult) => void): Promise<void> {
     const self = this;
     if (self.running) self.hide();
     self.running = true;
+
+    /* ─── Level Select Screen ─── */
+    const levelSelectEl = document.createElement('div');
+    Object.assign(levelSelectEl.style, {
+      position:'fixed', inset:'0', zIndex:'14001',
+      background:'rgba(0,0,0,0.95)', display:'flex',
+      flexDirection:'column', alignItems:'center', justifyContent:'center',
+      fontFamily:'system-ui,sans-serif',
+    });
+    document.body.appendChild(levelSelectEl);
+
+    levelSelectEl.innerHTML = `
+      <div style="color:#FFD700;font-size:22px;font-weight:900;letter-spacing:3px;margin-bottom:6px">⚔️ CONTRACT WARS</div>
+      <div style="color:#aaa;font-size:13px;margin-bottom:24px">vs ${config.rival.name}</div>
+      <div style="color:#fff;font-size:14px;font-weight:700;letter-spacing:2px;margin-bottom:16px">CHOOSE LEVEL</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        ${LEVELS.map((lv, i) => `
+          <div data-level="${i}" style="
+            width:140px;padding:16px;border-radius:12px;cursor:pointer;text-align:center;
+            background:rgba(255,255,255,0.06);border:2px solid rgba(255,255,255,0.2);
+            transition:border-color 0.2s,background 0.2s;touch-action:manipulation;
+          ">
+            <div style="font-size:20px;margin-bottom:6px">${(['🏘️','🏗️','🌊'] as string[])[i] || '🎯'}</div>
+            <div style="color:#FFD700;font-weight:900;font-size:14px;letter-spacing:1px">${lv.name}</div>
+            <div style="color:#aaa;font-size:11px;margin-top:4px">${lv.subtitle}</div>
+            <div style="color:#888;font-size:10px;margin-top:4px">${lv.paths.length} path${lv.paths.length > 1 ? 's' : ''}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // Hover effects
+    levelSelectEl.querySelectorAll('[data-level]').forEach(el => {
+      (el as HTMLElement).addEventListener('mouseenter', () => {
+        (el as HTMLElement).style.background = 'rgba(255,255,255,0.12)';
+        (el as HTMLElement).style.borderColor = config.rival.color;
+      });
+      (el as HTMLElement).addEventListener('mouseleave', () => {
+        (el as HTMLElement).style.background = 'rgba(255,255,255,0.06)';
+        (el as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)';
+      });
+    });
+
+    await new Promise<void>(resolveLevelSelect => {
+      levelSelectEl.querySelectorAll('[data-level]').forEach(el => {
+        el.addEventListener('click', () => {
+          const levelIdx = Number((el as HTMLElement).dataset.level);
+          (self as any)._pendingLevelIdx = levelIdx;
+          levelSelectEl.remove();
+          resolveLevelSelect();
+        });
+      });
+      // Also touchstart for mobile
+      levelSelectEl.querySelectorAll('[data-level]').forEach(el => {
+        el.addEventListener('touchstart', (ev) => {
+          ev.preventDefault();
+          const levelIdx = Number((el as HTMLElement).dataset.level);
+          (self as any)._pendingLevelIdx = levelIdx;
+          levelSelectEl.remove();
+          resolveLevelSelect();
+        }, { passive: false });
+      });
+    });
+
+    const levelIdx = (self as any)._pendingLevelIdx ?? 0;
+    delete (self as any)._pendingLevelIdx;
+    const levelDef = LEVELS[levelIdx];
 
     // ── Create overlay ──
     const overlay = document.createElement('div');
@@ -137,7 +278,7 @@ export class TowerDefence {
     // Camera — isometric-ish overhead
     const cam = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
     const camTarget = new THREE.Vector3(WORLD_W / 2, 0, WORLD_H / 2);
-    let camDist = 35;
+    let camDist = 38;
     const updateCam = () => {
       cam.position.set(camTarget.x + camDist * 0.6, camDist * 0.8, camTarget.z + camDist * 0.6);
       cam.lookAt(camTarget);
@@ -171,23 +312,29 @@ export class TowerDefence {
     const cellGeo = new THREE.BoxGeometry(CELL * 0.92, 0.1, CELL * 0.92);
     const cellMatNormal = new THREE.MeshStandardMaterial({ color:'#2a2a3a', roughness:0.8, transparent:true, opacity:0.4 });
     const cellMatHover = new THREE.MeshStandardMaterial({ color:'#4a4a6a', roughness:0.8, transparent:true, opacity:0.6 });
-    const cellMatInvalid = new THREE.MeshStandardMaterial({ color:'#6a2a2a', roughness:0.8, transparent:true, opacity:0.4 });
 
-    // Build path in world coords
-    const pathWorld: THREE.Vector3[] = PATH_GRID.map(([gx, gy]) => new THREE.Vector3(gx * CELL, 0, gy * CELL));
+    // ── Build path curves for each path in this level ──
+    const pathCurves: THREE.CatmullRomCurve3[] = levelDef.paths.map(pathGrid => {
+      const pts = pathGrid.map(([gx, gz]) => new THREE.Vector3(gx * CELL, 0, gz * CELL));
+      return new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.3);
+    });
 
-    // Mark path cells as occupied
+    // Mark ALL path cells as occupied
     const pathCells = new Set<string>();
-    for (let i = 0; i < pathWorld.length - 1; i++) {
-      const a = pathWorld[i], b = pathWorld[i + 1];
-      const steps = Math.ceil(a.distanceTo(b) / (CELL * 0.5));
-      for (let s = 0; s <= steps; s++) {
-        const t = s / steps;
-        const x = Math.round((a.x + (b.x - a.x) * t) / CELL);
-        const z = Math.round((a.z + (b.z - a.z) * t) / CELL);
-        if (x >= 0 && x < GRID_W && z >= 0 && z < GRID_H) {
-          gridOccupied[x][z] = true;
-          pathCells.add(`${x},${z}`);
+    for (const pathGrid of levelDef.paths) {
+      for (let i = 0; i < pathGrid.length - 1; i++) {
+        const [ax, az] = pathGrid[i], [bx, bz] = pathGrid[i + 1];
+        const steps = Math.max(Math.abs(bx - ax), Math.abs(bz - az));
+        for (let s = 0; s <= steps; s++) {
+          const t = steps > 0 ? s / steps : 0;
+          const gx = Math.round(ax + (bx - ax) * t);
+          const gz = Math.round(az + (bz - az) * t);
+          const cgx = Math.max(0, Math.min(GRID_W - 1, gx));
+          const cgz = Math.max(0, Math.min(GRID_H - 1, gz));
+          if (gx >= 0 && gx < GRID_W && gz >= 0 && gz < GRID_H) {
+            gridOccupied[cgx][cgz] = true;
+            pathCells.add(`${cgx},${cgz}`);
+          }
         }
       }
     }
@@ -205,25 +352,102 @@ export class TowerDefence {
       }
     }
 
-    // ── Path rendering ──
-    const pathCurve = new THREE.CatmullRomCurve3(pathWorld, false, 'catmullrom', 0.3);
-    const pathPoints = pathCurve.getPoints(200);
-    const pathShape = new THREE.Shape();
-    // Extrude path as tube
-    const tubeGeo = new THREE.TubeGeometry(pathCurve, 100, 0.8, 8, false);
-    const pathMesh = new THREE.Mesh(tubeGeo, new THREE.MeshStandardMaterial({ color:'#D2B48C', roughness:0.7 }));
-    pathMesh.position.y = 0.05;
-    scene.add(pathMesh);
+    // ── Path rendering — draw a tube for EACH path ──
+    for (const curve of pathCurves) {
+      const pathPoints = curve.getPoints(200);
+      const tubeGeo = new THREE.TubeGeometry(curve, 100, 0.8, 8, false);
+      const pathMesh = new THREE.Mesh(tubeGeo, new THREE.MeshStandardMaterial({ color:'#D2B48C', roughness:0.7 }));
+      pathMesh.position.y = 0.05;
+      scene.add(pathMesh);
 
-    // Lane markings (dashed line along path center)
-    const dashGeo = new THREE.BoxGeometry(0.3, 0.02, 0.15);
-    const dashMat = new THREE.MeshStandardMaterial({ color:'#FFF8DC' });
-    for (let i = 0; i < pathPoints.length; i += 6) {
-      const d = new THREE.Mesh(dashGeo, dashMat);
-      d.position.copy(pathPoints[i]);
-      d.position.y = 0.9;
-      if (i + 1 < pathPoints.length) d.lookAt(pathPoints[Math.min(i + 1, pathPoints.length - 1)]);
-      scene.add(d);
+      // Lane markings
+      const dashGeo = new THREE.BoxGeometry(0.3, 0.02, 0.15);
+      const dashMat = new THREE.MeshStandardMaterial({ color:'#FFF8DC' });
+      for (let i = 0; i < pathPoints.length; i += 6) {
+        const d = new THREE.Mesh(dashGeo, dashMat);
+        d.position.copy(pathPoints[i]);
+        d.position.y = 0.9;
+        if (i + 1 < pathPoints.length) d.lookAt(pathPoints[Math.min(i + 1, pathPoints.length - 1)]);
+        scene.add(d);
+      }
+    }
+
+    // ── House / Wall Mesh at end of path 0 ──
+    const endPt = levelDef.paths[0][levelDef.paths[0].length - 1];
+    const houseGroup = new THREE.Group();
+    const houseBody = new THREE.Mesh(
+      new THREE.BoxGeometry(2.5, 2.0, 2.5),
+      new THREE.MeshLambertMaterial({ color: 0xC8A870 })
+    );
+    houseBody.position.y = 1.0;
+    houseBody.castShadow = true;
+    houseGroup.add(houseBody);
+    const roofMat = new THREE.MeshLambertMaterial({ color: 0x8B1212 });
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(2.0, 1.4, 4), roofMat);
+    roof.rotation.y = Math.PI / 4;
+    roof.position.y = 2.7;
+    houseGroup.add(roof);
+    const glowGeo = new THREE.RingGeometry(1.8, 2.2, 32);
+    const glowMat = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+    const glowRing = new THREE.Mesh(glowGeo, glowMat);
+    glowRing.rotation.x = -Math.PI / 2;
+    glowRing.position.y = 0.1;
+    houseGroup.add(glowRing);
+    houseGroup.position.set(endPt[0] * CELL + CELL / 2, 0, endPt[1] * CELL + CELL / 2);
+    scene.add(houseGroup);
+    // Mark house cell as occupied
+    if (endPt[0] >= 0 && endPt[0] < GRID_W && endPt[1] >= 0 && endPt[1] < GRID_H) {
+      gridOccupied[endPt[0]][endPt[1]] = true;
+    }
+
+    // ── Rival Figures — one per path entry ──
+    const rivalFigures: THREE.Group[] = [];
+    const rivalCol = new THREE.Color(config.rival.color);
+    for (let pi = 0; pi < levelDef.paths.length; pi++) {
+      const entryPt = levelDef.paths[pi][0];
+      const figGroup = new THREE.Group();
+
+      // Body
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, 1.2, 0.5),
+        new THREE.MeshLambertMaterial({ color: rivalCol })
+      );
+      body.position.y = 1.0;
+      figGroup.add(body);
+
+      // Head
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 8, 8),
+        new THREE.MeshLambertMaterial({ color: 0xD4A878 })
+      );
+      head.position.y = 2.1;
+      figGroup.add(head);
+
+      // Hard hat (rival style — dark)
+      const rHat = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.38, 0.42, 0.18, 8),
+        new THREE.MeshLambertMaterial({ color: 0x222222 })
+      );
+      rHat.position.y = 2.45;
+      figGroup.add(rHat);
+
+      // Arms raised (sending enemies)
+      for (const [side, angle] of [[-1, 0.4], [1, -0.4]] as [number, number][]) {
+        const arm = new THREE.Mesh(
+          new THREE.BoxGeometry(0.22, 0.9, 0.22),
+          new THREE.MeshLambertMaterial({ color: rivalCol })
+        );
+        arm.position.set(side * 0.55, 1.3, 0);
+        arm.rotation.z = angle;
+        figGroup.add(arm);
+      }
+
+      // Position at entry point, slightly outside the grid
+      const ex = entryPt[0] < 0 ? entryPt[0] * CELL - 1 : entryPt[0] > GRID_W ? WORLD_W + 2 : entryPt[0] * CELL;
+      const ez = entryPt[1] < 0 ? entryPt[1] * CELL - 1 : entryPt[1] > GRID_H ? WORLD_H + 2 : entryPt[1] * CELL;
+      figGroup.position.set(ex, 0, ez);
+      scene.add(figGroup);
+      rivalFigures.push(figGroup);
     }
 
     // ── Scaffold structures on edges ──
@@ -242,28 +466,29 @@ export class TowerDefence {
       }
     }
 
-    // ── TEM Van at entry ──
-    const vanBody = new THREE.Mesh(
+    // ── TEM Van at first path entry ──
+    const vanEntry = levelDef.paths[0][0];
+    const vanZ = Math.max(0, vanEntry[1]) * CELL;
+    const vanBody2 = new THREE.Mesh(
       new THREE.BoxGeometry(3, 1.8, 1.5),
       new THREE.MeshStandardMaterial({ color:'#E8A830' })
     );
-    vanBody.position.set(-3, 1, pathWorld[0].z);
-    vanBody.castShadow = true;
-    scene.add(vanBody);
+    vanBody2.position.set(-3, 1, vanZ);
+    vanBody2.castShadow = true;
+    scene.add(vanBody2);
     const vanTop = new THREE.Mesh(
       new THREE.BoxGeometry(1.5, 0.8, 1.5),
       new THREE.MeshStandardMaterial({ color:'#E8A830' })
     );
-    vanTop.position.set(-2.5, 2.2, pathWorld[0].z);
+    vanTop.position.set(-2.5, 2.2, vanZ);
     scene.add(vanTop);
-    // Wheels
     const wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.2, 8);
     const wheelMat = new THREE.MeshStandardMaterial({ color:'#222' });
     for (const wx of [-3.8, -2.0]) {
       for (const wz of [-0.8, 0.8]) {
         const w = new THREE.Mesh(wheelGeo, wheelMat);
         w.rotation.x = Math.PI / 2;
-        w.position.set(wx, 0.3, pathWorld[0].z + wz);
+        w.position.set(wx, 0.3, vanZ + wz);
         scene.add(w);
       }
     }
@@ -280,14 +505,38 @@ export class TowerDefence {
     let gameOver = false;
     let selectedTowerType: string | null = null;
     let selectedPlacedTower: PlacedTower | null = null;
+    let killsThisWave = 0;
+    let killTriggerSent = false;
 
     const difficulty = config.rival.difficulty;
     const waves = generateWaves(difficulty);
-    const rivalColor = new THREE.Color(config.rival.color);
+    const rivalColor3 = new THREE.Color(config.rival.color);
+
+    // ── BANTER UI ──
+    const banterEl = document.createElement('div');
+    Object.assign(banterEl.style, {
+      position: 'absolute', top: '60px', right: '10px',
+      background: 'rgba(0,0,0,0.85)', border: `2px solid ${config.rival.color}`,
+      borderRadius: '12px', padding: '8px 14px',
+      color: '#FFF', fontSize: '12px', fontWeight: 'bold',
+      zIndex: '14006', display: 'none', maxWidth: '200px',
+      textAlign: 'center', lineHeight: '1.4',
+      boxShadow: `0 0 12px ${config.rival.color}44`,
+      pointerEvents: 'none',
+    });
+    overlay.appendChild(banterEl);
+
+    let banterTimeout: ReturnType<typeof setTimeout> | null = null;
+    function showBanter(line: string, duration = 4000) {
+      if (banterTimeout) clearTimeout(banterTimeout);
+      banterEl.innerHTML = `<span style="color:${config.rival.color}">${config.rival.name}</span><br>${line}`;
+      banterEl.style.display = 'block';
+      banterTimeout = setTimeout(() => { banterEl.style.display = 'none'; banterTimeout = null; }, duration);
+    }
 
     // ── TOWER STATE ──
     interface PlacedTower {
-      id: string;       // crew id or equip id
+      id: string;
       gx: number; gz: number;
       mesh: THREE.Group;
       level: number;
@@ -298,10 +547,8 @@ export class TowerDefence {
       target: Enemy | null;
       rangeMesh: THREE.Mesh;
       incomeCooldown: number;
-      // for beam
       beamCharge: number;
       beamMesh: THREE.Mesh | null;
-      // for follow drone
       droneTarget: Enemy | null;
       droneMesh: THREE.Mesh | null;
     }
@@ -311,14 +558,15 @@ export class TowerDefence {
     interface Enemy {
       def: EnemyDef;
       hp: number; maxHp: number;
-      pathProgress: number;    // 0-1 along pathCurve
+      pathProgress: number;
+      pathIdx: number;          // which path this enemy follows
       speed: number;
       mesh: THREE.Group;
       hpBar: THREE.Mesh;
       hpBarBg: THREE.Mesh;
       alive: boolean;
-      revealed: boolean;       // for camo
-      slowed: number;          // slow timer
+      revealed: boolean;
+      slowed: number;
       flying: boolean;
     }
     const enemies: Enemy[] = [];
@@ -353,21 +601,18 @@ export class TowerDefence {
     function createCrewMesh(id: string): THREE.Group {
       const data = CREW[id];
       const g = new THREE.Group();
-      // Body (capsule = cylinder + spheres)
       const bodyGeo = new THREE.CylinderGeometry(0.35, 0.4, 1.2, 8);
       const bodyMat = new THREE.MeshStandardMaterial({ color: data.color });
       const body = new THREE.Mesh(bodyGeo, bodyMat);
       body.position.y = 0.9;
       body.castShadow = true;
       g.add(body);
-      // Head
       const headGeo = new THREE.SphereGeometry(0.28, 8, 8);
       const headMat = new THREE.MeshStandardMaterial({ color: data.skin });
       const head = new THREE.Mesh(headGeo, headMat);
       head.position.y = 1.75;
       head.castShadow = true;
       g.add(head);
-      // Hard hat
       const hatGeo = new THREE.CylinderGeometry(0.32, 0.35, 0.15, 8);
       const hatMat = new THREE.MeshStandardMaterial({ color:'#FFD700' });
       const hat = new THREE.Mesh(hatGeo, hatMat);
@@ -398,11 +643,13 @@ export class TowerDefence {
         const crossbar = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.08), new THREE.MeshStandardMaterial({ color:'#FF4500' }));
         crossbar.position.y = 1.5; g.add(crossbar);
       } else if (id === 'drone') {
-        const body = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshStandardMaterial({ color }));
-        body.position.y = 2.5; g.add(body);
+        const dBody = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), new THREE.MeshStandardMaterial({ color }));
+        dBody.position.y = 2.5; g.add(dBody);
         for (let i = 0; i < 4; i++) {
           const arm = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.04, 0.04), new THREE.MeshStandardMaterial({ color:'#333' }));
-          arm.position.y = 2.5; arm.rotation.y = i * Math.PI / 2; arm.position.x = Math.cos(i * Math.PI / 2) * 0.3; arm.position.z = Math.sin(i * Math.PI / 2) * 0.3;
+          arm.position.y = 2.5; arm.rotation.y = i * Math.PI / 2;
+          arm.position.x = Math.cos(i * Math.PI / 2) * 0.3;
+          arm.position.z = Math.sin(i * Math.PI / 2) * 0.3;
           g.add(arm);
         }
       } else { // beam
@@ -416,19 +663,17 @@ export class TowerDefence {
 
     function createEnemyMesh(def: EnemyDef): THREE.Group {
       const g = new THREE.Group();
-      const c = def.special === 'boss' ? rivalColor : new THREE.Color(def.color);
+      const c = def.special === 'boss' ? rivalColor3 : new THREE.Color(def.color);
       const bodyGeo = new THREE.CapsuleGeometry(0.3 * def.scale, 0.6 * def.scale, 4, 8);
       const bodyMat = new THREE.MeshStandardMaterial({ color: c, transparent: def.special === 'camo', opacity: def.special === 'camo' ? 0.15 : 1 });
       const body = new THREE.Mesh(bodyGeo, bodyMat);
       body.position.y = 0.6 * def.scale + (def.special === 'fly' ? 2 : 0);
       body.castShadow = true;
       g.add(body);
-      // Boss hard hat
       if (def.special === 'boss') {
         const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 0.25, 8), new THREE.MeshStandardMaterial({ color:'#FFD700' }));
         hat.position.y = 1.5; g.add(hat);
       }
-      // HP bar background
       const hpBgGeo = new THREE.PlaneGeometry(1.0 * def.scale, 0.12);
       const hpBg = new THREE.Mesh(hpBgGeo, new THREE.MeshBasicMaterial({ color:'#333' }));
       hpBg.position.y = 1.4 * def.scale + (def.special === 'fly' ? 2 : 0);
@@ -491,17 +736,15 @@ export class TowerDefence {
       const isEquip = id in EQUIP;
       if (!isCrew && !isEquip) return false;
       const data = isCrew ? CREW[id] : EQUIP[id];
-      const cost = data.cost * 1000; // convert to sats
+      const cost = data.cost * 1000;
       if (sats < cost) return false;
 
-      // Phil can be placed on path
       const isPath = pathCells.has(`${gx},${gz}`);
       if (isPath && id !== 'phil') return false;
       if (!isPath && gridOccupied[gx]?.[gz]) return false;
 
       sats -= cost;
       gridOccupied[gx][gz] = true;
-      // Remove grid cell mesh
       if (gridMeshes[gx][gz]) {
         scene.remove(gridMeshes[gx][gz]!);
         gridMeshes[gx][gz] = null;
@@ -513,15 +756,13 @@ export class TowerDefence {
       mesh.position.set(wx, 0, wz);
       scene.add(mesh);
 
-      // Range circle (invisible by default)
       const rangeGeo = new THREE.RingGeometry(data.range - 0.1, data.range, 32);
-      const rangeMat = new THREE.MeshBasicMaterial({ color: isCrew ? data.color : data.color, transparent:true, opacity:0, side: THREE.DoubleSide });
+      const rangeMat = new THREE.MeshBasicMaterial({ color: data.color, transparent:true, opacity:0, side: THREE.DoubleSide });
       const rangeMesh = new THREE.Mesh(rangeGeo, rangeMat);
       rangeMesh.rotation.x = -Math.PI / 2;
       rangeMesh.position.set(wx, 0.15, wz);
       scene.add(rangeMesh);
 
-      // Place pulse effect
       const pulseGeo = new THREE.RingGeometry(0.5, 1.5, 32);
       const pulseMat = new THREE.MeshBasicMaterial({ color: isCrew ? (data as CrewData).color : (data as EquipData).color, transparent:true, opacity:0.6, side:THREE.DoubleSide });
       const pulseMesh = new THREE.Mesh(pulseGeo, pulseMat);
@@ -557,7 +798,6 @@ export class TowerDefence {
       scene.remove(t.rangeMesh);
       if (t.beamMesh) scene.remove(t.beamMesh);
       gridOccupied[t.gx][t.gz] = pathCells.has(`${t.gx},${t.gz}`);
-      // Recreate grid cell if not path
       if (!gridOccupied[t.gx][t.gz]) {
         const mesh = new THREE.Mesh(cellGeo, cellMatNormal.clone());
         mesh.position.set(t.gx * CELL + CELL / 2, 0.05, t.gz * CELL + CELL / 2);
@@ -584,9 +824,7 @@ export class TowerDefence {
       t.damage = Math.floor(t.damage * 1.35);
       t.range *= 1.15;
       if (t.level === 3) t.fireRate *= 1.3;
-      // Visual: scale up slightly
       t.mesh.scale.setScalar(1 + (t.level - 1) * 0.12);
-      // Update range circle
       scene.remove(t.rangeMesh);
       const rangeGeo2 = new THREE.RingGeometry(t.range - 0.1, t.range, 32);
       const rangeMat2 = new THREE.MeshBasicMaterial({ color: (t.id in CREW ? CREW[t.id].color : EQUIP[t.id].color), transparent:true, opacity:0, side:THREE.DoubleSide });
@@ -599,9 +837,8 @@ export class TowerDefence {
 
     /* ═══════════════════════ ENEMY SPAWN ═══════════════════════ */
 
-    function spawnEnemy(type: string) {
+    function spawnEnemy(type: string, assignedPathIdx?: number) {
       const def = { ...ENEMIES[type] };
-      // Scale with wave
       const hpMult = 1 + currentWave * 0.2 + difficulty * 0.3;
       const spdMult = 1 + currentWave * 0.05;
       def.hp = Math.floor(def.hp * hpMult);
@@ -610,9 +847,13 @@ export class TowerDefence {
       const mesh = createEnemyMesh(def);
       scene.add(mesh);
 
+      const pathIdx = assignedPathIdx ?? Math.floor(Math.random() * pathCurves.length);
+
       const enemy: Enemy = {
         def, hp: def.hp, maxHp: def.hp,
-        pathProgress: 0, speed: def.speed,
+        pathProgress: 0,
+        pathIdx,
+        speed: def.speed,
         mesh,
         hpBar: mesh.userData.hpBar,
         hpBarBg: mesh.userData.hpBg,
@@ -628,7 +869,6 @@ export class TowerDefence {
       if (!e.alive) return;
       e.hp -= dmg;
 
-      // Flash body
       const body = e.mesh.userData.body as THREE.Mesh;
       if (body) {
         const orig = (body.material as THREE.MeshStandardMaterial).color.clone();
@@ -636,10 +876,8 @@ export class TowerDefence {
         setTimeout(() => { if (body.material) (body.material as THREE.MeshStandardMaterial).color.copy(orig); }, 80);
       }
 
-      // Damage number
       showFloatText(`-${dmg}`, e.mesh.position.clone().add(new THREE.Vector3(0, 2, 0)), '#FF4444');
 
-      // Update HP bar
       const pct = Math.max(0, e.hp / e.maxHp);
       e.hpBar.scale.x = pct;
       (e.hpBar.material as THREE.MeshBasicMaterial).color.set(pct > 0.5 ? '#44FF44' : pct > 0.25 ? '#FFAA00' : '#FF4444');
@@ -659,9 +897,19 @@ export class TowerDefence {
       showFloatText(`+${(reward / 1000).toFixed(0)}k ⚡`, e.mesh.position, '#FFD700');
       spawnParticles(e.mesh.position, e.def.color, 8);
 
-      // Boss death: big explosion
       if (e.def.special === 'boss') {
         spawnParticles(e.mesh.position, '#FFD700', 25);
+      }
+
+      // Track kills for banter
+      killsThisWave++;
+      if (killsThisWave >= 5 && !killTriggerSent) {
+        killTriggerSent = true;
+        showBanter(randomFrom(BANTER.player_kills));
+      }
+      // Occasionally banter when player is winning
+      if (wavesCleared > waves.length / 2 && Math.random() < 0.05) {
+        showBanter(randomFrom(BANTER.player_winning));
       }
 
       // Splitter
@@ -669,13 +917,14 @@ export class TowerDefence {
         for (let i = 0; i < 2; i++) {
           const miniDef = { ...ENEMIES.bucket };
           miniDef.hp = Math.floor(miniDef.hp * 0.5);
-          const mesh = createEnemyMesh(miniDef);
-          scene.add(mesh);
+          const miniMesh = createEnemyMesh(miniDef);
+          scene.add(miniMesh);
           const mini: Enemy = {
             def: miniDef, hp: miniDef.hp, maxHp: miniDef.hp,
             pathProgress: e.pathProgress + (i - 0.5) * 0.01,
-            speed: miniDef.speed, mesh,
-            hpBar: mesh.userData.hpBar, hpBarBg: mesh.userData.hpBg,
+            pathIdx: e.pathIdx,
+            speed: miniDef.speed, mesh: miniMesh,
+            hpBar: miniMesh.userData.hpBar, hpBarBg: miniMesh.userData.hpBg,
             alive: true, revealed: true, slowed: 0, flying: false,
           };
           enemies.push(mini);
@@ -702,7 +951,20 @@ export class TowerDefence {
     uiTop.appendChild(uiLives);
     uiTop.appendChild(uiSats);
 
-    // Tower tray (bottom)
+    // Level name badge
+    const uiLevelBadge = document.createElement('div');
+    Object.assign(uiLevelBadge.style, {
+      position: 'absolute', top: '52px', left: '50%',
+      transform: 'translateX(-50%)',
+      background: `rgba(0,0,0,0.7)`,
+      border: `1px solid ${config.rival.color}`,
+      borderRadius: '6px', padding: '2px 10px',
+      color: config.rival.color, fontSize: '11px', fontWeight: '700',
+      letterSpacing: '2px', zIndex: '14002', pointerEvents: 'none',
+    });
+    uiLevelBadge.textContent = `${levelDef.name} · ${levelDef.subtitle}`;
+    overlay.appendChild(uiLevelBadge);
+
     const uiTray = document.createElement('div');
     Object.assign(uiTray.style, {
       position:'absolute', bottom:'0', left:'0', right:'0',
@@ -720,7 +982,6 @@ export class TowerDefence {
     trayRow.style.cssText = 'display:flex;gap:4px;overflow-x:auto;padding:2px 0;';
     uiTray.appendChild(trayRow);
 
-    // Info panel (appears when tower selected for info)
     const uiInfo = document.createElement('div');
     Object.assign(uiInfo.style, {
       position:'absolute', bottom:'90px', left:'8px', right:'8px',
@@ -729,7 +990,6 @@ export class TowerDefence {
     });
     overlay.appendChild(uiInfo);
 
-    // Announcement overlay
     const uiAnnounce = document.createElement('div');
     Object.assign(uiAnnounce.style, {
       position:'absolute', top:'0', left:'0', right:'0', bottom:'0',
@@ -744,7 +1004,6 @@ export class TowerDefence {
     announceSub.style.cssText = 'color:#DDD;font-size:16px;margin-top:8px;text-align:center;';
     uiAnnounce.appendChild(announceSub);
 
-    // Build tray buttons
     function buildTray() {
       trayRow.innerHTML = '';
       const available: { id: string; name: string; color: string; cost: number; desc: string }[] = [];
@@ -781,11 +1040,7 @@ export class TowerDefence {
         for (let gz = 0; gz < GRID_H; gz++) {
           const m = gridMeshes[gx][gz];
           if (!m) continue;
-          if (selectedTowerType) {
-            m.material = cellMatHover.clone();
-          } else {
-            m.material = cellMatNormal.clone();
-          }
+          m.material = selectedTowerType ? cellMatHover.clone() : cellMatNormal.clone();
         }
       }
     }
@@ -837,7 +1092,6 @@ export class TowerDefence {
       pointer.y = -(clientY / window.innerHeight) * 2 + 1;
       raycaster.setFromCamera(pointer, cam);
 
-      // Check if clicking on ground plane
       const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
       const intersection = new THREE.Vector3();
       raycaster.ray.intersectPlane(plane, intersection);
@@ -846,10 +1100,8 @@ export class TowerDefence {
       const gx = Math.floor(intersection.x / CELL);
       const gz = Math.floor(intersection.z / CELL);
 
-      // Check if clicking on a placed tower
       const clickedTower = towers.find(t => t.gx === gx && t.gz === gz);
       if (clickedTower && !selectedTowerType) {
-        // Show range
         if (selectedPlacedTower && selectedPlacedTower !== clickedTower) {
           (selectedPlacedTower.rangeMesh.material as THREE.MeshBasicMaterial).opacity = 0;
         }
@@ -859,7 +1111,6 @@ export class TowerDefence {
         return;
       }
 
-      // Place tower
       if (selectedTowerType && gx >= 0 && gx < GRID_W && gz >= 0 && gz < GRID_H) {
         if (placeTower(selectedTowerType, gx, gz)) {
           selectedTowerType = null;
@@ -868,7 +1119,6 @@ export class TowerDefence {
         return;
       }
 
-      // Deselect
       if (selectedPlacedTower) {
         (selectedPlacedTower.rangeMesh.material as THREE.MeshBasicMaterial).opacity = 0;
         selectedPlacedTower = null;
@@ -889,7 +1139,6 @@ export class TowerDefence {
     renderer.domElement.addEventListener('click', handleClick);
     renderer.domElement.addEventListener('touchstart', handleTouch, { passive: false });
 
-    // Pinch zoom
     let lastPinchDist = 0;
     renderer.domElement.addEventListener('touchmove', (e) => {
       if (e.touches.length === 2) {
@@ -907,7 +1156,6 @@ export class TowerDefence {
     }, { passive: false });
     renderer.domElement.addEventListener('touchend', () => { lastPinchDist = 0; });
 
-    // Resize
     const handleResize = () => {
       cam.aspect = window.innerWidth / window.innerHeight;
       cam.updateProjectionMatrix();
@@ -919,11 +1167,18 @@ export class TowerDefence {
 
     function startPrepPhase() {
       phase = 'announce';
-      phaseTimer = 3;
+      phaseTimer = 3.5;
       uiAnnounce.style.display = 'flex';
-      announceTitle.textContent = `⚔️ WAVE ${currentWave + 1}`;
+      announceTitle.textContent = `⚔️ WAVE ${currentWave + 1}/${waves.length}`;
       const waveData = waves[currentWave];
+      const hasBoss = waveData.enemies.some(e => e.type === 'boss');
       announceSub.textContent = waveData.enemies.map(e => `${e.count}× ${ENEMIES[e.type]?.name || e.type}`).join(' + ');
+      // Banter
+      if (hasBoss) showBanter(randomFrom(BANTER.boss_wave), 5000);
+      else showBanter(randomFrom(BANTER.wave_start));
+      // Reset kill counter
+      killsThisWave = 0;
+      killTriggerSent = false;
     }
 
     function startWave() {
@@ -998,10 +1253,17 @@ export class TowerDefence {
       const dt = Math.min(0.1, (now - lastTime) / 1000);
       lastTime = now;
 
+      // ── Animate rival figures ──
+      const t = now / 1000;
+      for (const fig of rivalFigures) {
+        fig.position.y = Math.sin(t * 2.5) * 0.15;
+        fig.rotation.y = Math.sin(t * 1.5) * 0.2;
+      }
+
       // ── Phase timers ──
       if (phase === 'announce') {
         phaseTimer -= dt;
-        announceTitle.textContent = `⚔️ WAVE ${currentWave + 1} — ${Math.ceil(phaseTimer)}`;
+        announceTitle.textContent = `⚔️ WAVE ${currentWave + 1}/${waves.length} — ${Math.ceil(phaseTimer)}`;
         if (phaseTimer <= 0) startWave();
       } else if (phase === 'between') {
         phaseTimer -= dt;
@@ -1024,25 +1286,30 @@ export class TowerDefence {
         if (!e.alive) continue;
         const speed = e.speed * (e.slowed > 0 ? 0.5 : 1);
         e.slowed = Math.max(0, e.slowed - dt);
-        // Progress along path
-        const pathLen = pathCurve.getLength();
+
+        const curve = pathCurves[e.pathIdx] ?? pathCurves[0];
+        const pathLen = curve.getLength();
         e.pathProgress += (speed / pathLen) * dt;
 
         if (e.pathProgress >= 1) {
           e.alive = false;
           scene.remove(e.mesh);
           lives--;
+          // Flash house red
+          (houseBody.material as THREE.MeshLambertMaterial).color.set(0xFF2222);
+          setTimeout(() => { (houseBody.material as THREE.MeshLambertMaterial).color.set(0xC8A870); }, 300);
+          // Rival banter
+          showBanter(randomFrom(BANTER.enemy_reaches));
           if (lives <= 0) endGame(false);
           updateUI();
           continue;
         }
 
-        const pos = pathCurve.getPointAt(Math.min(e.pathProgress, 0.999));
+        const pos = curve.getPointAt(Math.min(e.pathProgress, 0.999));
         e.mesh.position.set(pos.x, e.flying ? 2 : 0, pos.z);
 
-        // Face direction
         if (e.pathProgress < 0.99) {
-          const ahead = pathCurve.getPointAt(Math.min(e.pathProgress + 0.01, 0.999));
+          const ahead = curve.getPointAt(Math.min(e.pathProgress + 0.01, 0.999));
           e.mesh.lookAt(ahead.x, e.mesh.position.y, ahead.z);
         }
 
@@ -1060,8 +1327,8 @@ export class TowerDefence {
         if (e.def.special === 'camo') {
           const body = e.mesh.userData.body as THREE.Mesh;
           if (body) {
-            const revealed = towers.some(t => t.special === 'reveal' &&
-              t.mesh.position.distanceTo(e.mesh.position) <= t.range);
+            const revealed = towers.some(t2 => t2.special === 'reveal' &&
+              t2.mesh.position.distanceTo(e.mesh.position) <= t2.range);
             e.revealed = revealed;
             (body.material as THREE.MeshStandardMaterial).opacity = revealed ? 0.8 : 0.15;
             e.hpBar.visible = revealed;
@@ -1071,48 +1338,43 @@ export class TowerDefence {
       }
 
       // ── Tower AI ──
-      for (const t of towers) {
-        const tPos = t.mesh.position;
+      for (const tower of towers) {
+        const tPos = tower.mesh.position;
 
-        // Income
-        if (t.special === 'income') {
-          t.incomeCooldown -= dt;
-          if (t.incomeCooldown <= 0) {
-            const amount = 5000 * t.level;
+        if (tower.special === 'income') {
+          tower.incomeCooldown -= dt;
+          if (tower.incomeCooldown <= 0) {
+            const amount = 5000 * tower.level;
             sats += amount;
             earned += amount;
-            t.incomeCooldown = 10;
+            tower.incomeCooldown = 10;
             showFloatText(`+${(amount/1000).toFixed(0)}k 💰`, tPos.clone().add(new THREE.Vector3(0, 2.5, 0)), '#1ABC9C');
             updateUI();
           }
         }
 
-        // Aura (Connie)
-        if (t.special === 'aura') {
+        if (tower.special === 'aura') {
           for (const e of enemies) {
             if (!e.alive || (!e.revealed && e.def.special === 'camo')) continue;
-            if (tPos.distanceTo(e.mesh.position) <= t.range) {
-              e.hp -= t.damage * dt;
-              if (e.hp <= 0) killEnemy(e, t);
+            if (tPos.distanceTo(e.mesh.position) <= tower.range) {
+              e.hp -= tower.damage * dt;
+              if (e.hp <= 0) killEnemy(e, tower);
             }
           }
-          // Skip normal targeting
           continue;
         }
 
-        // Slow zone (barricade)
-        if (t.special === 'slowzone') {
+        if (tower.special === 'slowzone') {
           for (const e of enemies) {
             if (!e.alive || e.flying) continue;
-            if (tPos.distanceTo(e.mesh.position) <= t.range) {
+            if (tPos.distanceTo(e.mesh.position) <= tower.range) {
               e.slowed = 0.5;
             }
           }
           continue;
         }
 
-        // Follow drone
-        if (t.special === 'follow') {
+        if (tower.special === 'follow') {
           let slowest: Enemy | null = null;
           let minSpd = Infinity;
           for (const e of enemies) {
@@ -1120,75 +1382,68 @@ export class TowerDefence {
             if (e.speed < minSpd) { minSpd = e.speed; slowest = e; }
           }
           if (slowest) {
-            t.cooldown -= dt;
-            if (t.cooldown <= 0) {
-              damageEnemy(slowest, t.damage, t);
-              t.cooldown = 1 / t.fireRate;
+            tower.cooldown -= dt;
+            if (tower.cooldown <= 0) {
+              damageEnemy(slowest, tower.damage, tower);
+              tower.cooldown = 1 / tower.fireRate;
             }
           }
           continue;
         }
 
-        if (t.fireRate <= 0 && t.special !== 'beam') continue;
+        if (tower.fireRate <= 0 && tower.special !== 'beam') continue;
 
-        // Find target
         let target: Enemy | null = null;
         let bestProg = -1;
         for (const e of enemies) {
           if (!e.alive) continue;
           if (!e.revealed && e.def.special === 'camo') continue;
-          if (e.flying && t.special === 'block') continue;
+          if (e.flying && tower.special === 'block') continue;
           const dist = tPos.distanceTo(e.mesh.position);
-          if (dist <= t.range && e.pathProgress > bestProg) {
+          if (dist <= tower.range && e.pathProgress > bestProg) {
             bestProg = e.pathProgress;
             target = e;
           }
         }
 
-        // Beam tower
-        if (t.special === 'beam') {
+        if (tower.special === 'beam') {
           if (target) {
-            t.beamCharge += dt;
-            if (t.beamCharge >= 2) {
-              // Fire sustained beam
-              damageEnemy(target, Math.floor(t.damage * dt * 3), t);
-              // Visual beam
-              if (!t.beamMesh) {
+            tower.beamCharge += dt;
+            if (tower.beamCharge >= 2) {
+              damageEnemy(target, Math.floor(tower.damage * dt * 3), tower);
+              if (!tower.beamMesh) {
                 const beamGeo = new THREE.CylinderGeometry(0.05, 0.05, 1, 4);
                 beamGeo.rotateX(Math.PI / 2);
                 const beamMat = new THREE.MeshBasicMaterial({ color:'#FF69B4', transparent:true, opacity:0.7 });
-                t.beamMesh = new THREE.Mesh(beamGeo, beamMat);
-                scene.add(t.beamMesh);
+                tower.beamMesh = new THREE.Mesh(beamGeo, beamMat);
+                scene.add(tower.beamMesh);
               }
               const mid = tPos.clone().add(target.mesh.position).multiplyScalar(0.5);
               mid.y = 1.5;
-              t.beamMesh.position.copy(mid);
-              t.beamMesh.scale.z = tPos.distanceTo(target.mesh.position);
-              t.beamMesh.lookAt(target.mesh.position);
+              tower.beamMesh.position.copy(mid);
+              tower.beamMesh.scale.z = tPos.distanceTo(target.mesh.position);
+              tower.beamMesh.lookAt(target.mesh.position);
             }
           } else {
-            t.beamCharge = Math.max(0, t.beamCharge - dt * 0.5);
-            if (t.beamMesh) { scene.remove(t.beamMesh); t.beamMesh = null; }
+            tower.beamCharge = Math.max(0, tower.beamCharge - dt * 0.5);
+            if (tower.beamMesh) { scene.remove(tower.beamMesh); tower.beamMesh = null; }
           }
           continue;
         }
 
-        t.cooldown -= dt;
-        if (target && t.cooldown <= 0) {
-          t.cooldown = 1 / t.fireRate;
-          t.shotCount++;
+        tower.cooldown -= dt;
+        if (target && tower.cooldown <= 0) {
+          tower.cooldown = 1 / tower.fireRate;
+          tower.shotCount++;
 
-          // Attack animation: lean forward
-          t.mesh.rotation.x = -0.3;
-          setTimeout(() => { if (t.mesh) t.mesh.rotation.x = 0; }, 150);
+          tower.mesh.rotation.x = -0.3;
+          setTimeout(() => { if (tower.mesh) tower.mesh.rotation.x = 0; }, 150);
 
-          // Determine damage
-          let dmg = t.damage;
-          if (t.special === 'double3' && t.shotCount % 3 === 0) dmg *= 2;
+          let dmg = tower.damage;
+          if (tower.special === 'double3' && tower.shotCount % 3 === 0) dmg *= 2;
 
-          // Create projectile
-          const projGeo = new THREE.SphereGeometry(t.special === 'pierce' ? 0.06 : 0.12, 6, 6);
-          const pColor = t.id in CREW ? CREW[t.id].color : EQUIP[t.id].color;
+          const projGeo = new THREE.SphereGeometry(tower.special === 'pierce' ? 0.06 : 0.12, 6, 6);
+          const pColor = tower.id in CREW ? CREW[tower.id].color : EQUIP[tower.id].color;
           const projMat = new THREE.MeshBasicMaterial({ color: pColor });
           const proj = new THREE.Mesh(projGeo, projMat);
           proj.position.copy(tPos).add(new THREE.Vector3(0, 1.5, 0));
@@ -1196,8 +1451,8 @@ export class TowerDefence {
 
           projectiles.push({
             mesh: proj, target, pos: proj.position.clone(),
-            speed: 20, damage: dmg, special: t.special,
-            towerColor: pColor, fromTower: t,
+            speed: 20, damage: dmg, special: tower.special,
+            towerColor: pColor, fromTower: tower,
           });
         }
       }
@@ -1218,10 +1473,8 @@ export class TowerDefence {
         if (p.pos.distanceTo(p.target.mesh.position) < 0.5) {
           damageEnemy(p.target, p.damage, p.fromTower);
 
-          // Slow
           if (p.special === 'slow') p.target.slowed = 2;
 
-          // Splash
           if (p.special === 'splash' || p.special === 'aoebomb') {
             const splashR = p.special === 'aoebomb' ? 3 : 2;
             for (const e of enemies) {
@@ -1233,9 +1486,9 @@ export class TowerDefence {
             spawnParticles(p.pos, p.towerColor, 5);
           }
 
-          // Pierce
           if (p.special === 'pierce') {
-            const dir2 = pathCurve.getTangentAt(Math.min(p.target.pathProgress, 0.99));
+            const eCurve = pathCurves[p.target.pathIdx] ?? pathCurves[0];
+            const dir2 = eCurve.getTangentAt(Math.min(p.target.pathProgress, 0.99));
             for (const e of enemies) {
               if (e === p.target || !e.alive) continue;
               const toE = e.mesh.position.clone().sub(p.pos);
@@ -1292,11 +1545,10 @@ export class TowerDefence {
 
     self.animId = requestAnimationFrame(gameLoop);
 
-    // Store cleanup refs
     (this as any)._cleanup = () => {
       cancelAnimationFrame(self.animId);
+      if (banterTimeout) clearTimeout(banterTimeout);
       window.removeEventListener('resize', handleResize);
-      // Dispose all geometries/materials
       scene.traverse((obj) => {
         if ((obj as THREE.Mesh).geometry) (obj as THREE.Mesh).geometry.dispose();
         const mat = (obj as THREE.Mesh).material;
