@@ -445,7 +445,7 @@ export class CharacterCreator {
     ctx.fill();
 
     // ── Measurements (proportional to height) ────────────────────────────────
-    const hh   = H * 0.70;
+    const hh   = H * 0.60;
     const cx   = W / 2;
     const base = H - 4;
 
@@ -644,10 +644,10 @@ export class CharacterCreator {
 
       case 5: { // AFRO — bumpy perimeter circles
         const hc = this.hairColor;
-        const afroCy = headY - headRY * 0.2;
+        const afroCy = headY - headRY * 0.1;
         const afroCx = cx;
-        const R  = headRX * 2.1;
-        const Ry = headRY * 1.8;
+        const R  = headRX * 1.75;
+        const Ry = headRY * 1.55;
 
         // Solid interior fill — slightly larger than head so skin is fully covered
         ctx.fillStyle = hc;
@@ -669,10 +669,10 @@ export class CharacterCreator {
         }
 
         // Outline ring — ensures afro is visible even with dark hair on dark bg
-        ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.20)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.ellipse(afroCx, afroCy, R * 0.95, Ry * 0.95, 0, 0, Math.PI * 2);
+        ctx.ellipse(afroCx, afroCy, R, Ry, 0, 0, Math.PI * 2);
         ctx.stroke();
 
         // Inner texture — subtle curl hints
