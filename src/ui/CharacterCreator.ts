@@ -469,9 +469,7 @@ export class CharacterCreator {
     // Shirt — charcoal with visible edge (TEM style)
     ctx.fillStyle = '#1c1c1c';
     ctx.fillRect(cx - 21, base - hh * 0.81, 42, hh * 0.38);
-    // Shirt collar hint
-    ctx.fillStyle = '#C1666B';
-    ctx.fillRect(cx - 5, base - hh * 0.81, 10, 3);
+    // (no collar line)
 
     // Arms — charcoal sleeves
     ctx.fillStyle = '#1c1c1c';
@@ -642,59 +640,44 @@ export class CharacterCreator {
         break;
       }
 
-      case 5: { // AFRO — bumpy perimeter circles
+      case 5: { // AFRO — bumpy perimeter; face re-drawn on top so skin is visible
         const hc = this.hairColor;
-        const afroCy = headY - headRY * 0.1;
         const afroCx = cx;
-        const R  = headRX * 1.75;
-        const Ry = headRY * 1.55;
+        const afroCy = headY - headRY * 0.15;
+        const R  = headRX * 1.85;
+        const Ry = headRY * 1.65;
 
-        // Solid interior fill — slightly larger than head so skin is fully covered
-        ctx.fillStyle = hc;
-        ctx.beginPath();
-        ctx.ellipse(afroCx, afroCy, R * 0.82, Ry * 0.85, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Bumpy perimeter — 20 overlapping circles
-        for (let i = 0; i < 20; i++) {
-          const angle = (i / 20) * Math.PI * 2 - Math.PI / 2;
+        // Bumpy perimeter ONLY — no solid interior (face will show through)
+        for (let i = 0; i < 22; i++) {
+          const angle = (i / 22) * Math.PI * 2 - Math.PI / 2;
           const rScale = 0.88 + Math.sin(i * 2.7 + 1.1) * 0.10;
           const bx = afroCx + Math.cos(angle) * R * rScale;
           const by = afroCy + Math.sin(angle) * Ry * rScale;
-          const bSize = headRX * (0.44 + Math.sin(i * 1.9) * 0.09);
+          const bSize = headRX * (0.44 + Math.sin(i * 1.9) * 0.08);
           ctx.fillStyle = hc;
           ctx.beginPath();
           ctx.arc(bx, by, bSize, 0, Math.PI * 2);
           ctx.fill();
         }
 
-        // Outline ring — ensures afro is visible even with dark hair on dark bg
-        ctx.strokeStyle = 'rgba(255,255,255,0.20)';
+        // Outline ring — visibility against dark backgrounds
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.ellipse(afroCx, afroCy, R, Ry, 0, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Inner texture — subtle curl hints
-        ctx.globalAlpha = 0.18;
-        ctx.fillStyle = '#000000';
-        for (let i = 0; i < 9; i++) {
-          const angle = (i / 9) * Math.PI * 2;
-          ctx.beginPath();
-          ctx.arc(
-            afroCx + Math.cos(angle) * R * 0.42,
-            afroCy + Math.sin(angle) * Ry * 0.38,
-            headRX * 0.22, 0, Math.PI * 2
-          );
-          ctx.fill();
-        }
-        ctx.globalAlpha = 1.0;
+        // Re-draw face skin on top so the face is always visible
+        ctx.fillStyle = this.skinTone;
+        ctx.beginPath();
+        ctx.ellipse(cx, headY, headRX, headRY, 0, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Soft highlight top-left
-        ctx.globalAlpha = 0.18;
+        // Soft afro highlight (top-left of afro mass)
+        ctx.globalAlpha = 0.14;
         ctx.fillStyle = '#FFFFFF';
         ctx.beginPath();
-        ctx.ellipse(afroCx - headRX * 0.5, afroCy - headRY * 1.0, headRX * 0.7, headRY * 0.45, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(afroCx - headRX * 0.5, afroCy - headRY * 0.9, headRX * 0.6, headRY * 0.38, -0.3, 0, Math.PI * 2);
         ctx.fill();
         ctx.globalAlpha = 1.0;
         break;
