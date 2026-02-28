@@ -491,7 +491,7 @@ async function main() {
       playerOnFoot.selectedWeapon  = weaponSelector.selectedWeapon;
       playerOnFoot.selectedPaintHex = weaponSelector.selectedHex;
       // Pass camera angle so joystick is camera-relative
-      playerOnFoot.update(dt, input.steerAxis, input.joystickForward, input.accelerating, engine.camera.angle);
+      playerOnFoot.update(dt, input.steerAxis, -input.joystickForward, input.accelerating, engine.camera.angle);
       engine.camera.followOnFoot(playerOnFoot.position, playerOnFoot.heading);
       // Highlight GET IN VAN when close to van
       const near = playerOnFoot.distanceTo(new THREE.Vector3(vanX, 0, vanZ)) < 5;
