@@ -550,6 +550,9 @@ export class TEMRadio {
   private container!: HTMLDivElement;
   private stationIdx = 0;
   private on = false;
+  private _onStateChange: (() => void) | null = null;
+  /** Register a callback fired whenever power is toggled */
+  setOnStateChange(cb: () => void): void { this._onStateChange = cb; }
   private songIdx = 0;
   private djIdx = 0;
   private songTimer = 0;
@@ -747,6 +750,7 @@ export class TEMRadio {
       this.engine.stop();
     }
     this._renderStation();
+    this._onStateChange?.();
   }
 
   private _changeStation(dir: 1 | -1): void {

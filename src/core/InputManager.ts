@@ -18,6 +18,7 @@ export class InputManager {
   private radioBtnEl: HTMLDivElement | null = null;
   private radioPopupEl: HTMLDivElement | null = null;
   private radioPopupTimeout: ReturnType<typeof setTimeout> | null = null;
+  private syncRadioBtn: (() => void) | null = null;
 
   constructor() {
     window.addEventListener('keydown', (e) => {
@@ -240,6 +241,7 @@ export class InputManager {
       radioBtn.style.background = on ? 'rgba(200,140,30,0.75)' : 'rgba(80,80,80,0.55)';
       radioBtn.style.borderColor = on ? 'rgba(255,200,80,0.8)' : 'rgba(150,150,150,0.4)';
     };
+    this.syncRadioBtn = syncBtn;
 
     const showPopup = () => {
       if (!this.radio) return;
@@ -326,11 +328,10 @@ export class InputManager {
   /** Wire up the radio — call from main.ts after TEMRadio is created */
   setRadio(radio: TEMRadio): void {
     this.radio = radio;
+    // Keep floating button in sync whenever TEMRadio state changes (e.g. via in-menu ⏻)
+    if (this.syncRadioBtn) radio.setOnStateChange(this.syncRadioBtn);
     // Sync button icon to initial state
-    if (this.radioBtnEl) {
-      this.radioBtnEl.textContent = radio.isOn() ? '📻' : '🔇';
-      this.radioBtnEl.style.background = radio.isOn() ? 'rgba(200,140,30,0.75)' : 'rgba(80,80,80,0.55)';
-    }
+    if (this.syncRadioBtn) this.syncRadioBtn();
   }
 
   get joystickForward() { return this.joystickY; }
