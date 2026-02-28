@@ -24,19 +24,22 @@ export class CameraController {
   }
 
   followOnFoot(pos: THREE.Vector3, heading: number) {
-    // Closer, lower follow than driving camera
+    // Camera stays locked behind the character.
+    // Very slow pan rate (0.022) — swings around gradually as player changes
+    // direction, never tied to raw joystick input.
     let angleDiff = heading - this.cameraAngle;
-    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff >  Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-    this.cameraAngle += angleDiff * 0.10;
+    this.cameraAngle += angleDiff * 0.022;
+
     const behind = 12;
     const height = 10;
     this.targetPos.set(
       pos.x - Math.sin(this.cameraAngle) * behind,
       pos.y + height,
-      pos.z + Math.cos(this.cameraAngle) * behind
+      pos.z + Math.cos(this.cameraAngle) * behind,
     );
-    this.camera.position.lerp(this.targetPos, 0.14);
+    this.camera.position.lerp(this.targetPos, 0.10);
     const lookAt = pos.clone();
     lookAt.y += 1.2;
     this.camera.lookAt(lookAt);
