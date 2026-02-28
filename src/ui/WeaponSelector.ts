@@ -243,11 +243,8 @@ export class WeaponSelector {
   }
 
   private _updateColourBtn(): void {
-    if (this.selectedWeapon === 'trowel' && this.visible) {
-      this.colourBtn.style.display = 'flex';
-    } else {
-      this.colourBtn.style.display = 'none';
-    }
+    const isPaintTool = ['trowel', 'roller', 'bucket'].includes(this.selectedWeapon);
+    this.colourBtn.style.display = (isPaintTool && this.visible) ? 'flex' : 'none';
   }
 
   private _updateColourChipLabel(): void {

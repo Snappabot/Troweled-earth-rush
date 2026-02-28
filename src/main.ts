@@ -220,14 +220,11 @@ async function main() {
     getInVanBtn.style.display = 'block';
     // Hide REV — replaced by weapon tool toggle
     if (input.brakeBtnEl) input.brakeBtnEl.style.display = 'none';
-    // GAS = attack when on foot
+    // GAS = action button when on foot
+    playerOnFoot.onAction = (msg, color) => hud.showToast(msg, color);
     input.onGasPress = () => {
       if (!playerOnFoot) return;
-      playerOnFoot.attack();
-      if (playerOnFoot.selectedWeapon === 'trowel') {
-        const hit = playerOnFoot.trowelBuilding(engine.scene);
-        if (hit) hud.showToast(`🎨 Applied ${weaponSelector.selectedColorName}!`, 0xC8A040);
-      }
+      playerOnFoot.useWeapon();
     };
   };
 
