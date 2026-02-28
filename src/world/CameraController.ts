@@ -42,6 +42,9 @@ export class CameraController {
     this.camera.lookAt(lookAt);
   }
 
+  /** Current camera yaw angle — used for camera-relative player movement */
+  get angle(): number { return this.cameraAngle; }
+
   follow(vanPos: THREE.Vector3, velocity: THREE.Vector3, heading: number) {
     // Smoothly rotate camera angle toward van heading
     // Normalize angle difference to -PI..PI

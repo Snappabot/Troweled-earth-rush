@@ -159,7 +159,11 @@ export class PlayerOnFoot {
     return this.group.position;
   }
 
-  update(dt: number, jx: number, jy: number, sprint: boolean): void {
+  /**
+   * @param camAngle  current camera yaw (from CameraController.angle)
+   *                  used to translate joystick into camera-relative world movement
+   */
+  update(dt: number, jx: number, jy: number, sprint: boolean, camAngle = 0): void {
     const speed = sprint ? 14 : 8;
     const len = Math.sqrt(jx * jx + jy * jy);
     const moving = len > 0.1;
@@ -167,15 +171,19 @@ export class PlayerOnFoot {
     if (moving) {
       const nx = jx / len;
       const ny = jy / len;
-      // jx maps to world X, jy maps to world Z (forward)
-      const moveX = nx * speed * dt;
-      const moveZ = -ny * speed * dt;
 
-      this.group.position.x += moveX;
-      this.group.position.z += moveZ;
+      // Camera-relative movement:
+      // camAngle is the yaw where the camera sits behind the player.
+      // forward direction in world = (sin(camAngle), 0, -cos(camAngle))
+      // right   direction in world = (cos(camAngle), 0,  sin(camAngle))
+      const worldX = ny * Math.sin(camAngle) + nx * Math.cos(camAngle);
+      const worldZ = -ny * Math.cos(camAngle) + nx * Math.sin(camAngle);
 
-      // Update heading (atan2 of movement direction in world space)
-      this.heading = Math.atan2(nx, ny);
+      this.group.position.x += worldX * speed * dt;
+      this.group.position.z += worldZ * speed * dt;
+
+      // Heading = direction player is facing in world space
+      this.heading = Math.atan2(worldX, -worldZ);
       this.group.rotation.y = this.heading;
 
       // Walk animation

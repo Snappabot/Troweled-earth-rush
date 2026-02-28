@@ -8,6 +8,10 @@ export class InputManager {
   accelerating = false;
   braking = false;
   horn = false;
+  /** Exposed so on-foot mode can hide it */
+  brakeBtnEl: HTMLDivElement | null = null;
+  /** Fires once on GAS press — set by main.ts for on-foot attack */
+  onGasPress: (() => void) | null = null;
   private joystickManager: nipplejs.JoystickManager | null = null;
   private hornTimeout: ReturnType<typeof setTimeout> | null = null;
   private radio: TEMRadio | null = null;
@@ -94,6 +98,7 @@ export class InputManager {
     `;
     brakeBtn.textContent = 'REV';
     document.body.appendChild(brakeBtn);
+    this.brakeBtnEl = brakeBtn;
 
     brakeBtn.addEventListener('touchstart', (e) => {
       e.preventDefault();
@@ -136,6 +141,7 @@ export class InputManager {
       e.preventDefault();
       this.accelerating = true;
       gasBtn.style.background = 'rgba(50, 200, 50, 0.9)';
+      this.onGasPress?.();
     }, { passive: false });
     gasBtn.addEventListener('touchend', (e) => {
       e.preventDefault();

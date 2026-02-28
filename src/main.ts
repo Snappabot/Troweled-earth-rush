@@ -196,58 +196,61 @@ async function main() {
   let isOnFoot = false;
   const weaponSelector = new WeaponSelector();
 
-  // "EXIT VAN" button
+  // "EXIT VAN" button — top-right, visible when slow
   const exitVanBtn = document.createElement('button');
   exitVanBtn.textContent = '🚪 EXIT VAN';
-  exitVanBtn.style.cssText = `position:fixed;top:60px;right:10px;z-index:5000;padding:8px 14px;background:rgba(0,0,0,0.8);color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;`;
+  exitVanBtn.style.cssText = `position:fixed;top:60px;right:10px;z-index:5000;padding:8px 14px;background:rgba(0,0,0,0.85);color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;`;
   document.body.appendChild(exitVanBtn);
 
-  // "GET IN VAN" button (hidden by default)
+  // "GET IN VAN" button — hidden until on foot
   const getInVanBtn = document.createElement('button');
   getInVanBtn.textContent = '🚐 GET IN VAN';
-  getInVanBtn.style.cssText = `position:fixed;top:60px;right:10px;z-index:5000;padding:8px 14px;background:rgba(0,0,0,0.8);color:#E8A830;border:2px solid #E8A830;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;display:none;`;
+  getInVanBtn.style.cssText = `position:fixed;top:60px;right:10px;z-index:5000;padding:8px 14px;background:rgba(0,0,0,0.85);color:#E8A830;border:2px solid #E8A830;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;display:none;`;
   document.body.appendChild(getInVanBtn);
 
-  // "ATTACK" button (on-foot mode)
-  const attackBtn = document.createElement('button');
-  attackBtn.textContent = '⚔️';
-  attackBtn.style.cssText = `position:fixed;bottom:260px;right:30px;z-index:5000;width:64px;height:64px;background:rgba(180,30,30,0.85);color:#fff;border:2px solid #FF4444;border-radius:50%;font-size:26px;cursor:pointer;touch-action:manipulation;display:none;`;
-  document.body.appendChild(attackBtn);
-
-  exitVanBtn.addEventListener('click', () => {
-    if (physics.speed > 4) return;
+  // Enter on-foot mode
+  const _enterOnFoot = () => {
+    if (physics.speed > 4 || isOnFoot) return;
     isOnFoot = true;
-    const spawnPos = new THREE.Vector3(van.mesh.position.x, 0, van.mesh.position.z + 3);
+    const spawnPos = new THREE.Vector3(van.mesh.position.x + 2.5, 0, van.mesh.position.z);
     playerOnFoot = new PlayerOnFoot(engine.scene, playerChar, spawnPos);
+    // Camera stays behind character — seed its angle to current van heading
     weaponSelector.show();
-    attackBtn.style.display = 'flex';
-    attackBtn.style.alignItems = 'center';
-    attackBtn.style.justifyContent = 'center';
     exitVanBtn.style.display = 'none';
     getInVanBtn.style.display = 'block';
-  });
+    // Hide REV — replaced by weapon tool toggle
+    if (input.brakeBtnEl) input.brakeBtnEl.style.display = 'none';
+    // GAS = attack when on foot
+    input.onGasPress = () => {
+      if (!playerOnFoot) return;
+      playerOnFoot.attack();
+      if (playerOnFoot.selectedWeapon === 'trowel') {
+        const hit = playerOnFoot.trowelBuilding(engine.scene);
+        if (hit) hud.showToast(`🎨 Applied ${weaponSelector.selectedColorName}!`, 0xC8A040);
+      }
+    };
+  };
 
-  getInVanBtn.addEventListener('click', () => {
-    if (!playerOnFoot) return;
+  // Exit on-foot mode
+  const _exitOnFoot = () => {
+    if (!isOnFoot) return;
     isOnFoot = false;
-    playerOnFoot.dispose();
-    playerOnFoot = null;
+    if (playerOnFoot) { playerOnFoot.dispose(); playerOnFoot = null; }
     weaponSelector.hide();
-    attackBtn.style.display = 'none';
     exitVanBtn.style.display = 'block';
     getInVanBtn.style.display = 'none';
     getInVanBtn.style.borderColor = '#E8A830';
     getInVanBtn.style.color = '#E8A830';
-  });
+    // Restore REV button
+    if (input.brakeBtnEl) input.brakeBtnEl.style.display = 'flex';
+    // Restore GAS to accelerate only
+    input.onGasPress = null;
+  };
 
-  attackBtn.addEventListener('click', () => {
-    if (playerOnFoot) {
-      playerOnFoot.attack();
-      if (playerOnFoot.selectedWeapon === 'trowel') {
-        playerOnFoot.trowelBuilding(engine.scene);
-      }
-    }
-  });
+  exitVanBtn.addEventListener('touchstart', (e) => { e.preventDefault(); _enterOnFoot(); }, { passive: false });
+  exitVanBtn.addEventListener('click', _enterOnFoot);
+  getInVanBtn.addEventListener('touchstart', (e) => { e.preventDefault(); _exitOnFoot(); }, { passive: false });
+  getInVanBtn.addEventListener('click', _exitOnFoot);
 
   // ── Splat callbacks ──────────────────────────────────────────────────────────
   pedestrians.onSplat = (sats: number, name?: string) => {
@@ -485,19 +488,15 @@ async function main() {
       exitVanBtn.style.opacity = physics.speed < 4 ? '1' : '0.4';
     }
     if (isOnFoot && playerOnFoot) {
-      playerOnFoot.selectedWeapon = weaponSelector.selectedWeapon;
+      playerOnFoot.selectedWeapon  = weaponSelector.selectedWeapon;
       playerOnFoot.selectedPaintHex = weaponSelector.selectedHex;
-      playerOnFoot.update(dt, input.steerAxis, input.joystickForward, input.gas);
+      // Pass camera angle so joystick is camera-relative
+      playerOnFoot.update(dt, input.steerAxis, input.joystickForward, input.accelerating, engine.camera.angle);
       engine.camera.followOnFoot(playerOnFoot.position, playerOnFoot.heading);
-      // Check if near van to enable get-in highlight
-      const vanPos3 = new THREE.Vector3(vanX, 0, vanZ);
-      if (playerOnFoot.distanceTo(vanPos3) < 5) {
-        getInVanBtn.style.borderColor = '#FFFFFF';
-        getInVanBtn.style.color = '#FFFFFF';
-      } else {
-        getInVanBtn.style.borderColor = '#E8A830';
-        getInVanBtn.style.color = '#E8A830';
-      }
+      // Highlight GET IN VAN when close to van
+      const near = playerOnFoot.distanceTo(new THREE.Vector3(vanX, 0, vanZ)) < 5;
+      getInVanBtn.style.borderColor = near ? '#FFFFFF' : '#E8A830';
+      getInVanBtn.style.color       = near ? '#FFFFFF' : '#E8A830';
     }
 
     // ── Traffic system ────────────────────────────────────────────────────────

@@ -1,195 +1,257 @@
+/**
+ * WeaponSelector — on-foot tool tray + TEM colour picker.
+ *
+ * Layout:
+ *  • A round toggle button sits where REV used to be (bottom-right).
+ *  • Tapping the toggle expands a vertical list of 5 weapon buttons above it.
+ *  • When Trowel is selected a small "🎨 Colour" chip appears that
+ *    opens a full colour-picker overlay on tap.
+ */
 import { MARBELLINO_COLOURS } from '../data/MarbellinoColours';
 import { WEAPONS } from '../entities/PlayerOnFoot';
 
 export class WeaponSelector {
-  selectedWeapon = 'trowel';
-  selectedHex = '#F2EDDF';
+  selectedWeapon   = 'trowel';
+  selectedHex      = '#F2EDDF';
   selectedColorName = 'Custom Spanish White';
   visible = false;
 
-  private panel!: HTMLDivElement;
-  private colorPanel!: HTMLDivElement;
-  private weaponBtns: HTMLButtonElement[] = [];
+  private toggleBtn!: HTMLDivElement;
+  private trayEl!:    HTMLDivElement;
+  private colourBtn!: HTMLDivElement;
+  private colourOverlay!: HTMLDivElement;
+  private weaponBtns: HTMLDivElement[] = [];
+  private trayOpen = false;
 
-  constructor() {
-    this._build();
-  }
+  constructor() { this._build(); }
 
   show(): void {
-    this.panel.style.display = 'flex';
+    this.toggleBtn.style.display = 'flex';
     this.visible = true;
-    this._updateColorPanelVisibility();
   }
 
   hide(): void {
-    this.panel.style.display = 'none';
-    this.colorPanel.style.display = 'none';
+    this.toggleBtn.style.display  = 'none';
+    this.trayEl.style.display     = 'none';
+    this.colourBtn.style.display  = 'none';
+    this.colourOverlay.style.display = 'none';
+    this.trayOpen = false;
     this.visible = false;
   }
 
-  private _updateColorPanelVisibility(): void {
-    if (this.selectedWeapon === 'trowel' && this.visible) {
-      this.colorPanel.style.display = 'flex';
-    } else {
-      this.colorPanel.style.display = 'none';
-    }
-  }
-
   private _build(): void {
-    // ── Weapon tray ────────────────────────────────────────────────────────
-    this.panel = document.createElement('div');
-    this.panel.style.cssText = [
-      'position:fixed',
-      'bottom:120px',
-      'left:50%',
-      'transform:translateX(-50%)',
-      'display:none',
-      'flex-direction:row',
-      'gap:8px',
-      'z-index:4000',
-      'align-items:flex-end',
-      'pointer-events:auto',
-    ].join(';');
-    document.body.appendChild(this.panel);
+    // ── Toggle button — same position as REV ─────────────────────────────────
+    this.toggleBtn = document.createElement('div');
+    this.toggleBtn.style.cssText = `
+      position:fixed; bottom:30px; right:30px;
+      width:90px; height:90px; border-radius:50%;
+      background:rgba(30,30,50,0.90);
+      border:3px solid rgba(212,160,64,0.7);
+      display:none; align-items:center; justify-content:center;
+      flex-direction:column; gap:2px;
+      color:#FFD700; font-size:22px; font-weight:900;
+      z-index:2000; touch-action:manipulation; user-select:none;
+      cursor:pointer;
+    `;
+    this.toggleBtn.innerHTML = `<span style="font-size:24px">🪚</span><span style="font-size:9px;letter-spacing:1px;color:#aaa">TOOLS</span>`;
+    document.body.appendChild(this.toggleBtn);
+
+    this.toggleBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      this._toggleTray();
+    }, { passive: false });
+    this.toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); this._toggleTray();
+    });
+
+    // ── Weapon tray — hidden, appears above toggle ────────────────────────────
+    this.trayEl = document.createElement('div');
+    this.trayEl.style.cssText = `
+      position:fixed; bottom:130px; right:30px;
+      display:none; flex-direction:column-reverse; align-items:center;
+      gap:8px; z-index:2001; pointer-events:auto;
+    `;
+    document.body.appendChild(this.trayEl);
 
     WEAPONS.forEach((w) => {
-      const btn = document.createElement('button');
-      btn.style.cssText = [
-        'width:60px',
-        'height:60px',
-        'background:rgba(0,0,0,0.82)',
-        'border:2px solid #555',
-        'border-radius:10px',
-        'color:#fff',
-        'font-size:22px',
-        'display:flex',
-        'flex-direction:column',
-        'align-items:center',
-        'justify-content:center',
-        'cursor:pointer',
-        'touch-action:manipulation',
-        'user-select:none',
-        'gap:2px',
-      ].join(';');
-
-      const iconEl = document.createElement('span');
-      iconEl.textContent = w.icon;
-      iconEl.style.fontSize = '22px';
-
-      const nameEl = document.createElement('span');
-      nameEl.textContent = w.name.split(' ')[0];
-      nameEl.style.cssText = 'font-size:9px;color:#aaa;letter-spacing:0.5px;';
-
-      btn.appendChild(iconEl);
-      btn.appendChild(nameEl);
-
-      btn.addEventListener('click', () => {
+      const btn = document.createElement('div');
+      btn.style.cssText = `
+        width:80px; height:80px; border-radius:12px;
+        background:rgba(10,10,20,0.92); border:2px solid #444;
+        display:flex; flex-direction:column; align-items:center;
+        justify-content:center; gap:3px;
+        cursor:pointer; touch-action:manipulation; user-select:none;
+      `;
+      btn.innerHTML = `
+        <span style="font-size:26px">${w.icon}</span>
+        <span style="font-size:10px;color:#ccc;letter-spacing:0.5px">${w.name.split(' ')[0]}</span>
+      `;
+      const select = (e: Event) => {
+        e.preventDefault(); e.stopPropagation();
         this.selectedWeapon = w.id;
-        this._refreshSelection();
-        this._updateColorPanelVisibility();
-      });
-      btn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        this.selectedWeapon = w.id;
-        this._refreshSelection();
-        this._updateColorPanelVisibility();
-      }, { passive: false });
-
-      this.panel.appendChild(btn);
+        this._refreshBtns();
+        this._updateColourBtn();
+        // Update toggle icon
+        this.toggleBtn.innerHTML = `<span style="font-size:24px">${w.icon}</span><span style="font-size:9px;letter-spacing:1px;color:#aaa">TOOLS</span>`;
+        this._closeTray();
+      };
+      btn.addEventListener('touchstart', select as EventListener, { passive: false });
+      btn.addEventListener('click', select);
+      this.trayEl.appendChild(btn);
       this.weaponBtns.push(btn);
     });
 
-    this._refreshSelection();
+    this._refreshBtns();
 
-    // ── Color picker panel ─────────────────────────────────────────────────
-    this.colorPanel = document.createElement('div');
-    this.colorPanel.style.cssText = [
-      'position:fixed',
-      'bottom:190px',
-      'left:50%',
-      'transform:translateX(-50%)',
-      'display:none',
-      'flex-direction:row',
-      'flex-wrap:wrap',
-      'gap:6px',
-      'z-index:4000',
-      'background:rgba(0,0,0,0.85)',
-      'border:1px solid rgba(200,168,106,0.4)',
-      'border-radius:14px',
-      'padding:10px',
-      'max-width:340px',
-      'justify-content:center',
-      'pointer-events:auto',
-    ].join(';');
-    document.body.appendChild(this.colorPanel);
+    // ── Colour chip — only visible when trowel selected ───────────────────────
+    this.colourBtn = document.createElement('div');
+    this.colourBtn.style.cssText = `
+      position:fixed; bottom:140px; left:50%;
+      transform:translateX(-50%);
+      display:none;
+      background:rgba(10,10,20,0.92);
+      border:2px solid rgba(212,160,64,0.6);
+      border-radius:24px; padding:8px 16px;
+      color:#FFD700; font-size:12px; font-weight:700;
+      letter-spacing:1px; z-index:2000;
+      touch-action:manipulation; cursor:pointer; user-select:none;
+      align-items:center; gap:8px; white-space:nowrap;
+    `;
+    this._updateColourChipLabel();
+    document.body.appendChild(this.colourBtn);
 
-    // Title
-    const title = document.createElement('div');
-    title.textContent = '🎨 Paint Colour';
-    title.style.cssText = [
-      'width:100%',
-      'text-align:center',
-      'color:#C8A86A',
-      'font-size:11px',
-      'font-weight:800',
-      'letter-spacing:1px',
-      'margin-bottom:4px',
-    ].join(';');
-    this.colorPanel.appendChild(title);
+    const openColour = (e: Event) => {
+      e.preventDefault(); e.stopPropagation();
+      this.colourOverlay.style.display = 'flex';
+    };
+    this.colourBtn.addEventListener('touchstart', openColour as EventListener, { passive: false });
+    this.colourBtn.addEventListener('click', openColour);
 
-    // Swatches
+    // ── Colour picker overlay ─────────────────────────────────────────────────
+    this.colourOverlay = document.createElement('div');
+    this.colourOverlay.style.cssText = `
+      position:fixed; inset:0; z-index:9000;
+      background:rgba(0,0,0,0.88);
+      display:none; flex-direction:column;
+      align-items:center; justify-content:center;
+      touch-action:none;
+    `;
+    document.body.appendChild(this.colourOverlay);
+
+    // Overlay title + close
+    const overlayHead = document.createElement('div');
+    overlayHead.style.cssText = `
+      color:#FFD700; font-size:16px; font-weight:900; letter-spacing:2px;
+      margin-bottom:16px; text-align:center;
+    `;
+    overlayHead.textContent = '🎨 SELECT PAINT COLOUR';
+    this.colourOverlay.appendChild(overlayHead);
+
+    // Grid of swatches
+    const grid = document.createElement('div');
+    grid.style.cssText = `
+      display:grid; grid-template-columns:repeat(4,1fr);
+      gap:10px; max-width:320px; width:90%;
+    `;
+    this.colourOverlay.appendChild(grid);
+
     MARBELLINO_COLOURS.forEach((col) => {
       const swatch = document.createElement('div');
-      swatch.style.cssText = [
-        'width:40px',
-        'height:40px',
-        `background:${col.hex}`,
-        'border-radius:6px',
-        'cursor:pointer',
-        'border:2px solid transparent',
-        'touch-action:manipulation',
-        'flex-shrink:0',
-        'position:relative',
-      ].join(';');
-      swatch.title = col.name;
+      swatch.style.cssText = `
+        width:100%; aspect-ratio:1;
+        background:${col.hex}; border-radius:8px;
+        border:2px solid transparent;
+        cursor:pointer; touch-action:manipulation;
+        display:flex; align-items:flex-end; justify-content:center;
+        padding-bottom:3px; box-sizing:border-box;
+        position:relative;
+      `;
+      // Short name label
+      const nameEl = document.createElement('span');
+      nameEl.style.cssText = `
+        font-size:7px; font-weight:700;
+        color:rgba(0,0,0,0.6); line-height:1.2;
+        text-align:center; width:100%; padding:0 2px;
+        text-shadow: 0 0 2px rgba(255,255,255,0.4);
+        pointer-events:none;
+      `;
+      nameEl.textContent = col.name.split(' ').slice(-1)[0]; // last word only
+      swatch.appendChild(nameEl);
 
       if (col.hex === this.selectedHex) {
         swatch.style.border = '2px solid #FFD700';
-        swatch.style.boxShadow = '0 0 6px rgba(255,215,0,0.6)';
       }
 
-      const selectColor = () => {
+      const pickColor = (e: Event) => {
+        e.preventDefault(); e.stopPropagation();
         this.selectedHex = col.hex;
         this.selectedColorName = col.name;
-        // Update borders on all swatches
-        this.colorPanel.querySelectorAll<HTMLDivElement>('[data-swatch]').forEach((s) => {
+        grid.querySelectorAll<HTMLDivElement>('[data-sw]').forEach(s => {
           s.style.border = '2px solid transparent';
-          s.style.boxShadow = 'none';
         });
         swatch.style.border = '2px solid #FFD700';
-        swatch.style.boxShadow = '0 0 6px rgba(255,215,0,0.6)';
+        this._updateColourChipLabel();
+        this.colourOverlay.style.display = 'none';
       };
-
-      swatch.dataset['swatch'] = col.hex;
-      swatch.addEventListener('click', selectColor);
-      swatch.addEventListener('touchstart', (e) => { e.preventDefault(); selectColor(); }, { passive: false });
-
-      this.colorPanel.appendChild(swatch);
+      swatch.dataset['sw'] = col.hex;
+      swatch.addEventListener('touchstart', pickColor as EventListener, { passive: false });
+      swatch.addEventListener('click', pickColor);
+      grid.appendChild(swatch);
     });
+
+    // Close button
+    const closeBtn = document.createElement('div');
+    closeBtn.style.cssText = `
+      margin-top:20px; padding:12px 32px;
+      background:rgba(212,160,64,0.2); border:2px solid rgba(212,160,64,0.5);
+      border-radius:12px; color:#FFD700; font-size:14px; font-weight:700;
+      letter-spacing:2px; cursor:pointer; touch-action:manipulation;
+    `;
+    closeBtn.textContent = '✕ CLOSE';
+    closeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); this.colourOverlay.style.display = 'none'; }, { passive: false });
+    closeBtn.addEventListener('click', () => { this.colourOverlay.style.display = 'none'; });
+    this.colourOverlay.appendChild(closeBtn);
   }
 
-  private _refreshSelection(): void {
+  private _toggleTray(): void {
+    this.trayOpen ? this._closeTray() : this._openTray();
+  }
+
+  private _openTray(): void {
+    this.trayOpen = true;
+    this.trayEl.style.display = 'flex';
+    this.toggleBtn.style.borderColor = '#FFD700';
+  }
+
+  private _closeTray(): void {
+    this.trayOpen = false;
+    this.trayEl.style.display = 'none';
+    this.toggleBtn.style.borderColor = 'rgba(212,160,64,0.7)';
+  }
+
+  private _refreshBtns(): void {
     WEAPONS.forEach((w, i) => {
       const btn = this.weaponBtns[i];
       if (w.id === this.selectedWeapon) {
         btn.style.border = '2px solid #FFD700';
-        btn.style.background = 'rgba(40,30,0,0.92)';
-        btn.style.boxShadow = '0 0 8px rgba(255,215,0,0.4)';
+        btn.style.background = 'rgba(40,30,0,0.95)';
       } else {
-        btn.style.border = '2px solid #555';
-        btn.style.background = 'rgba(0,0,0,0.82)';
-        btn.style.boxShadow = 'none';
+        btn.style.border = '2px solid #444';
+        btn.style.background = 'rgba(10,10,20,0.92)';
       }
     });
+  }
+
+  private _updateColourBtn(): void {
+    if (this.selectedWeapon === 'trowel' && this.visible) {
+      this.colourBtn.style.display = 'flex';
+    } else {
+      this.colourBtn.style.display = 'none';
+    }
+  }
+
+  private _updateColourChipLabel(): void {
+    const dot = `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${this.selectedHex};border:1px solid rgba(255,255,255,0.3);vertical-align:middle;margin-right:6px;"></span>`;
+    this.colourBtn.innerHTML = `${dot}${this.selectedColorName} ▾`;
   }
 }
