@@ -4,6 +4,7 @@ import type { TEMRadio } from '../audio/TEMRadio';
 export class InputManager {
   keys: Record<string, boolean> = {};
   steerAxis = 0;
+  joystickY = 0;
   accelerating = false;
   braking = false;
   horn = false;
@@ -59,11 +60,13 @@ export class InputManager {
     this.joystickManager.on('move', (_evt, data: nipplejs.JoystickOutputData) => {
       if (data.vector) {
         this.steerAxis = data.vector.x;
+        this.joystickY = -(data.vector.y ?? 0);
       }
     });
 
     this.joystickManager.on('end', () => {
       this.steerAxis = 0;
+      this.joystickY = 0;
     });
 
     // Brake / REV button
@@ -324,6 +327,8 @@ export class InputManager {
     }
   }
 
+  get joystickForward() { return this.joystickY; }
+  get gas() { return this.forward; }
   get forward() { return this.keys['ArrowUp'] || this.keys['KeyW'] || this.accelerating; }
   get backward() { return this.keys['ArrowDown'] || this.keys['KeyS']; }
   get left() { return this.keys['ArrowLeft'] || this.keys['KeyA'] || this.steerAxis < -0.2; }

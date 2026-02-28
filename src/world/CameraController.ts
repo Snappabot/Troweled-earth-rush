@@ -23,6 +23,25 @@ export class CameraController {
     );
   }
 
+  followOnFoot(pos: THREE.Vector3, heading: number) {
+    // Closer, lower follow than driving camera
+    let angleDiff = heading - this.cameraAngle;
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    this.cameraAngle += angleDiff * 0.10;
+    const behind = 12;
+    const height = 10;
+    this.targetPos.set(
+      pos.x - Math.sin(this.cameraAngle) * behind,
+      pos.y + height,
+      pos.z + Math.cos(this.cameraAngle) * behind
+    );
+    this.camera.position.lerp(this.targetPos, 0.14);
+    const lookAt = pos.clone();
+    lookAt.y += 1.2;
+    this.camera.lookAt(lookAt);
+  }
+
   follow(vanPos: THREE.Vector3, velocity: THREE.Vector3, heading: number) {
     // Smoothly rotate camera angle toward van heading
     // Normalize angle difference to -PI..PI

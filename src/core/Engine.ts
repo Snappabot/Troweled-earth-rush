@@ -562,6 +562,11 @@ export class Engine {
     group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
+    // Tag main wall mesh as paintable (first child = main body)
+    if (group.children.length > 0) {
+      (group.children[0] as THREE.Mesh).userData['paintable'] = true;
+      (group.children[0] as THREE.Mesh).userData['buildingName'] = 'Building';
+    }
     this.registerBuildingCollider(x, z, 8.5, 7.5, sx, sz);
   }
 
@@ -615,6 +620,11 @@ export class Engine {
     group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
+    // Tag main wall mesh as paintable (index 1 = terracotta main body; index 0 = shadow)
+    if (group.children.length > 1) {
+      (group.children[1] as THREE.Mesh).userData['paintable'] = true;
+      (group.children[1] as THREE.Mesh).userData['buildingName'] = 'Building';
+    }
     this.registerBuildingCollider(x, z, 7.5, 6.5, sx, sz);
   }
 
@@ -648,6 +658,11 @@ export class Engine {
     group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
+    // Tag main tower body mesh as paintable (index 2 = tower body)
+    if (group.children.length > 2) {
+      (group.children[2] as THREE.Mesh).userData['paintable'] = true;
+      (group.children[2] as THREE.Mesh).userData['buildingName'] = 'Building';
+    }
     this.registerBuildingCollider(x, z, 4.5, 4.5, sx, sz);
   }
 
@@ -701,6 +716,11 @@ export class Engine {
     group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
+    // Tag main wall mesh as paintable (index 0 = warm cream main body)
+    if (group.children.length > 0) {
+      (group.children[0] as THREE.Mesh).userData['paintable'] = true;
+      (group.children[0] as THREE.Mesh).userData['buildingName'] = 'Building';
+    }
     this.registerBuildingCollider(x, z, 7.0, 6.0, sx, sz);
   }
 

@@ -43,6 +43,8 @@ import { ContractWarsPanel } from './ui/ContractWarsPanel';
 import { PhotoReveal } from './minigames/PhotoReveal';
 import { WorkshopShootout } from './minigames/WorkshopShootout';
 import { RivalSystem } from './gameplay/RivalSystem';
+import { PlayerOnFoot } from './entities/PlayerOnFoot';
+import { WeaponSelector } from './ui/WeaponSelector';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -188,6 +190,64 @@ async function main() {
   // ── Traffic + Pedestrian systems ────────────────────────────────────────────
   const traffic    = new TrafficSystem(engine.scene);
   const pedestrians = new PedestrianSystem(engine.scene);
+
+  // ── On-foot mode ─────────────────────────────────────────────────────────────
+  let playerOnFoot: PlayerOnFoot | null = null;
+  let isOnFoot = false;
+  const weaponSelector = new WeaponSelector();
+
+  // "EXIT VAN" button
+  const exitVanBtn = document.createElement('button');
+  exitVanBtn.textContent = '🚪 EXIT VAN';
+  exitVanBtn.style.cssText = `position:fixed;top:60px;right:10px;z-index:5000;padding:8px 14px;background:rgba(0,0,0,0.8);color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;`;
+  document.body.appendChild(exitVanBtn);
+
+  // "GET IN VAN" button (hidden by default)
+  const getInVanBtn = document.createElement('button');
+  getInVanBtn.textContent = '🚐 GET IN VAN';
+  getInVanBtn.style.cssText = `position:fixed;top:60px;right:10px;z-index:5000;padding:8px 14px;background:rgba(0,0,0,0.8);color:#E8A830;border:2px solid #E8A830;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;display:none;`;
+  document.body.appendChild(getInVanBtn);
+
+  // "ATTACK" button (on-foot mode)
+  const attackBtn = document.createElement('button');
+  attackBtn.textContent = '⚔️';
+  attackBtn.style.cssText = `position:fixed;bottom:260px;right:30px;z-index:5000;width:64px;height:64px;background:rgba(180,30,30,0.85);color:#fff;border:2px solid #FF4444;border-radius:50%;font-size:26px;cursor:pointer;touch-action:manipulation;display:none;`;
+  document.body.appendChild(attackBtn);
+
+  exitVanBtn.addEventListener('click', () => {
+    if (physics.speed > 4) return;
+    isOnFoot = true;
+    const spawnPos = new THREE.Vector3(van.mesh.position.x, 0, van.mesh.position.z + 3);
+    playerOnFoot = new PlayerOnFoot(engine.scene, playerChar, spawnPos);
+    weaponSelector.show();
+    attackBtn.style.display = 'flex';
+    attackBtn.style.alignItems = 'center';
+    attackBtn.style.justifyContent = 'center';
+    exitVanBtn.style.display = 'none';
+    getInVanBtn.style.display = 'block';
+  });
+
+  getInVanBtn.addEventListener('click', () => {
+    if (!playerOnFoot) return;
+    isOnFoot = false;
+    playerOnFoot.dispose();
+    playerOnFoot = null;
+    weaponSelector.hide();
+    attackBtn.style.display = 'none';
+    exitVanBtn.style.display = 'block';
+    getInVanBtn.style.display = 'none';
+    getInVanBtn.style.borderColor = '#E8A830';
+    getInVanBtn.style.color = '#E8A830';
+  });
+
+  attackBtn.addEventListener('click', () => {
+    if (playerOnFoot) {
+      playerOnFoot.attack();
+      if (playerOnFoot.selectedWeapon === 'trowel') {
+        playerOnFoot.trowelBuilding(engine.scene);
+      }
+    }
+  });
 
   // ── Splat callbacks ──────────────────────────────────────────────────────────
   pedestrians.onSplat = (sats: number, name?: string) => {
@@ -418,6 +478,27 @@ async function main() {
     }
 
     pedestrians.update(dt, vanX, vanZ);
+
+    // ── On-foot mode ──────────────────────────────────────────────────────────
+    if (!isOnFoot) {
+      // Show/hide exit van button based on speed — fade when moving
+      exitVanBtn.style.opacity = physics.speed < 4 ? '1' : '0.4';
+    }
+    if (isOnFoot && playerOnFoot) {
+      playerOnFoot.selectedWeapon = weaponSelector.selectedWeapon;
+      playerOnFoot.selectedPaintHex = weaponSelector.selectedHex;
+      playerOnFoot.update(dt, input.steerAxis, input.joystickForward, input.gas);
+      engine.camera.followOnFoot(playerOnFoot.position, playerOnFoot.heading);
+      // Check if near van to enable get-in highlight
+      const vanPos3 = new THREE.Vector3(vanX, 0, vanZ);
+      if (playerOnFoot.distanceTo(vanPos3) < 5) {
+        getInVanBtn.style.borderColor = '#FFFFFF';
+        getInVanBtn.style.color = '#FFFFFF';
+      } else {
+        getInVanBtn.style.borderColor = '#E8A830';
+        getInVanBtn.style.color = '#E8A830';
+      }
+    }
 
     // ── Traffic system ────────────────────────────────────────────────────────
     traffic.update(dt, vanX, vanZ);
@@ -889,7 +970,9 @@ async function main() {
       }
     }
 
-    engine.camera.follow(van.mesh.position, van.velocity, van.heading);
+    if (!isOnFoot) {
+      engine.camera.follow(van.mesh.position, van.velocity, van.heading);
+    }
     hud.update(physics.speed, spillMeter.level);
   });
 
