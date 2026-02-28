@@ -193,15 +193,15 @@ async function main() {
   pedestrians.onSplat = (sats: number, name?: string) => {
     jobManager.money += sats;
     hud.updateMoney(jobManager.money);
-    if (name === 'veronica') {
-      hud.showToast("💸 She's gonna need that alimony now!", 0xFF69B4);
+    if (name === 'boronica') {
+      hud.showToast("💸 Boronica's gonna need that alimony now!", 0xFF69B4);
     } else if (name === 'kangaroo') {
       hud.showToast('🦘 +10K! Roo down!', 0xC8A05A);
     } else {
       hud.showToast('💀 +10K sats!', 0xAA0000);
     }
   };
-  pedestrians.onVeronicaYell = () => {
+  pedestrians.onBoronicaYell = () => {
     hud.showToast('😤 JOSE! Pay me the alimony... I mean ALL the money! 💸', 0xFF1493);
   };
 

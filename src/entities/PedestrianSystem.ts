@@ -7,14 +7,14 @@ const BODY_COLORS = [
 ];
 const SKIN_COLOR  = 0xFFDBAC;
 const ROOS_COLOR  = 0xC8A05A; // kangaroo tan
-const VERONICA_BODY = 0xFF69B4; // hot pink
-const VERONICA_HAIR = 0xFFD700; // blonde
+const BORONICA_BODY = 0xFF69B4; // hot pink
+const BORONICA_HAIR = 0xFFD700; // blonde
 
 const GRID   = 40;
 const ROAD_W = 8;
 
 const SPLAT_DIST      = 1.6;   // van distance to trigger splat
-const YELL_DIST       = 14;    // Veronica yells at van
+const YELL_DIST       = 14;    // Boronica yells at van
 const SPLAT_REWARD    = 10_000; // sats per splat
 const SPLAT_LIFE      = 14;    // seconds before goo fades
 const RESPAWN_DELAY   = 10;    // seconds before entity reappears
@@ -42,9 +42,9 @@ interface Pedestrian {
   splatted:       boolean;
   respawnTimer:   number;
   spawnAxis:      'x' | 'z';  // remember original axis for respawn
-  // Veronica-specific
-  isVeronica:     boolean;
-  veronicaYelled: boolean;
+  // Boronica-specific
+  isBoronica:     boolean;
+  boronicaYelled: boolean;
 }
 
 interface Kangaroo {
@@ -99,16 +99,16 @@ function buildPedestrian(bodyColor: number): {
   return { group, leftArm, rightArm, leftLeg, rightLeg };
 }
 
-/** Veronica — hot-pink dress, blonde hair, permanently angry stance */
-function buildVeronica(): {
+/** Boronica — hot-pink dress, blonde hair, permanently angry stance */
+function buildBoronica(): {
   group: THREE.Group;
   leftArm: THREE.Mesh; rightArm: THREE.Mesh;
   leftLeg: THREE.Mesh; rightLeg: THREE.Mesh;
 } {
   const group    = new THREE.Group();
-  const bodyMat  = new THREE.MeshLambertMaterial({ color: VERONICA_BODY });
+  const bodyMat  = new THREE.MeshLambertMaterial({ color: BORONICA_BODY });
   const skinMat  = new THREE.MeshLambertMaterial({ color: 0xFFD0A0 });
-  const hairMat  = new THREE.MeshLambertMaterial({ color: VERONICA_HAIR });
+  const hairMat  = new THREE.MeshLambertMaterial({ color: BORONICA_HAIR });
 
   // Dress (wider cone for skirt)
   const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.48, 0.6, 0.8, 8), bodyMat);
@@ -273,8 +273,8 @@ export class PedestrianSystem {
 
   /** Fired on splat: (satsEarned, entityName?) */
   onSplat: ((sats: number, name?: string) => void) | null = null;
-  /** Fired when van gets close to Veronica and she yells */
-  onVeronicaYell: (() => void) | null = null;
+  /** Fired when van gets close to Boronica and she yells */
+  onBoronicaYell: (() => void) | null = null;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -285,20 +285,20 @@ export class PedestrianSystem {
   // ── Spawn ───────────────────────────────────────────────────────────────────
 
   private _spawnPedestrians(): void {
-    const spawnOne = (axis: 'x' | 'z', isVeronica = false): void => {
-      const bodyColor = isVeronica
-        ? VERONICA_BODY
+    const spawnOne = (axis: 'x' | 'z', isBoronica = false): void => {
+      const bodyColor = isBoronica
+        ? BORONICA_BODY
         : BODY_COLORS[Math.floor(Math.random() * BODY_COLORS.length)];
 
-      const built = isVeronica
-        ? buildVeronica()
+      const built = isBoronica
+        ? buildBoronica()
         : buildPedestrian(bodyColor);
       const { group, leftArm, rightArm, leftLeg, rightLeg } = built;
 
       const roadPos = randomSidewalk();
       const { segStart, segEnd, pos } = randomSegment();
       const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
-      const speed = isVeronica ? 3.5 : 2 + Math.random() * 1.5;
+      const speed = isBoronica ? 3.5 : 2 + Math.random() * 1.5;
 
       const ped: Pedestrian = {
         group, axis, roadPos, segStart, segEnd, pos, dir, speed,
@@ -306,7 +306,7 @@ export class PedestrianSystem {
         walkCycle: Math.random() * Math.PI * 2,
         leftArm, rightArm, leftLeg, rightLeg,
         splatted: false, respawnTimer: 0, spawnAxis: axis,
-        isVeronica, veronicaYelled: false,
+        isBoronica, boronicaYelled: false,
       };
 
       this.pedestrians.push(ped);
@@ -317,7 +317,7 @@ export class PedestrianSystem {
 
     for (let i = 0; i < 20; i++) spawnOne('x');
     for (let i = 0; i < 20; i++) spawnOne('z');
-    // Veronica — always on a z-axis sidewalk so she's visible
+    // Boronica — always on a z-axis sidewalk so she's visible
     spawnOne('z', true);
   }
 
@@ -395,7 +395,7 @@ export class PedestrianSystem {
     ped.dir       = Math.random() > 0.5 ? 1 : -1;
     ped.splatted  = false;
     ped.scattering = false;
-    ped.veronicaYelled = false;
+    ped.boronicaYelled = false;
     this._applyPedPosition(ped);
     ped.group.visible = true;
   }
@@ -431,17 +431,17 @@ export class PedestrianSystem {
       const dz = pz - vanZ;
       const dist = Math.sqrt(dx * dx + dz * dz);
 
-      // Veronica yell
-      if (ped.isVeronica && !ped.veronicaYelled && dist < YELL_DIST) {
-        ped.veronicaYelled = true;
-        this.onVeronicaYell?.();
+      // Boronica yell
+      if (ped.isBoronica && !ped.boronicaYelled && dist < YELL_DIST) {
+        ped.boronicaYelled = true;
+        this.onBoronicaYell?.();
       }
 
       // Splat check
       if (dist < SPLAT_DIST) {
         ped.splatted = true;
         ped.respawnTimer = RESPAWN_DELAY + Math.random() * 5;
-        this._splatEntity(px, pz, ped.group, ped.isVeronica ? 'veronica' : undefined);
+        this._splatEntity(px, pz, ped.group, ped.isBoronica ? 'boronica' : undefined);
         continue;
       }
 
