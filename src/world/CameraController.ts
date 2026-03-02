@@ -32,7 +32,7 @@ export class CameraController {
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
     this.cameraAngle += angleDiff * 0.022;
 
-    const behind = 20;
+    const behind = 40;
     const height = 7;
     this.targetPos.set(
       pos.x - Math.sin(this.cameraAngle) * behind,
