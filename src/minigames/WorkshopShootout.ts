@@ -108,6 +108,7 @@ function markSolved(n:string){try{const s=getSolved();s.add(n);localStorage.setI
 export interface ShootoutResult {
   won: boolean;
   colour?: string;
+  totalShots: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -180,6 +181,7 @@ export class WorkshopShootout {
 
   // ── Cooldown
   private shotCooldown = 0;
+  private totalShots   = 0;  // cumulative shots fired this round
 
   // ── In-flight globs
   private globs: Glob[] = [];
@@ -221,6 +223,7 @@ export class WorkshopShootout {
   // ── HTML control refs
   private pigBtnEls: Partial<Record<PKey, HTMLElement>> = {};
   private shotCountEls: Partial<Record<PKey, HTMLElement>> = {};
+  private shotsTotalEl!: HTMLElement;
   private mixBtnEl!: HTMLButtonElement;
   private undoBtnEl!: HTMLButtonElement;
   private timerEl!: HTMLElement;
@@ -314,7 +317,12 @@ export class WorkshopShootout {
     this.timerEl = document.createElement('span');
     this.timerEl.style.cssText = `color:#fff;font-size:15px;font-weight:900;flex-shrink:0;`;
     this.timerEl.textContent = `${GAME_TIME}s`;
+    // Shots counter badge
+    this.shotsTotalEl = document.createElement('span');
+    this.shotsTotalEl.style.cssText = `color:#60ccff;font-size:13px;font-weight:800;flex-shrink:0;`;
+    this.shotsTotalEl.textContent = '🎯 0 shots';
     row1.appendChild(jobLbl);
+    row1.appendChild(this.shotsTotalEl);
     row1.appendChild(this.timerEl);
     hud.appendChild(row1);
 
@@ -736,6 +744,8 @@ export class WorkshopShootout {
     const p = PIGS.find(q => q.key === key)!;
     if (this.shots[key] < p.max) {
       this.shots[key]++;
+      this.totalShots++;
+      if (this.shotsTotalEl) this.shotsTotalEl.textContent = `🎯 ${this.totalShots} shot${this.totalShots !== 1 ? "s" : ""}`;
       this._refreshCounts();
       this.currentMix = computeMix(this.shots);
       this.bkFlashT   = 0.5;
@@ -871,6 +881,7 @@ export class WorkshopShootout {
     const result: ShootoutResult = {
       won,
       colour: won ? this.target.name : undefined,
+      totalShots: this.totalShots,
     };
     try { this._cleanup(); } catch { /* best effort */ }
     try { this.onDoneFn(result); } catch { /* best effort */ }

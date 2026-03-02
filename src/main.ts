@@ -313,6 +313,7 @@ async function main() {
   let _contestedJobTitle   = '';
   let _contestedStartTime  = 0;   // Date.now() when job mini-game starts
   let _jobSpillTotal       = 0;   // cumulative sats lost to spills this job
+  let _shootoutShots       = 0;   // total shots fired in Jose's paint mini-game
   const _namePrompt = new PlayerNamePrompt();
 
   // ── Random break interrupt system ─────────────────────────────────────────────
@@ -690,6 +691,7 @@ async function main() {
               crewIds:    getActiveCrew(),
               playerName: playerChar.name,
             }, (mixResult) => {
+              _shootoutShots = mixResult.totalShots ?? 0;
               const mixMsg = mixResult.won
                 ? `Perfect mix — ${mixResult.colour ?? 'colour matched'}!\nBuckets in the van.`
                 : `Close enough! Buckets in the van.`;
@@ -816,6 +818,7 @@ async function main() {
                     crew_ids:          getActiveCrew(),
                     completion_time_s: Math.round((Date.now() - _contestedStartTime) / 1000),
                     payout:            netPayout,
+                    shots_used:        _shootoutShots,
                   });
                 }
                 const earned = jobManager.completeJob(arrived, finalQuality);

@@ -16,6 +16,7 @@ export interface ScoreEntry {
   crew_ids:           string[];
   completion_time_s:  number;
   payout:             number;
+  shots_used?:        number;
   created_at?:        string;
 }
 
