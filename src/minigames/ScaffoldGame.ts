@@ -4,6 +4,7 @@
  * Jarrad starts at the BOTTOM and climbs 5 scaffold platforms to the TOP.
  * Connie + Phil drop coloured plaster blobs down from the top.
  * Catching blobs on the way up = partial BTC bonus per catch.
+ * AVOID brown goo bombs — getting hit costs sats and triggers a goo splat!
  * Reaching the top (floor 5) = full bonus payout.
  * Partial height = partial payout. 30-second timer.
  */
@@ -39,6 +40,9 @@ const GAME_TIME      = 30;         // seconds
 const CLIMB_DURATION = 0.42;       // seconds per floor transition
 const BLOB_CATCH_R   = 40;         // pixel radius for catch detection
 const PLAYER_SPEED   = 260;        // px/s horizontal on platform
+const BOMB_PENALTY   = 8_000;       // sats lost per bomb hit
+const BOMB_CATCH_R   = 38;          // pixel radius for bomb hit detection
+const GOO_FLASH_DUR  = 0.45;        // seconds of screen flash
 
 // ── Blob object ───────────────────────────────────────────────────────────────
 interface Blob {
@@ -67,6 +71,24 @@ interface BurstRing {
   age: number;
   maxAge: number;
   color: string;
+}
+
+
+// ── Bomb (brown goo) ──────────────────────────────────────────────────────────
+interface Bomb {
+  x: number; y: number;
+  vx: number; vy: number;
+  r: number;
+  spin: number;
+  dead: boolean;
+  hit: boolean;
+}
+
+// ── Goo splat effect ──────────────────────────────────────────────────────────
+interface GooSplat {
+  x: number; y: number;
+  age: number;
+  maxAge: number;
 }
 
 // ── Rounded-rect helper (avoids lib.dom roundRect compat issues) ──────────────
@@ -137,6 +159,12 @@ export class ScaffoldGame {
   private nextDrop = 0;
   private dropSide = 0;
 
+  // Bombs
+  private bombs: Bomb[] = [];
+  private nextBomb = 0;
+  private gooSplats: GooSplat[] = [];
+  private gooFlash = 0;            // countdown timer for screen flash
+
   // VFX
   private floatingTexts: FloatingText[] = [];
   private bursts: BurstRing[] = [];
@@ -159,6 +187,7 @@ export class ScaffoldGame {
     this._computeLayout();
     this._buildButtons();
     this.nextDrop = 0.6 + Math.random() * 0.4;
+    this.nextBomb = 2.5 + Math.random() * 1.5;  // first bomb after ~3-4s
     this.lastTs   = performance.now();
     this.rafId    = requestAnimationFrame(ts => this._loop(ts));
   }
@@ -400,6 +429,47 @@ export class ScaffoldGame {
     }
     this.blobs = this.blobs.filter(b => !b.dead);
 
+
+    // ── Bomb spawning ──────────────────────────────────────────────────────────
+    this.nextBomb -= dt;
+    if (this.nextBomb <= 0 && this.bombs.length < 4) {
+      this._spawnBomb();
+      this.nextBomb = 2.0 + Math.random() * 1.8;
+    }
+
+    // ── Bomb physics + hit detection ───────────────────────────────────────────
+    for (const bm of this.bombs) {
+      if (bm.dead) continue;
+      bm.vy  += blobGravity * dt;
+      bm.x   += bm.vx * dt;
+      bm.y   += bm.vy * dt;
+      bm.spin += 1.4 * dt;
+      if (bm.y > this.scaffoldBottom + 60) { bm.dead = true; continue; }
+
+      const playerCY = this.playerY - this.hh * 0.032;
+      const dx = bm.x - this.playerX;
+      const dy = bm.y - playerCY;
+      if (Math.sqrt(dx * dx + dy * dy) < BOMB_CATCH_R + bm.r) {
+        bm.dead   = true;
+        bm.hit    = true;
+        this.catchSats = Math.max(0, this.catchSats - BOMB_PENALTY);
+        this.gooFlash  = GOO_FLASH_DUR;
+        this.gooSplats.push({ x: this.playerX, y: this.playerY - this.hh * 0.05, age: 0, maxAge: 1.8 });
+        this.floatingTexts.push({
+          x: bm.x, y: bm.y - 20,
+          text: `-${BOMB_PENALTY / 1000}K sats 💩`,
+          age: 0, maxAge: 1.3,
+          color: '#8B4513',
+        });
+      }
+    }
+    this.bombs = this.bombs.filter(bm => !bm.dead);
+
+    // ── Goo splat aging ────────────────────────────────────────────────────────
+    for (const gs of this.gooSplats) gs.age += dt;
+    this.gooSplats = this.gooSplats.filter(gs => gs.age < gs.maxAge);
+    if (this.gooFlash > 0) this.gooFlash = Math.max(0, this.gooFlash - dt);
+
     // ── VFX aging ─────────────────────────────────────────────────────────────
     for (const ft of this.floatingTexts) ft.age += dt;
     this.floatingTexts = this.floatingTexts.filter(ft => ft.age < ft.maxAge);
@@ -431,7 +501,22 @@ export class ScaffoldGame {
     });
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────────
+
+  // ── Spawn bomb ────────────────────────────────────────────────────────────────
+  private _spawnBomb(): void {
+    const x = this.scaffoldLeft + Math.random() * (this.scaffoldRight - this.scaffoldLeft);
+    const y = this.scaffoldTop + 18;
+    const initVY = this.hh * (0.06 + Math.random() * 0.03);
+    const driftX = (Math.random() - 0.5) * 80;
+    this.bombs.push({
+      x, y, vx: driftX, vy: initVY,
+      r: 13 + Math.random() * 5,
+      spin: Math.random() * Math.PI * 2,
+      dead: false, hit: false,
+    });
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
   private _render(): void {
     const { ctx, ww, hh } = this;
     ctx.clearRect(0, 0, ww, hh);
@@ -439,6 +524,8 @@ export class ScaffoldGame {
     this._drawScaffold();
     this._drawCharacters();
     this._drawBlobs();
+    this._drawBombs();
+    this._drawGooSplats();
     this._drawBursts();
     this._drawPlayer();
     this._drawFloatingTexts();
@@ -707,6 +794,94 @@ export class ScaffoldGame {
         ctx.stroke();
       }
       ctx.restore();
+    }
+  }
+
+
+  // ── Bombs ─────────────────────────────────────────────────────────────────────
+  private _drawBombs(): void {
+    const { ctx } = this;
+    for (const bm of this.bombs) {
+      if (bm.dead) continue;
+      ctx.save();
+      ctx.translate(bm.x, bm.y);
+      ctx.rotate(bm.spin);
+
+      const r = bm.r;
+
+      // Shadow
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#000';
+      ctx.beginPath();
+      ctx.ellipse(0, r * 0.6, r * 0.9, r * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+
+      // Main bomb body — dark brown goo blob
+      ctx.fillStyle = '#5a2d0c';
+      ctx.beginPath();
+      ctx.moveTo(r * 1.2, 0);
+      ctx.bezierCurveTo(r * 1.2, r * 0.7,  r * 0.7,  r * 1.2,  0, r * 1.2);
+      ctx.bezierCurveTo(-r * 0.7, r * 1.2, -r * 1.2, r * 0.7, -r * 1.2, 0);
+      ctx.bezierCurveTo(-r * 1.2, -r * 0.7, -r * 0.7, -r * 1.2, 0, -r * 1.2);
+      ctx.bezierCurveTo(r * 0.7, -r * 1.2, r * 1.2, -r * 0.7, r * 1.2, 0);
+      ctx.fill();
+
+      // Drip blobs
+      ctx.fillStyle = '#7a3d14';
+      ctx.beginPath(); ctx.ellipse(-r*0.4, r*1.1, r*0.22, r*0.35, 0.2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse( r*0.5, r*1.0, r*0.18, r*0.28, -0.2, 0, Math.PI*2); ctx.fill();
+
+      // Warning skull 💀
+      ctx.font      = `bold ${Math.round(r * 1.1)}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('💀', 0, 0);
+      ctx.textBaseline = 'alphabetic';
+
+      // Danger ring
+      ctx.strokeStyle = '#FF4400';
+      ctx.lineWidth   = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 1.55, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.restore();
+    }
+  }
+
+  // ── Goo splats ────────────────────────────────────────────────────────────────
+  private _drawGooSplats(): void {
+    const { ctx } = this;
+
+    // Screen flash
+    if (this.gooFlash > 0) {
+      const alpha = (this.gooFlash / GOO_FLASH_DUR) * 0.35;
+      ctx.fillStyle = `rgba(90,45,12,${alpha})`;
+      ctx.fillRect(0, 0, this.ww, this.hh);
+    }
+
+    // Splat marks on player
+    for (const gs of this.gooSplats) {
+      const t     = gs.age / gs.maxAge;
+      const alpha = Math.max(0, 1 - t * 0.7);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = '#7a3d14';
+      const r = this.hh * 0.035;
+      // Irregular splat
+      ctx.save();
+      ctx.translate(gs.x, gs.y);
+      for (let i = 0; i < 6; i++) {
+        const a  = (i / 6) * Math.PI * 2;
+        const lr = r * (0.5 + Math.random() * 0.6);
+        ctx.beginPath();
+        ctx.ellipse(Math.cos(a) * lr * 0.7, Math.sin(a) * lr * 0.7, lr * 0.35, lr * 0.22, a, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
     }
   }
 
