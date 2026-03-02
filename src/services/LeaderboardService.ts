@@ -17,6 +17,7 @@ export interface ScoreEntry {
   completion_time_s:  number;
   payout:             number;
   shots_used?:        number;
+  connie_hits?:       number;
   created_at?:        string;
 }
 

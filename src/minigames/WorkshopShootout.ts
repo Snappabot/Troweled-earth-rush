@@ -109,6 +109,7 @@ export interface ShootoutResult {
   won: boolean;
   colour?: string;
   totalShots: number;
+  connieHits: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -182,6 +183,7 @@ export class WorkshopShootout {
   // ── Cooldown
   private shotCooldown = 0;
   private totalShots   = 0;  // cumulative shots fired this round
+  private connieHits   = 0;  // times Connie was hit (penalty)
 
   // ── In-flight globs
   private globs: Glob[] = [];
@@ -721,8 +723,9 @@ export class WorkshopShootout {
           if (dConn < 30 * bkScale) {
             g.miss = true;
             this.connHitT = 1.5;
+            this.connieHits++;
             this._addSplats(g.tx, g.ty, PIGS.find(p=>p.key===g.pigKey)!.dot, 14);
-            this._setHint("JOSE!! WATCH IT!! 😤", '#FF6644', 2000);
+            this._setHint(`JOSE!! WATCH IT!! 😤  (Connie hit ${this.connieHits}× — score penalty!)`, '#FF4422', 2500);
           } else {
             g.miss = true;
             // Floor splat
@@ -882,6 +885,7 @@ export class WorkshopShootout {
       won,
       colour: won ? this.target.name : undefined,
       totalShots: this.totalShots,
+      connieHits: this.connieHits,
     };
     try { this._cleanup(); } catch { /* best effort */ }
     try { this.onDoneFn(result); } catch { /* best effort */ }

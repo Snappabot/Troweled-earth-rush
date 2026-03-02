@@ -314,6 +314,7 @@ async function main() {
   let _contestedStartTime  = 0;   // Date.now() when job mini-game starts
   let _jobSpillTotal       = 0;   // cumulative sats lost to spills this job
   let _shootoutShots       = 0;   // total shots fired in Jose's paint mini-game
+  let _connieHits          = 0;   // times Connie was hit (score penalty)
   const _namePrompt = new PlayerNamePrompt();
 
   // ── Random break interrupt system ─────────────────────────────────────────────
@@ -692,6 +693,7 @@ async function main() {
               playerName: playerChar.name,
             }, (mixResult) => {
               _shootoutShots = mixResult.totalShots ?? 0;
+              _connieHits    = (mixResult as any).connieHits ?? 0;
               const mixMsg = mixResult.won
                 ? `Perfect mix — ${mixResult.colour ?? 'colour matched'}!\nBuckets in the van.`
                 : `Close enough! Buckets in the van.`;
@@ -812,12 +814,17 @@ async function main() {
                 radio.setVisible(true);
                 if (isContestWin) {
                   const netPayout = Math.max(0, arrived.pay - _jobSpillTotal);
+                  // Score modifier: fewer shots = better. Each shot over 5 = -1%, Connie hit = -5% each
+                  const _shotPenaltyPct  = Math.max(0, (_shootoutShots - 5)) * 0.01;
+                  const _conniePenaltyPct = _connieHits * 0.05;
+                  const _scoreMultiplier  = Math.max(0.5, 1 - _shotPenaltyPct - _conniePenaltyPct);
+                  const _adjustedPayout   = Math.round(netPayout * _scoreMultiplier);
                   submitScore({
                     player_name:       playerChar.name || getPlayerName() || 'TEM Crew',
                     job_title:         _contestedJobTitle.replace(/^⚔️\s*/, '').trim(),
                     crew_ids:          getActiveCrew(),
                     completion_time_s: Math.round((Date.now() - _contestedStartTime) / 1000),
-                    payout:            netPayout,
+                    payout:            _adjustedPayout,
                     shots_used:        _shootoutShots,
                   });
                 }
