@@ -2,6 +2,7 @@ import bpy
 import threading
 import json
 import queue
+import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 SECRET = "temrush2026"
@@ -16,7 +17,11 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(403)
             self.end_headers()
             return
-        task_queue.put(data.get('code', ''))
+        code = data.get('code', '')
+        url = data.get('url', '')
+        if url:
+            code = urllib.request.urlopen(url).read().decode()
+        task_queue.put(code)
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
@@ -39,4 +44,4 @@ def start():
 
 threading.Thread(target=start, daemon=True).start()
 bpy.app.timers.register(process_queue, persistent=True)
-print("Blender server v3 running on port 5000")
+print("Blender server v4 running on port 5000")
