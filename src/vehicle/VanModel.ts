@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { makeTEMRoofTexture } from '../utils/LogoLoader';
+import { TextureLoader } from 'three';
 
 export class VanModel {
   mesh: THREE.Group;
@@ -54,18 +55,31 @@ export class VanModel {
 
     // ── Side details ─────────────────────────────────────────────────────────
 
-    // TEM orange/terracotta stripe — both sides
-    const stripeMat = new THREE.MeshLambertMaterial({ color: 0xC1666B });
-    const stripeL = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.35, 3.0), stripeMat);
-    stripeL.position.set(-1.23, 0.85, 0.5);
-    stripeL.castShadow = true;
-    stripeL.receiveShadow = true;
+    // TEM earthy wrap — both sides, loaded from texture
+    const wrapTex = new TextureLoader().load('/assets/tem_wrap.png');
+    wrapTex.flipY = false;
+    const wrapMat = new THREE.MeshLambertMaterial({
+      map: wrapTex,
+      transparent: false,
+    });
+    // Left side wrap panel
+    const stripeL = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.82), wrapMat);
+    stripeL.rotation.y = -Math.PI / 2;
+    stripeL.position.set(-1.23, 1.0, 0.5);
     this.bodyGroup.add(stripeL);
 
-    const stripeR = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.35, 3.0), stripeMat);
-    stripeR.position.set(1.23, 0.85, 0.5);
-    stripeR.castShadow = true;
-    stripeR.receiveShadow = true;
+    // Right side wrap panel (mirror texture horizontally)
+    const wrapTexR = new TextureLoader().load('/assets/tem_wrap.png');
+    wrapTexR.flipY = false;
+    wrapTexR.repeat.x = -1;
+    wrapTexR.offset.x = 1;
+    const wrapMatR = new THREE.MeshLambertMaterial({
+      map: wrapTexR,
+      transparent: false,
+    });
+    const stripeR = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.82), wrapMatR);
+    stripeR.rotation.y = Math.PI / 2;
+    stripeR.position.set(1.23, 1.0, 0.5);
     this.bodyGroup.add(stripeR);
 
     // Side windows on cab — both sides
