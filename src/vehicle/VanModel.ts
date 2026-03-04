@@ -91,9 +91,10 @@ export class VanModel {
     // ── TEM roof logo ─────────────────────────────────────────────────────────
     const treeTex = makeTEMRoofTexture(512);
     const treeMat = new THREE.MeshLambertMaterial({ map: treeTex, transparent: true, depthWrite: false });
-    const treePlane = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 3.8), treeMat);
+    const treePlane = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 4.2), treeMat);
     treePlane.rotation.x = -Math.PI / 2;
-    treePlane.position.set(0, 1.80, 0.9);
+    treePlane.position.set(0, 1.83, 0.5);
+    treePlane.renderOrder = 1;
     this.bodyGroup.add(treePlane);
 
     // ── Roof rack ─────────────────────────────────────────────────────────────
