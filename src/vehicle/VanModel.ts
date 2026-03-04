@@ -18,8 +18,9 @@ export class VanModel {
     this.mesh.add(this.bodyGroup);
 
     // ── Load GLB ─────────────────────────────────────────────────────────────
+    const base = import.meta.env.BASE_URL as string;
     const loader = new GLTFLoader();
-    loader.load('/assets/tem_van.glb', (gltf) => {
+    loader.load(`${base}assets/tem_van.glb`, (gltf) => {
       const model = gltf.scene;
 
       // Measure bounding box to auto-scale to game proportions
@@ -27,23 +28,24 @@ export class VanModel {
       const size = new THREE.Vector3();
       box.getSize(size);
 
-      // Target dimensions matching physics hitbox: ~2.4 wide, ~4.8 long, ~1.6 tall
+      // Target width ~2.4 to match physics hitbox
       const targetWidth = 2.4;
-      const scaleFactor = targetWidth / size.x;
+      const scaleFactor = targetWidth / Math.max(size.x, 0.01);
       model.scale.setScalar(scaleFactor);
 
-      // Re-measure after scale to centre correctly
+      // Re-measure after scale, then centre and ground the model
       box.setFromObject(model);
       const centre = new THREE.Vector3();
       box.getCenter(centre);
+      const scaledSize = new THREE.Vector3();
+      box.getSize(scaledSize);
 
-      // Offset so van sits on ground (y=0) and is centred on X/Z
-      model.position.sub(centre);
-      box.getSize(size);
-      model.position.y += size.y * scaleFactor * 0.5; // lift to ground level
+      // Centre on X/Z, sit bottom on Y=0
+      model.position.x -= centre.x;
+      model.position.z -= centre.z;
+      model.position.y -= (centre.y - scaledSize.y * 0.5);
 
-      // Rotate to face +Z (game forward) — GLB Y-up, van faces along Blender Y
-      // which becomes Three.js -Z after export; rotate 180° to face +Z
+      // Rotate to face +Z (game forward)
       model.rotation.y = Math.PI;
 
       // Apply materials
