@@ -23,57 +23,24 @@ export class VanModel {
       (gltf) => {
         const model = gltf.scene;
 
-        // GLB v2 known dims (centred + grounded):
-        //   local X ±2.948 = van length (5.896)
-        //   local Z ±1.119 = van width  (2.238)
-        //   local Y 0..2.507 = height (grounded)
-        //
-        // rotation.y = PI/2:  +X→+Z(fwd), +Z→-X(left), -Z→+X(right)
-        const SCALE = 0.65;
-        model.scale.setScalar(SCALE);
+        // Van is centred + grounded in the GLB.
+        // Long axis = Blender X → Three.js X → rotate PI/2 to face +Z (game fwd)
+        model.scale.setScalar(0.65);
         model.rotation.y = Math.PI / 2;
-        // already centred + grounded, no position offset needed
-
-        // Glossy black body material
-        const bodyMat = new THREE.MeshPhongMaterial({
-          color: 0x0d0d0d,
-          specular: 0x222222,
-          shininess: 60,
-        });
 
         model.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return;
           child.castShadow = true;
           child.receiveShadow = true;
-          child.material = bodyMat;
+          // Baked texture is already in the GLB material — keep it
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(m => { m.needsUpdate = true; });
+            } else {
+              (child.material as THREE.Material).needsUpdate = true;
+            }
+          }
         });
-
-        // TEM earthy wrap — left side of van
-        // Left side = model local +Z face (outer at Z=+1.119)
-        // PlaneGeometry dimensions are in model-local units (before parent scale)
-        const wrapTex = new THREE.TextureLoader().load(`${base}assets/tem_wrap.png`);
-        const wrapMat = new THREE.MeshLambertMaterial({ map: wrapTex, side: THREE.FrontSide });
-
-        // Left side wrap (faces world -X via parent rot.y=PI/2)
-        const wrapL = new THREE.Mesh(
-          new THREE.PlaneGeometry(3.5, 1.1),  // model-local units
-          wrapMat
-        );
-        wrapL.rotation.y = 0;  // default +Z normal → world left side after parent rot
-        wrapL.position.set(-0.4, 0.75, 1.13);  // on left outer face, rear section
-        model.add(wrapL);
-
-        // Right side wrap (mirrored)
-        const wrapTexR = new THREE.TextureLoader().load(`${base}assets/tem_wrap.png`);
-        wrapTexR.repeat.x = -1; wrapTexR.offset.x = 1;
-        const wrapMatR = new THREE.MeshLambertMaterial({ map: wrapTexR, side: THREE.FrontSide });
-        const wrapR = new THREE.Mesh(
-          new THREE.PlaneGeometry(3.5, 1.1),
-          wrapMatR
-        );
-        wrapR.rotation.y = Math.PI;  // face -Z in model → world right side
-        wrapR.position.set(-0.4, 0.75, -1.13);
-        model.add(wrapR);
 
         this.bodyGroup.add(model);
       },
@@ -81,7 +48,7 @@ export class VanModel {
       (err) => console.error('[VanModel] GLB load error:', err)
     );
 
-    // Emissive lights — always visible regardless of GLB state
+    // Emissive lights (always present)
     const headMat = new THREE.MeshLambertMaterial({
       color: 0xffffcc, emissive: 0xffffcc, emissiveIntensity: 1.0,
     });
