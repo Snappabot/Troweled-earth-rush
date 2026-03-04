@@ -44,7 +44,6 @@ export class VanModel {
 
     // ── TEM earthy wrap — both sides ─────────────────────────────────────────
     const wrapTex = new THREE.TextureLoader().load(`${base}assets/tem_wrap.png`);
-    wrapTex.flipY = false;
     const wrapMat = new THREE.MeshLambertMaterial({ map: wrapTex });
     const wrapL = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.82), wrapMat);
     wrapL.rotation.y = -Math.PI / 2;
@@ -52,7 +51,7 @@ export class VanModel {
     this.bodyGroup.add(wrapL);
 
     const wrapTexR = new THREE.TextureLoader().load(`${base}assets/tem_wrap.png`);
-    wrapTexR.flipY = false; wrapTexR.repeat.x = -1; wrapTexR.offset.x = 1;
+    wrapTexR.repeat.x = -1; wrapTexR.offset.x = 1;
     const wrapMatR = new THREE.MeshLambertMaterial({ map: wrapTexR });
     const wrapR = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.82), wrapMatR);
     wrapR.rotation.y = Math.PI / 2;
