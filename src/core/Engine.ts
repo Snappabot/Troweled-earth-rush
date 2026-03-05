@@ -255,8 +255,10 @@ export class Engine {
         if (cr > 0.45) {
           const side = cr > 0.72 ? 1 : -1;
           const px = x + (this.seed(x, z, 61) - 0.5) * 4;
-          const pz = z + side * (ROAD_W / 2 + 2.0); // 6.0 from road centre — clear of road edge (4.0)
-          this.addParkedCar(px, pz, x + side * 3, z + 7, Math.PI / 2);
+          const pz = z + side * (ROAD_W / 2 + 2.0);
+          // Skip if px lands inside a vertical road (intersection zone)
+          const nearVertRoad = (Math.abs(px % GRID) < ROAD_W / 2 + 2) || (Math.abs((px % GRID) - GRID) < ROAD_W / 2 + 2);
+          if (!nearVertRoad) this.addParkedCar(px, pz, x + side * 3, z + 7, Math.PI / 2);
         }
       }
     }
@@ -316,9 +318,11 @@ export class Engine {
         const cr = this.seed(x, z, 62);
         if (cr > 0.45) {
           const side = cr > 0.72 ? 1 : -1;
-          const px = x + side * (ROAD_W / 2 + 2.0); // 6.0 from road centre — clear of road edge (4.0)
+          const px = x + side * (ROAD_W / 2 + 2.0);
           const pz = z + (this.seed(x, z, 63) - 0.5) * 4;
-          this.addParkedCar(px, pz, x + 9, z + side * 3, 0);
+          // Skip if pz lands inside a horizontal road (intersection zone)
+          const nearHorizRoad = (Math.abs(pz % GRID) < ROAD_W / 2 + 2) || (Math.abs((pz % GRID) - GRID) < ROAD_W / 2 + 2);
+          if (!nearHorizRoad) this.addParkedCar(px, pz, x + 9, z + side * 3, 0);
         }
       }
     }
