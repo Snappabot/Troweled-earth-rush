@@ -158,7 +158,12 @@ export class TrafficSystem {
       let pos = -200 + Math.random() * 400;
       if (Math.abs(pos) < 50) pos = pos < 0 ? -65 : 65;
 
-      group.rotation.y = axis === 'x' ? (dir === 1 ? -Math.PI / 2 : Math.PI / 2) : (dir === 1 ? Math.PI : 0);
+      // car front = -Z in object space
+      // z-axis: dir=1 → moving +Z → face +Z → rotate PI
+      // x-axis: dir=1 → moving +X → face +X → rotate -PI/2
+      group.rotation.y = axis === 'x'
+        ? (dir === 1 ? Math.PI / 2 : -Math.PI / 2)
+        : (dir === 1 ? 0 : Math.PI);
 
       const car: TrafficCar = { group, axis, roadPos, laneOffset, baseSpeed, currentSpeed: baseSpeed, dir, pos, nudgeVel: 0, hw: col.hw, hd: col.hd };
       this.cars.push(car);
