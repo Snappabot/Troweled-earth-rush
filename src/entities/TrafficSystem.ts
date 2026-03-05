@@ -1,15 +1,33 @@
 import * as THREE from 'three';
-
-const CAR_COLORS = [0xE63946, 0x2196F3, 0xFFB300, 0x4CAF50, 0x9C27B0, 0xFF6B35];
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /** Lookahead distance (units) at which a car starts braking for the van */
 const BRAKE_DISTANCE = 14;
 /** Distance at which car fully stops */
 const STOP_DISTANCE = 8;
 /** How quickly cars resume after van clears the path */
-const RESUME_RATE = 6; // speed units per second
+const RESUME_RATE = 6;
 /** How far cars get nudged when physically hit by the van */
 const NUDGE_FORCE = 0.6;
+
+// Vehicle type definitions — slug, collision half-dims, scale
+const VEHICLE_TYPES = [
+  { slug: 'sedan',        hw: 1.35, hd: 2.55, scale: 0.82 },
+  { slug: 'hatchback',    hw: 1.35, hd: 2.50, scale: 0.82 },
+  { slug: 'suv',          hw: 1.40, hd: 2.55, scale: 0.80 },
+  { slug: 'pickup',       hw: 1.40, hd: 2.55, scale: 0.80 },
+  { slug: 'muscle',       hw: 1.35, hd: 2.90, scale: 0.78 },
+  { slug: 'sports',       hw: 1.28, hd: 2.70, scale: 0.80 },
+  { slug: 'taxi',         hw: 1.35, hd: 2.55, scale: 0.82 },
+  { slug: 'police_sedan', hw: 1.35, hd: 2.55, scale: 0.82 },
+  { slug: 'police_suv',   hw: 1.40, hd: 2.55, scale: 0.80 },
+  { slug: 'ambulance',    hw: 1.40, hd: 2.80, scale: 0.78 },
+] as const;
+
+// Body colour palette for generic cars (not police/taxi/ambulance)
+const BODY_COLORS = [0xE63946, 0x2196F3, 0xFFB300, 0x4CAF50, 0x9C27B0, 0xFF6B35, 0x00BCD4, 0xF5F5F5];
+
+type VehicleType = typeof VEHICLE_TYPES[number];
 
 interface TrafficCar {
   group: THREE.Group;
@@ -20,93 +38,110 @@ interface TrafficCar {
   currentSpeed: number;
   dir: 1 | -1;
   pos: number;
-  /** Brief "knocked" momentum after being hit */
   nudgeVel: number;
-}
-
-function createTrafficCar(color: number): THREE.Group {
-  const group = new THREE.Group();
-
-  // Body
-  const bodyMat = new THREE.MeshLambertMaterial({ color });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(3.5, 1.2, 6.5), bodyMat);
-  body.position.set(0, 0.6, 0);
-  body.castShadow = true;
-  group.add(body);
-
-  // Roof / cabin
-  const roofMat = new THREE.MeshLambertMaterial({ color });
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.9, 3.5), roofMat);
-  roof.position.set(0, 1.65, 0);
-  roof.castShadow = true;
-  group.add(roof);
-
-  // Wheels
-  const wheelMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
-  const wheelPositions: [number, number, number][] = [
-    [-1.8, 0.4,  2.2],
-    [ 1.8, 0.4,  2.2],
-    [-1.8, 0.4, -2.2],
-    [ 1.8, 0.4, -2.2],
-  ];
-  for (const [wx, wy, wz] of wheelPositions) {
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.4, 8), wheelMat);
-    wheel.rotation.z = Math.PI / 2;
-    wheel.position.set(wx, wy, wz);
-    wheel.castShadow = true;
-    group.add(wheel);
-  }
-
-  // Front windscreen
-  const wsMat = new THREE.MeshLambertMaterial({ color: 0x334455 });
-  const frontWS = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.7, 0.1), wsMat);
-  frontWS.position.set(0, 1.4, -3.3);
-  group.add(frontWS);
-
-  // Rear window
-  const rearWS = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.7, 0.1), wsMat);
-  rearWS.position.set(0, 1.4, 3.3);
-  group.add(rearWS);
-
-  return group;
-}
-
-function rotationForCar(axis: 'x' | 'z', dir: 1 | -1): number {
-  if (axis === 'x') {
-    return dir === 1 ? -Math.PI / 2 : Math.PI / 2;
-  } else {
-    return dir === 1 ? Math.PI : 0;
-  }
+  hw: number; // half-width of bounding box (along perpendicular axis)
+  hd: number; // half-depth of bounding box (along travel axis)
 }
 
 export class TrafficSystem {
   private cars: TrafficCar[] = [];
   private scene: THREE.Scene;
+  private templates: Map<string, THREE.Group> = new Map();
+  private loaded = false;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
-    this._spawn();
+    this._loadAndSpawn();
+  }
+
+  private _loadAndSpawn(): void {
+    const base = (import.meta as any).env.BASE_URL as string;
+    const loader = new GLTFLoader();
+    let remaining = VEHICLE_TYPES.length;
+
+    for (const vtype of VEHICLE_TYPES) {
+      loader.load(`${base}assets/traffic/${vtype.slug}.glb`, (gltf) => {
+        const tmpl = gltf.scene;
+        tmpl.scale.setScalar(vtype.scale);
+        tmpl.rotation.y = 0; // will be set per-car
+        // Apply proper materials
+        tmpl.traverse((child) => {
+          if (!(child instanceof THREE.Mesh)) return;
+          child.castShadow = true;
+          child.receiveShadow = true;
+        });
+        this.templates.set(vtype.slug, tmpl);
+        remaining--;
+        if (remaining === 0) {
+          this.loaded = true;
+          this._spawn();
+        }
+      }, undefined, (err) => {
+        console.warn(`Traffic GLB failed: ${vtype.slug}`, err);
+        remaining--;
+        if (remaining === 0) { this.loaded = true; this._spawn(); }
+      });
+    }
+  }
+
+  private _cloneVehicle(vtype: VehicleType, color?: number): THREE.Group {
+    const tmpl = this.templates.get(vtype.slug);
+    if (!tmpl) {
+      // Fallback: plain box
+      const g = new THREE.Group();
+      const m = new THREE.MeshLambertMaterial({ color: color ?? 0x888888 });
+      const b = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.4, 5.0), m);
+      b.position.y = 0.7; b.castShadow = true;
+      g.add(b);
+      return g;
+    }
+
+    const group = tmpl.clone(true);
+    group.scale.setScalar(vtype.scale);
+
+    // Tint body meshes for non-special vehicles
+    if (color !== undefined) {
+      group.traverse((child) => {
+        if (!(child instanceof THREE.Mesh)) return;
+        const mat = child.material as THREE.Material;
+        const name = mat?.name ?? '';
+        // Only recolour body parts (not glass/lights/wheels)
+        if (!name.includes('glass') && !name.includes('window') &&
+            !name.includes('light') && !name.includes('tire') &&
+            !name.includes('rim') && !name.includes('interior')) {
+          (child.material as THREE.MeshStandardMaterial).color?.setHex(color);
+        }
+      });
+    }
+    return group;
   }
 
   private _spawn(): void {
-    // Road lines (skip ±240 edges)
     const roadLines = [-200, -160, -120, -80, -40, 0, 40, 80, 120, 160, 200];
+    const genericTypes = VEHICLE_TYPES.filter(v => !v.slug.startsWith('police') && v.slug !== 'ambulance');
+    const specialTypes  = VEHICLE_TYPES.filter(v => v.slug.startsWith('police') || v.slug === 'ambulance');
 
-    const spawnCar = (axis: 'x' | 'z') => {
-      const color = CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)];
-      const group = createTrafficCar(color);
-      const roadPos = roadLines[Math.floor(Math.random() * roadLines.length)];
+    const spawnCar = (axis: 'x' | 'z', forceType?: VehicleType) => {
+      // Pick vehicle type: ~15% chance special, rest generic
+      const isSpecial = !forceType && Math.random() < 0.15;
+      const typePool  = forceType ? [forceType] : (isSpecial ? specialTypes : genericTypes);
+      const vtype     = typePool[Math.floor(Math.random() * typePool.length)];
+      const color     = (!isSpecial && !forceType) ? BODY_COLORS[Math.floor(Math.random() * BODY_COLORS.length)] : undefined;
+
+      const group = this._cloneVehicle(vtype, color);
+      const roadPos    = roadLines[Math.floor(Math.random() * roadLines.length)];
       const laneOffset = Math.random() > 0.5 ? 2 : -2;
-      const baseSpeed = 10 + Math.random() * 10;
+      const baseSpeed  = 10 + Math.random() * 10;
       const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
       const pos = -200 + Math.random() * 400;
 
-      group.rotation.y = rotationForCar(axis, dir);
+      group.rotation.y = this._rotationFor(axis, dir);
 
       const car: TrafficCar = {
         group, axis, roadPos, laneOffset,
         baseSpeed, currentSpeed: baseSpeed,
-        dir, pos, nudgeVel: 0
+        dir, pos, nudgeVel: 0,
+        hw: vtype.hw, hd: vtype.hd,
       };
       this.cars.push(car);
       this.scene.add(group);
@@ -115,6 +150,11 @@ export class TrafficSystem {
 
     for (let i = 0; i < 14; i++) spawnCar('z');
     for (let i = 0; i < 14; i++) spawnCar('x');
+  }
+
+  private _rotationFor(axis: 'x' | 'z', dir: 1 | -1): number {
+    if (axis === 'x') return dir === 1 ? -Math.PI / 2 : Math.PI / 2;
+    return dir === 1 ? Math.PI : 0;
   }
 
   private _applyPosition(car: TrafficCar): void {
@@ -127,29 +167,20 @@ export class TrafficSystem {
 
   update(dt: number, vanX: number, vanZ: number): void {
     for (const car of this.cars) {
-      // ── Braking logic ──────────────────────────────────────────────────────
-      // Check if the van is ahead of this car along its travel axis
       const carX = car.group.position.x;
       const carZ = car.group.position.z;
-
-      let aheadDist = Infinity;
-      let lateralDist = Infinity;
+      let aheadDist = Infinity, lateralDist = Infinity;
 
       if (car.axis === 'x') {
-        // car travels along X; "ahead" = in direction of dir along X
-        const rawDist = (vanX - carX) * car.dir;
+        aheadDist   = (vanX - carX) * car.dir;
         lateralDist = Math.abs(vanZ - carZ);
-        aheadDist = rawDist;
       } else {
-        // car travels along Z
-        const rawDist = (vanZ - carZ) * car.dir;
+        aheadDist   = (vanZ - carZ) * car.dir;
         lateralDist = Math.abs(vanX - carX);
-        aheadDist = rawDist;
       }
 
-      // Lane-based braking — yield only when van is directly ahead in lane
       const vanInLane = lateralDist < 5;
-      const vanAhead = aheadDist > 0 && aheadDist < BRAKE_DISTANCE;
+      const vanAhead  = aheadDist > 0 && aheadDist < BRAKE_DISTANCE;
 
       if (vanInLane && vanAhead) {
         const t = Math.max(0, (aheadDist - STOP_DISTANCE) / (BRAKE_DISTANCE - STOP_DISTANCE));
@@ -158,86 +189,61 @@ export class TrafficSystem {
         car.currentSpeed = Math.min(car.baseSpeed, car.currentSpeed + RESUME_RATE * dt);
       }
 
-      // ── Nudge decay ────────────────────────────────────────────────────────
       if (Math.abs(car.nudgeVel) > 0.05) {
         car.pos += car.nudgeVel * dt;
-        car.nudgeVel *= Math.max(0, 1 - 6 * dt); // friction
+        car.nudgeVel *= Math.max(0, 1 - 6 * dt);
       } else {
         car.nudgeVel = 0;
       }
 
-      // ── Move ───────────────────────────────────────────────────────────────
       car.pos += car.dir * car.currentSpeed * dt;
-
-      // Wrap
       if (car.pos > 235) car.pos = -235;
       if (car.pos < -235) car.pos = 235;
-
       this._applyPosition(car);
     }
   }
 
-  /**
-   * Resolve van position against all traffic cars using AABB Minkowski sum.
-   * Also nudges the car away when hit — cars aren't immovable tanks.
-   */
   resolveVan(vanX: number, vanZ: number, vanRadius = 1.8): { x: number; z: number; hit: boolean } {
     let rx = vanX, rz = vanZ;
     let hit = false;
 
-    // 3 passes: multi-iteration resolves sandwiching between two cars
     for (let pass = 0; pass < 3; pass++) {
-    for (const car of this.cars) {
-      const cx = car.group.position.x;
-      const cz = car.group.position.z;
+      for (const car of this.cars) {
+        const cx = car.group.position.x;
+        const cz = car.group.position.z;
 
-      // axis='x': length (6.5) runs along X → hw=3.25, hd=1.75
-      // axis='z': length (6.5) runs along Z → hw=1.75, hd=3.25
-      const hw = (car.axis === 'x' ? 3.25 : 1.75) + vanRadius;
-      const hd = (car.axis === 'x' ? 1.75 : 3.25) + vanRadius;
+        // hw/hd stored per-vehicle; axis determines which is along travel
+        const hw = (car.axis === 'x' ? car.hd : car.hw) + vanRadius;
+        const hd = (car.axis === 'x' ? car.hw : car.hd) + vanRadius;
 
-      const dx = rx - cx;
-      const dz = rz - cz;
-
-      if (Math.abs(dx) < hw && Math.abs(dz) < hd) {
-        const overlapX = hw - Math.abs(dx);
-        const overlapZ = hd - Math.abs(dz);
-        const ESCAPE = 6; // extra clearance units pushed on the car
-
-        if (overlapX < overlapZ) {
-          const pushSign = dx < 0 ? -1 : 1;
-          rx += pushSign * overlapX; // push van out
-          // Teleport car away along ITS axis so it clears the van immediately
-          if (car.axis === 'x') {
-            car.pos -= pushSign * (overlapX + ESCAPE);
+        const dx = rx - cx, dz = rz - cz;
+        if (Math.abs(dx) < hw && Math.abs(dz) < hd) {
+          const overlapX = hw - Math.abs(dx);
+          const overlapZ = hd - Math.abs(dz);
+          const ESCAPE = 6;
+          if (overlapX < overlapZ) {
+            const ps = dx < 0 ? -1 : 1;
+            rx += ps * overlapX;
+            if (car.axis === 'x') car.pos -= ps * (overlapX + ESCAPE);
+            else car.pos += car.dir * (overlapZ + ESCAPE);
           } else {
-            // Z-axis car blocking X — bounce it forward along Z (its travel dir)
-            car.pos += car.dir * (overlapZ + ESCAPE);
+            const ps = dz < 0 ? -1 : 1;
+            rz += ps * overlapZ;
+            if (car.axis === 'z') car.pos -= ps * (overlapZ + ESCAPE);
+            else car.pos += car.dir * (overlapX + ESCAPE);
           }
-        } else {
-          const pushSign = dz < 0 ? -1 : 1;
-          rz += pushSign * overlapZ; // push van out
-          if (car.axis === 'z') {
-            car.pos -= pushSign * (overlapZ + ESCAPE);
-          } else {
-            car.pos += car.dir * (overlapX + ESCAPE);
-          }
+          car.currentSpeed = car.baseSpeed;
+          car.nudgeVel = 0;
+          hit = true;
         }
-
-        // Resume at full speed so the car drives away, not parks on the van
-        car.currentSpeed = car.baseSpeed;
-        car.nudgeVel = 0;
-        hit = true;
       }
-    } // end car loop
-    } // end pass loop
-
+    }
     return { x: rx, z: rz, hit };
   }
 
-  /** @deprecated Use resolveVan instead */
+  /** @deprecated Use resolveVan */
   checkVanCollision(vanX: number, vanZ: number): { hit: boolean; pushX: number; pushZ: number } {
-    const result = this.resolveVan(vanX, vanZ);
-    return { hit: result.hit, pushX: result.x - vanX, pushZ: result.z - vanZ };
+    const r = this.resolveVan(vanX, vanZ);
+    return { hit: r.hit, pushX: r.x - vanX, pushZ: r.z - vanZ };
   }
 }
