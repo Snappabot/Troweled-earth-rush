@@ -48,6 +48,7 @@ export class TrafficSystem {
   private scene: THREE.Scene;
   private templates: Map<string, THREE.Group> = new Map();
   private loaded = false;
+  private warmup = 4.0; // seconds before braking logic activates
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -133,7 +134,9 @@ export class TrafficSystem {
       const laneOffset = Math.random() > 0.5 ? 2 : -2;
       const baseSpeed  = 10 + Math.random() * 10;
       const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
-      const pos = -200 + Math.random() * 400;
+      // Avoid spawning within 50 units of origin (van start) to prevent instant parking
+      let pos = -200 + Math.random() * 400;
+      if (Math.abs(pos) < 50) pos = pos < 0 ? -60 : 60;
 
       group.rotation.y = this._rotationFor(axis, dir);
 
@@ -166,6 +169,8 @@ export class TrafficSystem {
   }
 
   update(dt: number, vanX: number, vanZ: number): void {
+    if (this.warmup > 0) this.warmup -= dt;
+
     for (const car of this.cars) {
       const carX = car.group.position.x;
       const carZ = car.group.position.z;
@@ -182,7 +187,10 @@ export class TrafficSystem {
       const vanInLane = lateralDist < 5;
       const vanAhead  = aheadDist > 0 && aheadDist < BRAKE_DISTANCE;
 
-      if (vanInLane && vanAhead) {
+      // During warmup all cars drive at full speed — clears spawn congestion
+      if (this.warmup > 0) {
+        car.currentSpeed = car.baseSpeed;
+      } else if (vanInLane && vanAhead) {
         const t = Math.max(0, (aheadDist - STOP_DISTANCE) / (BRAKE_DISTANCE - STOP_DISTANCE));
         car.currentSpeed = car.baseSpeed * t;
       } else {
