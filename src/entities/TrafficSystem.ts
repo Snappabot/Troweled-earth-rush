@@ -163,8 +163,11 @@ export class TrafficSystem {
     }
   }
 
-  update(dt: number, vanX: number, vanZ: number): void {
+  update(dt: number, vanX: number, vanZ: number, vanSpeed = 0): void {
     if (this.warmup > 0) this.warmup -= dt;
+
+    // Cars only yield to van when it's actually moving (>2 km/h)
+    const vanIsMoving = vanSpeed > 2;
 
     for (const car of this.cars) {
       const carX = car.group.position.x;
@@ -182,9 +185,9 @@ export class TrafficSystem {
       const vanInLane = lateralDist < 5;
       const vanAhead  = aheadDist > 0 && aheadDist < BRAKE_DISTANCE;
 
-      // During warmup all cars drive at full speed — clears spawn congestion
-      if (this.warmup > 0) {
-        car.currentSpeed = car.baseSpeed;
+      // During warmup or when van is parked — all cars drive freely
+      if (this.warmup > 0 || !vanIsMoving) {
+        car.currentSpeed = Math.min(car.baseSpeed, car.currentSpeed + RESUME_RATE * dt);
       } else if (vanInLane && vanAhead) {
         const t = Math.max(0, (aheadDist - STOP_DISTANCE) / (BRAKE_DISTANCE - STOP_DISTANCE));
         car.currentSpeed = car.baseSpeed * t;

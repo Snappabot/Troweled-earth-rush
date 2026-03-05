@@ -77,7 +77,7 @@ async function main() {
   const van = new VanModel(engine.scene);
 
   // ── Start van near the edge of the map (NE corner, road intersection) ───────
-  van.mesh.position.set(200, 0, 200);
+  van.mesh.position.set(215, 0, 215); // offset from road intersection grid (roads are at multiples of 40)
   van.heading = Math.PI * 1.25; // facing south-west toward city centre
 
   const spillMeter = new SpillMeter();
@@ -501,7 +501,8 @@ async function main() {
     }
 
     // ── Traffic system ────────────────────────────────────────────────────────
-    traffic.update(dt, vanX, vanZ);
+    // Pass van speed — traffic only brakes for a moving van, not a parked one
+    traffic.update(dt, vanX, vanZ, physics.speed);
     const trafficResult = traffic.resolveVan(vanX, vanZ);
     if (trafficResult.hit) {
       van.mesh.position.x = trafficResult.x;
