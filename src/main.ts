@@ -14,6 +14,7 @@ import type { ScaffoldResult } from './minigames/MiniGameManager';
 import { AchievementGallery } from './ui/AchievementGallery';
 import { PedestrianSystem } from './entities/PedestrianSystem';
 import { TrafficSystem } from './entities/TrafficSystem';
+import { ParkedCarSystem } from './entities/ParkedCarSystem';
 import { CoffeeShop } from './entities/CoffeeShop';
 import { BladderMeter } from './gameplay/BladderMeter';
 import { Mikayla } from './entities/Mikayla';
@@ -189,6 +190,7 @@ async function main() {
 
   // ── Traffic + Pedestrian systems ────────────────────────────────────────────
   const traffic    = new TrafficSystem(engine.scene);
+  new ParkedCarSystem(engine.scene);
   const pedestrians = new PedestrianSystem(engine.scene);
 
   // ── On-foot mode ─────────────────────────────────────────────────────────────
