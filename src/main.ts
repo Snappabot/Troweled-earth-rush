@@ -412,8 +412,10 @@ async function main() {
     }
 
     // ── Normal game loop ──────────────────────────────────────────────────────
-    physics.update(dt);
-    van.updateSuspension(dt);
+    if (!isOnFoot) {
+      physics.update(dt);
+      van.updateSuspension(dt);
+    }
 
     // ── CONTRACT WARS — tick rival progress ───────────────────────────────────
     // (ContractWar replaced by TowerDefence in mini-game sequence)

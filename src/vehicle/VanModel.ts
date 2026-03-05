@@ -84,7 +84,7 @@ export class VanModel {
     });
     const wrapL = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 0.80), wrapMat);
     wrapL.rotation.y = -Math.PI / 2;
-    wrapL.position.set(-1.21, 0.82, 0.5);
+    wrapL.position.set(-1.21, 1.10, 0.5);
     wrapL.renderOrder = 1;
     this.bodyGroup.add(wrapL);
 
@@ -96,7 +96,7 @@ export class VanModel {
     });
     const wrapR = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 0.80), wrapMatR);
     wrapR.rotation.y = Math.PI / 2;
-    wrapR.position.set(1.21, 0.82, 0.5);
+    wrapR.position.set(1.21, 1.10, 0.5);
     wrapR.renderOrder = 1;
     this.bodyGroup.add(wrapR);
 
