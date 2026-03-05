@@ -88,13 +88,8 @@ export class TrafficSystem {
   private _cloneVehicle(vtype: VehicleType, color?: number): THREE.Group {
     const tmpl = this.templates.get(vtype.slug);
     if (!tmpl) {
-      // Fallback: plain box
-      const g = new THREE.Group();
-      const m = new THREE.MeshLambertMaterial({ color: color ?? 0x888888 });
-      const b = new THREE.Mesh(new THREE.BoxGeometry(2.6, 1.4, 5.0), m);
-      b.position.y = 0.7; b.castShadow = true;
-      g.add(b);
-      return g;
+      // GLB failed — return invisible empty group (no box fallback)
+      return new THREE.Group();
     }
 
     const group = tmpl.clone(true);
