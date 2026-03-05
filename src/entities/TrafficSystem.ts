@@ -64,8 +64,19 @@ export class TrafficSystem {
       loader.load(`${base}assets/traffic/${vtype.slug}.glb`, (gltf) => {
         const tmpl = gltf.scene;
         tmpl.scale.setScalar(vtype.scale);
-        tmpl.rotation.y = 0; // will be set per-car
-        // Apply proper materials
+
+        // Auto-correct cars exported lying on their side (wrong Blender axis bake)
+        const box0 = new THREE.Box3().setFromObject(tmpl);
+        const size0 = box0.getSize(new THREE.Vector3());
+        if (size0.y < 0.4 * Math.min(size0.x, size0.z)) {
+          // Car is flat — rotate upright
+          tmpl.rotation.x = -Math.PI / 2;
+          tmpl.updateMatrixWorld(true);
+          // Re-ground
+          const box1 = new THREE.Box3().setFromObject(tmpl);
+          tmpl.position.y = -box1.min.y;
+        }
+
         tmpl.traverse((child) => {
           if (!(child instanceof THREE.Mesh)) return;
           child.castShadow = true;
