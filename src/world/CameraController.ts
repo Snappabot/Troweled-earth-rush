@@ -24,24 +24,31 @@ export class CameraController {
   }
 
   followOnFoot(pos: THREE.Vector3, heading: number) {
-    // 60° top-down camera, close to character, minimal sway
+    // Over-right-shoulder TPS camera
     let angleDiff = heading - this.cameraAngle;
     while (angleDiff >  Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-    this.cameraAngle += angleDiff * 0.008; // very slow pan — barely reacts to movement
+    this.cameraAngle += angleDiff * 0.06; // follows heading but not instantly
 
-    // 60° down angle: tan(60°) ≈ 1.73 → height = behind * 1.73
-    const behind = 10;
-    const height  = behind * 1.73; // ≈17.3 — gives ~60° downward look
+    // Character forward: (sin(angle), 0, -cos(angle))
+    // Character right:   (cos(angle), 0,  sin(angle))
+    const behind      = 5.0;
+    const rightOffset = 1.8;
+    const height      = 2.2;
+
     this.targetPos.set(
-      pos.x - Math.sin(this.cameraAngle) * behind,
+      pos.x - Math.sin(this.cameraAngle) * behind + Math.cos(this.cameraAngle) * rightOffset,
       pos.y + height,
-      pos.z + Math.cos(this.cameraAngle) * behind,
+      pos.z + Math.cos(this.cameraAngle) * behind + Math.sin(this.cameraAngle) * rightOffset,
     );
-    // Very slow position lerp — camera barely moves with player micro-movements
-    this.camera.position.lerp(this.targetPos, 0.04);
-    const lookAt = pos.clone();
-    lookAt.y += 1.0;
+    this.camera.position.lerp(this.targetPos, 0.12);
+
+    // Look at a point just ahead and slightly above the character
+    const lookAt = new THREE.Vector3(
+      pos.x + Math.sin(this.cameraAngle) * 3,
+      pos.y + 1.4,
+      pos.z - Math.cos(this.cameraAngle) * 3,
+    );
     this.camera.lookAt(lookAt);
   }
 
