@@ -35,6 +35,12 @@ interface TrafficCar {
   nudgeVel: number;
   hw: number;
   hd: number;
+  // ── Crash state ──────────────────────────────────────────────────────────
+  crashed: boolean;
+  crashTimer: number;     // seconds remaining in crash state
+  crashSpinVel: number;   // rad/s — spins out on impact
+  flashTimer: number;     // seconds of orange emissive flash remaining
+  baseRotY: number;       // correct heading to restore after spin-out
 }
 
 export class TrafficSystem {
@@ -107,11 +113,15 @@ export class TrafficSystem {
       // car front = +Z in Three.js (axis_forward='-Z' export)
       // dir=1 (+Z travel) → face +Z → rotation 0
       // dir=-1 (-Z travel) → face -Z → rotation PI
-      group.rotation.y = axis === 'x'
+      const baseRotY = axis === 'x'
         ? (dir === 1 ? -Math.PI / 2 : Math.PI / 2)
         : (dir === 1 ? 0 : Math.PI);
+      group.rotation.y = baseRotY;
 
-      const car: TrafficCar = { group, axis, roadPos, laneOffset, baseSpeed, currentSpeed: baseSpeed, dir, pos, nudgeVel: 0, hw: vtype.hw, hd: vtype.hd };
+      const car: TrafficCar = {
+        group, axis, roadPos, laneOffset, baseSpeed, currentSpeed: baseSpeed, dir, pos, nudgeVel: 0, hw: vtype.hw, hd: vtype.hd,
+        crashed: false, crashTimer: 0, crashSpinVel: 0, flashTimer: 0, baseRotY,
+      };
       this.cars.push(car);
       this.scene.add(group);
       this._applyPosition(car);
@@ -131,6 +141,43 @@ export class TrafficSystem {
     const vanIsMoving = vanSpeed > 2;
 
     for (const car of this.cars) {
+
+      // ── Orange flash decay ───────────────────────────────────────────────
+      if (car.flashTimer > 0) {
+        car.flashTimer -= dt;
+        const intensity = Math.max(0, car.flashTimer / 0.4);
+        car.group.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            const mat = child.material as THREE.MeshStandardMaterial;
+            if (mat && 'emissive' in mat) mat.emissiveIntensity = intensity * 1.8;
+          }
+        });
+        if (car.flashTimer <= 0) this._clearCrashFlash(car.group);
+      }
+
+      // ── Crash spin-out / recovery ────────────────────────────────────────
+      if (car.crashed) {
+        car.crashTimer -= dt;
+        // Spin while speed and spin-vel remain
+        car.group.rotation.y += car.crashSpinVel * dt;
+        car.crashSpinVel    *= Math.max(0, 1 - 2.5 * dt);
+        car.currentSpeed    *= Math.max(0, 1 - 6.0 * dt); // screech to halt
+
+        if (car.crashTimer <= 0) {
+          // Recover — restore heading, ramp speed back up gradually
+          car.crashed       = false;
+          car.crashSpinVel  = 0;
+          car.group.rotation.y = car.baseRotY;
+        }
+
+        car.pos += car.dir * car.currentSpeed * dt;
+        if (car.pos > 235) car.pos = -235;
+        if (car.pos < -235) car.pos = 235;
+        this._applyPosition(car);
+        continue; // skip normal braking logic while crashed
+      }
+
+      // ── Normal braking / speed logic ─────────────────────────────────────
       const carX = car.group.position.x, carZ = car.group.position.z;
       let aheadDist = Infinity, lateralDist = Infinity;
       if (car.axis === 'x') { aheadDist = (vanX - carX) * car.dir; lateralDist = Math.abs(vanZ - carZ); }
@@ -154,25 +201,87 @@ export class TrafficSystem {
     }
   }
 
-  resolveVan(vanX: number, vanZ: number, vanRadius = 1.8): { x: number; z: number; hit: boolean } {
-    let rx = vanX, rz = vanZ; let hit = false;
+  /** Set emissive on all meshes in a car group to crash-orange */
+  private _triggerCrashFlash(group: THREE.Group): void {
+    group.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const mat = child.material as THREE.MeshStandardMaterial;
+        if (mat && 'emissive' in mat) {
+          mat.emissive = new THREE.Color(0xFF5500);
+          mat.emissiveIntensity = 1.8;
+        }
+      }
+    });
+  }
+
+  /** Reset emissive on all meshes in a car group */
+  private _clearCrashFlash(group: THREE.Group): void {
+    group.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        const mat = child.material as THREE.MeshStandardMaterial;
+        if (mat && 'emissive' in mat) {
+          mat.emissive = new THREE.Color(0x000000);
+          mat.emissiveIntensity = 0;
+        }
+      }
+    });
+  }
+
+  resolveVan(vanX: number, vanZ: number, vanRadius = 1.8): { x: number; z: number; hit: boolean; impactX: number; impactZ: number } {
+    let rx = vanX, rz = vanZ;
+    let hit = false;
+    let impactX = 0, impactZ = 0;
+    // Track which cars we've already crash-triggered this call (3-pass loop)
+    const crashedThisCall = new Set<TrafficCar>();
+
     for (let pass = 0; pass < 3; pass++) {
       for (const car of this.cars) {
         const cx = car.group.position.x, cz = car.group.position.z;
         const hw = (car.axis === 'x' ? car.hd : car.hw) + vanRadius;
         const hd = (car.axis === 'x' ? car.hw : car.hd) + vanRadius;
         const dx = rx - cx, dz = rz - cz;
+
         if (Math.abs(dx) < hw && Math.abs(dz) < hd) {
-          const ox = hw - Math.abs(dx), oz = hd - Math.abs(dz); const E = 6;
-          if (ox < oz) { const ps = dx<0?-1:1; rx+=ps*ox; if(car.axis==='x') car.pos-=ps*(ox+E); else car.pos+=car.dir*(oz+E); }
-          else         { const ps = dz<0?-1:1; rz+=ps*oz; if(car.axis==='z') car.pos-=ps*(oz+E); else car.pos+=car.dir*(ox+E); }
-          car.currentSpeed = car.baseSpeed; car.nudgeVel = 0; hit = true;
+          const ox = hw - Math.abs(dx);
+          const oz = hd - Math.abs(dz);
+          // Small separation buffer (1 unit) — just enough to prevent next-frame re-entry
+          const SEP = 1.0;
+
+          if (ox < oz) {
+            const ps = dx < 0 ? -1 : 1;
+            rx += ps * ox;
+            impactX += ps * ox;
+            if (car.axis === 'x') car.pos -= ps * (ox + SEP);
+            else                  car.pos += car.dir * (oz + SEP);
+          } else {
+            const ps = dz < 0 ? -1 : 1;
+            rz += ps * oz;
+            impactZ += ps * oz;
+            if (car.axis === 'z') car.pos -= ps * (oz + SEP);
+            else                  car.pos += car.dir * (ox + SEP);
+          }
+
+          // ── Trigger crash on first hit this call ────────────────────────
+          if (!car.crashed && !crashedThisCall.has(car)) {
+            crashedThisCall.add(car);
+            car.crashed      = true;
+            car.crashTimer   = 1.2 + Math.random() * 1.4;   // 1.2–2.6s crash duration
+            // Spin direction based on which side the van hit
+            const spinDir    = dx < 0 ? 1 : -1;
+            car.crashSpinVel = (3.5 + Math.random() * 4.0) * spinDir;
+            car.currentSpeed *= 0.15;   // screech nearly to a stop on impact
+            car.flashTimer   = 0.4;     // 0.4s orange flash
+            this._triggerCrashFlash(car.group);
+          }
+
+          car.nudgeVel = 0;
+          hit = true;
         }
       }
     }
-    return { x: rx, z: rz, hit };
+    return { x: rx, z: rz, hit, impactX, impactZ };
   }
 
   /** @deprecated */
-  checkVanCollision(vx: number, vz: number) { const r=this.resolveVan(vx,vz); return {hit:r.hit,pushX:r.x-vx,pushZ:r.z-vz}; }
+  checkVanCollision(vx: number, vz: number) { const r = this.resolveVan(vx, vz); return { hit: r.hit, pushX: r.x - vx, pushZ: r.z - vz }; }
 }

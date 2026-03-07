@@ -509,6 +509,12 @@ async function main() {
     if (trafficResult.hit) {
       van.mesh.position.x = trafficResult.x;
       van.mesh.position.z = trafficResult.z;
+
+      // ── Van crash response: knockback impulse + suspension slam ────────────
+      const impactMag = Math.sqrt(trafficResult.impactX ** 2 + trafficResult.impactZ ** 2);
+      physics.applyImpulse(trafficResult.impactX, trafficResult.impactZ);
+      van.triggerBump(Math.min(1.0, 0.4 + impactMag * 0.3)); // camera shake
+
       if (jobActive) {
         // Only spill/damage materials after they've been picked up (Phase 2+)
         if (jobManager.activePhase >= 2) {
