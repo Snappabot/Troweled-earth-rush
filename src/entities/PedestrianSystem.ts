@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 // ── Colours ──────────────────────────────────────────────────────────────────
 const BODY_COLORS = [
@@ -501,29 +502,109 @@ export class PedestrianSystem {
     }
   }
 
+  private _charIdToFile(charId: string): string {
+    const map: Record<string, string> = {
+      trump:         'trump',
+      elon:          'elon',
+      karen:         'karen',
+      flatEarther:   'flat-earther',
+      antiVaxxer:    'anti-vaxxer',
+      cryptoBro:     'crypto-bro',
+      zuckerberg:    'zuckerberg',
+      alexJones:     'alex-jones',
+      kanyeWest:     'kanye',
+      conspiracyGuy: 'conspiracy-guy',
+    };
+    return map[charId] ?? charId;
+  }
+
   private _spawnHitCharacters(): void {
+    const base = (import.meta as any).env.BASE_URL as string;
+    const loader = new GLTFLoader();
+
     HIT_CHAR_DEFS.forEach((def, i) => {
-      const { group, leftArm, rightArm, leftLeg, rightLeg } = buildHitChar(def.charId, def.bodyColor, def.accentColor);
-      const spawnXZ = HIT_CHAR_POSITIONS[i];
-      const axis: 'x' | 'z' = Math.abs(spawnXZ.x) >= Math.abs(spawnXZ.z) ? 'x' : 'z';
-      const roadPos = randomSidewalk();
-      const { segStart, segEnd, pos } = randomSegment();
-      const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
+      const filename = this._charIdToFile(def.charId);
+      const url = `${base}models/characters/${filename}.glb`;
 
-      const hc: HitCharacter = {
-        group, charId: def.charId, preLine: def.preLine, splatToast: def.splatToast,
-        axis, roadPos, segStart, segEnd, pos, dir, speed: 2.5 + Math.random(),
-        scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
-        walkCycle: Math.random() * Math.PI * 2,
-        leftArm, rightArm, leftLeg, rightLeg,
-        splatted: false, respawnTimer: 0, nearbySpoken: false,
-      };
+      loader.load(url, (gltf) => {
+        const model = gltf.scene;
+        // Scale to match pedestrian height (~1.55 units)
+        model.scale.setScalar(1.8);
+        // Ensure shadows
+        model.traverse(c => { if ((c as THREE.Mesh).isMesh) { c.castShadow = true; } });
 
-      if (axis === 'x') group.position.set(pos, 0, roadPos);
-      else group.position.set(roadPos, 0, pos);
+        const wrapper = new THREE.Group();
+        wrapper.add(model);
 
-      this.scene.add(group);
-      this.hitChars.push(hc);
+        // Add a name label above the character
+        const cv = document.createElement('canvas'); cv.width = 256; cv.height = 64;
+        const ctx = cv.getContext('2d')!;
+        ctx.fillStyle = 'rgba(180,0,0,0.85)';
+        if ((ctx as any).roundRect) { (ctx as any).roundRect(2,2,252,60,8); } else { ctx.rect(2,2,252,60); }
+        ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = 'bold 26px Arial';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(def.charId === 'flatEarther' ? 'FLAT EARTHER' :
+                     def.charId === 'antiVaxxer'  ? 'ANTI-VAXXER'  :
+                     def.charId === 'cryptoBro'   ? 'CRYPTO BRO'   :
+                     def.charId === 'alexJones'   ? 'ALEX JONES'   :
+                     def.charId === 'kanyeWest'   ? 'KANYE WEST'   :
+                     def.charId === 'conspiracyGuy'? 'CONSPIRACY GUY':
+                     def.charId.toUpperCase(), 128, 32);
+        const label = new THREE.Mesh(
+          new THREE.PlaneGeometry(2.4, 0.6),
+          new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false })
+        );
+        label.position.set(0, 5.5, 0);
+        label.renderOrder = 1;
+        wrapper.add(label);
+
+        // Dummy mesh — walk animation rotates these (no-op on loaded models)
+        const dummy = new THREE.Mesh();
+
+        const spawnXZ = HIT_CHAR_POSITIONS[i];
+        const axis: 'x' | 'z' = Math.abs(spawnXZ.x) >= Math.abs(spawnXZ.z) ? 'x' : 'z';
+        const roadPos = randomSidewalk();
+        const { segStart, segEnd, pos } = randomSegment();
+        const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
+
+        const hc: HitCharacter = {
+          group: wrapper, charId: def.charId, preLine: def.preLine, splatToast: def.splatToast,
+          axis, roadPos, segStart, segEnd, pos, dir, speed: 2.5 + Math.random(),
+          scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
+          walkCycle: Math.random() * Math.PI * 2,
+          leftArm: dummy, rightArm: dummy, leftLeg: dummy, rightLeg: dummy,
+          splatted: false, respawnTimer: 0, nearbySpoken: false,
+        };
+
+        if (axis === 'x') wrapper.position.set(pos, 0, roadPos);
+        else wrapper.position.set(roadPos, 0, pos);
+
+        this.scene.add(wrapper);
+        this.hitChars.push(hc);
+
+      }, undefined, (_err) => {
+        // Fallback to procedural geometry if model fails to load
+        console.warn(`[TEM] Model not found for ${def.charId}, using fallback geometry`);
+        const { group, leftArm, rightArm, leftLeg, rightLeg } = buildHitChar(def.charId, def.bodyColor, def.accentColor);
+        const spawnXZ = HIT_CHAR_POSITIONS[i];
+        const axis: 'x' | 'z' = Math.abs(spawnXZ.x) >= Math.abs(spawnXZ.z) ? 'x' : 'z';
+        const roadPos = randomSidewalk();
+        const { segStart, segEnd, pos } = randomSegment();
+        const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
+        const hc: HitCharacter = {
+          group, charId: def.charId, preLine: def.preLine, splatToast: def.splatToast,
+          axis, roadPos, segStart, segEnd, pos, dir, speed: 2.5 + Math.random(),
+          scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
+          walkCycle: Math.random() * Math.PI * 2,
+          leftArm, rightArm, leftLeg, rightLeg,
+          splatted: false, respawnTimer: 0, nearbySpoken: false,
+        };
+        if (axis === 'x') group.position.set(pos, 0, roadPos);
+        else group.position.set(roadPos, 0, pos);
+        this.scene.add(group);
+        this.hitChars.push(hc);
+      });
     });
   }
 
@@ -533,6 +614,7 @@ export class PedestrianSystem {
     hc.roadPos = roadPos; hc.segStart = segStart; hc.segEnd = segEnd; hc.pos = pos;
     hc.dir = Math.random() > 0.5 ? 1 : -1;
     hc.splatted = false; hc.scattering = false; hc.nearbySpoken = false;
+    hc.walkCycle = Math.random() * Math.PI * 2;
     if (hc.axis === 'x') hc.group.position.set(hc.pos, 0, hc.roadPos);
     else hc.group.position.set(hc.roadPos, 0, hc.pos);
     hc.group.visible = true;
@@ -793,9 +875,12 @@ export class PedestrianSystem {
         hc.group.rotation.y = Math.atan2(hc.scatterDirX, hc.scatterDirZ);
       }
 
-      // Walk cycle
+      // Walk cycle — bob the whole model (loaded GLB models don't have named arm/leg refs)
       hc.walkCycle += hc.speed * dt * 2;
       const hcSwing = Math.sin(hc.walkCycle);
+      // Subtle body bob for loaded models
+      hc.group.position.y = Math.max(0, Math.abs(hcSwing) * 0.12);
+      // Procedural fallback arm/leg swing (no-op if dummy meshes)
       hc.leftArm.rotation.z  =  hcSwing * 0.4 + 0.15;
       hc.rightArm.rotation.z = -hcSwing * 0.4 - 0.15;
       hc.leftLeg.rotation.x  =  hcSwing * 0.5;
