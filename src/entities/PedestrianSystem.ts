@@ -67,6 +67,68 @@ interface SplatDecal {
   life: number;
 }
 
+// ── Hit Characters ─────────────────────────────────────────────────────────────
+interface HitCharDef {
+  charId: string;
+  bodyColor: number;
+  accentColor: number;
+  preLine: string;
+  splatToast: string;
+}
+
+const HIT_CHAR_DEFS: HitCharDef[] = [
+  { charId: 'trump',        bodyColor: 0xE2834F, accentColor: 0xFFD700, preLine: 'I love a good deal',                              splatToast: 'Hitting me with the car was not a good deal 💸 +10K!' },
+  { charId: 'elon',         bodyColor: 0x555566, accentColor: 0x222222, preLine: 'To the moon! ...oh.',                             splatToast: '🚀 Elon re-enters the atmosphere harder than expected. +10K!' },
+  { charId: 'karen',        bodyColor: 0xFFB6C1, accentColor: 0xFFD700, preLine: 'I want to speak to the driver!',                  splatToast: '📞 Karen has been spoken to. +10K!' },
+  { charId: 'flatEarther',  bodyColor: 0x7B5E42, accentColor: 0xCCCCCC, preLine: 'The van is a PSYOP!',                             splatToast: '🌍 Flat Earther went ROUND. +10K!' },
+  { charId: 'antiVaxxer',   bodyColor: 0x4CAF50, accentColor: 0x7B3F00, preLine: 'Essential oils will protect me!',                 splatToast: '💉 Turns out they did not. +10K!' },
+  { charId: 'cryptoBro',    bodyColor: 0xFF4500, accentColor: 0xFF8800, preLine: 'This is bullish for crypto!',                     splatToast: '📉 Market correction. +10K!' },
+  { charId: 'zuckerberg',   bodyColor: 0x888888, accentColor: 0xFFDBAC, preLine: 'I am a human. I enjoy human activities.',         splatToast: '🤖 Zuck.exe has stopped responding. +10K!' },
+  { charId: 'alexJones',    bodyColor: 0xFF4444, accentColor: 0xCC2222, preLine: 'THE VAN IS MAKING THE PEDESTRIANS GAY!',          splatToast: '📢 Infowars: Van confirmed real. +10K!' },
+  { charId: 'kanyeWest',    bodyColor: 0x111111, accentColor: 0x222222, preLine: 'I am a genius and the van knows it.',             splatToast: '🎤 The mic has been dropped. Permanently. +10K!' },
+  { charId: 'conspiracyGuy',bodyColor: 0x444444, accentColor: 0xFFFFFF, preLine: 'They are all connected, man. The van... the plaster...', splatToast: '🕵️ He connected with the van. +10K!' },
+];
+
+// Spawn positions for hit chars — spread across the map
+const HIT_CHAR_POSITIONS: { x: number; z: number }[] = [
+  { x:  60, z:  60 },
+  { x: -60, z:  60 },
+  { x: 120, z: -60 },
+  { x:-120, z: -60 },
+  { x:  60, z:-120 },
+  { x: -60, z: 120 },
+  { x: 150, z:   0 },
+  { x:-150, z:   0 },
+  { x:   0, z: 150 },
+  { x:   0, z:-150 },
+];
+
+interface HitCharacter {
+  group:        THREE.Group;
+  charId:       string;
+  preLine:      string;
+  splatToast:   string;
+  axis:         'x' | 'z';
+  roadPos:      number;
+  segStart:     number;
+  segEnd:       number;
+  pos:          number;
+  dir:          1 | -1;
+  speed:        number;
+  scattering:   boolean;
+  scatterTimer: number;
+  scatterDirX:  number;
+  scatterDirZ:  number;
+  walkCycle:    number;
+  leftArm:      THREE.Mesh;
+  rightArm:     THREE.Mesh;
+  leftLeg:      THREE.Mesh;
+  rightLeg:     THREE.Mesh;
+  splatted:       boolean;
+  respawnTimer:   number;
+  nearbySpoken:   boolean;
+}
+
 // ── Build Helpers ─────────────────────────────────────────────────────────────
 
 function buildPedestrian(bodyColor: number): {
@@ -243,6 +305,95 @@ function buildSplat(scene: THREE.Scene, x: number, z: number): THREE.Mesh {
   return mesh;
 }
 
+/** Build a hit character — base pedestrian + distinctive accent accessory */
+function buildHitChar(charId: string, bodyColor: number, accentColor: number): {
+  group: THREE.Group;
+  leftArm: THREE.Mesh; rightArm: THREE.Mesh;
+  leftLeg: THREE.Mesh; rightLeg: THREE.Mesh;
+} {
+  const { group, leftArm, rightArm, leftLeg, rightLeg } = buildPedestrian(bodyColor);
+  const accentMat = new THREE.MeshLambertMaterial({ color: accentColor });
+
+  if (charId === 'trump') {
+    // Gold tie
+    const tie = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.05), accentMat);
+    tie.position.set(0, 0.75, 0.36);
+    group.add(tie);
+    // Blonde hair (yellow sphere on top)
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.3, 6, 4), accentMat);
+    hair.scale.set(1, 0.6, 1);
+    hair.position.set(0, 1.58, 0);
+    group.add(hair);
+  } else if (charId === 'elon') {
+    // Dark hair
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.22, 6, 4), accentMat);
+    hair.scale.set(1.1, 0.5, 1);
+    hair.position.set(0, 1.55, -0.05);
+    group.add(hair);
+  } else if (charId === 'karen') {
+    // Blonde bob
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.32, 6, 4), accentMat);
+    hair.scale.set(1.1, 0.65, 1);
+    hair.position.set(0, 1.35, 0);
+    group.add(hair);
+  } else if (charId === 'flatEarther') {
+    // Tinfoil hat (silver cone)
+    const hat = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.55, 6), accentMat);
+    hat.position.set(0, 1.68, 0);
+    group.add(hat);
+  } else if (charId === 'antiVaxxer') {
+    // Ponytail (cylinder at back)
+    const pony = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.04, 0.45, 5), accentMat);
+    pony.position.set(0, 1.2, -0.3);
+    pony.rotation.x = 0.5;
+    group.add(pony);
+  } else if (charId === 'cryptoBro') {
+    // Backwards cap (flat cylinder)
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.1, 8), accentMat);
+    cap.position.set(0, 1.42, 0.06);
+    cap.rotation.z = 0.15;
+    group.add(cap);
+  } else if (charId === 'zuckerberg') {
+    // Bald — no hair, just slightly stiff arms (already stiff from buildPedestrian)
+    // Add a tiny blue collar tab
+    const collar = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.08, 0.08), accentMat);
+    collar.position.set(0, 1.12, 0.3);
+    group.add(collar);
+  } else if (charId === 'alexJones') {
+    // Scale up body for big build
+    group.scale.set(1.25, 1.25, 1.25);
+    // Red megaphone at hand
+    const mega = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.18, 0.4, 6), accentMat);
+    mega.rotation.z = Math.PI / 2;
+    mega.position.set(0.7, 0.85, 0.2);
+    group.add(mega);
+  } else if (charId === 'kanyeWest') {
+    // Sunglasses (two small dark boxes)
+    const glassMat = new THREE.MeshLambertMaterial({ color: 0x111111 });
+    const lGlass = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.07, 0.06), glassMat);
+    lGlass.position.set(-0.1, 1.3, 0.25);
+    group.add(lGlass);
+    const rGlass = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.07, 0.06), glassMat);
+    rGlass.position.set(0.1, 1.3, 0.25);
+    group.add(rGlass);
+  } else if (charId === 'conspiracyGuy') {
+    // Wide white eyes
+    const eyeMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+    const lEye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 5, 4), eyeMat);
+    lEye.position.set(-0.1, 1.32, 0.24);
+    group.add(lEye);
+    const rEye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 5, 4), eyeMat);
+    rEye.position.set(0.1, 1.32, 0.24);
+    group.add(rEye);
+    // Trench coat collar
+    const collar = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.25, 0.08), accentMat);
+    collar.position.set(0, 1.0, 0.3);
+    group.add(collar);
+  }
+
+  return { group, leftArm, rightArm, leftLeg, rightLeg };
+}
+
 // ── Shared spawn helpers ──────────────────────────────────────────────────────
 const roadLines: number[] = [];
 for (let r = -200; r <= 200; r += 40) roadLines.push(r);
@@ -268,6 +419,7 @@ function randomSegment(): { segStart: number; segEnd: number; pos: number } {
 export class PedestrianSystem {
   private pedestrians: Pedestrian[] = [];
   private kangaroos:   Kangaroo[]   = [];
+  private hitChars:    HitCharacter[] = [];
   private splats:      SplatDecal[] = [];
   private scene: THREE.Scene;
 
@@ -275,11 +427,16 @@ export class PedestrianSystem {
   onSplat: ((sats: number, name?: string) => void) | null = null;
   /** Fired when van gets close to Boronica and she yells */
   onBoronicaYell: (() => void) | null = null;
+  /** Fired when van gets close to a hit character */
+  onHitCharNear: ((charId: string, line: string) => void) | null = null;
+  /** Fired when van splats a hit character */
+  onHitCharSplat: ((charId: string, toast: string) => void) | null = null;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
     this._spawnPedestrians();
     this._spawnKangaroos();
+    this._spawnHitCharacters();
   }
 
   // ── Spawn ───────────────────────────────────────────────────────────────────
@@ -342,6 +499,43 @@ export class PedestrianSystem {
       this.scene.add(group);
       this._applyKangPosition(kang);
     }
+  }
+
+  private _spawnHitCharacters(): void {
+    HIT_CHAR_DEFS.forEach((def, i) => {
+      const { group, leftArm, rightArm, leftLeg, rightLeg } = buildHitChar(def.charId, def.bodyColor, def.accentColor);
+      const spawnXZ = HIT_CHAR_POSITIONS[i];
+      const axis: 'x' | 'z' = Math.abs(spawnXZ.x) >= Math.abs(spawnXZ.z) ? 'x' : 'z';
+      const roadPos = randomSidewalk();
+      const { segStart, segEnd, pos } = randomSegment();
+      const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
+
+      const hc: HitCharacter = {
+        group, charId: def.charId, preLine: def.preLine, splatToast: def.splatToast,
+        axis, roadPos, segStart, segEnd, pos, dir, speed: 2.5 + Math.random(),
+        scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
+        walkCycle: Math.random() * Math.PI * 2,
+        leftArm, rightArm, leftLeg, rightLeg,
+        splatted: false, respawnTimer: 0, nearbySpoken: false,
+      };
+
+      if (axis === 'x') group.position.set(pos, 0, roadPos);
+      else group.position.set(roadPos, 0, pos);
+
+      this.scene.add(group);
+      this.hitChars.push(hc);
+    });
+  }
+
+  private _respawnHitChar(hc: HitCharacter): void {
+    const roadPos = randomSidewalk();
+    const { segStart, segEnd, pos } = randomSegment();
+    hc.roadPos = roadPos; hc.segStart = segStart; hc.segEnd = segEnd; hc.pos = pos;
+    hc.dir = Math.random() > 0.5 ? 1 : -1;
+    hc.splatted = false; hc.scattering = false; hc.nearbySpoken = false;
+    if (hc.axis === 'x') hc.group.position.set(hc.pos, 0, hc.roadPos);
+    else hc.group.position.set(hc.roadPos, 0, hc.pos);
+    hc.group.visible = true;
   }
 
   // ── Position helpers ────────────────────────────────────────────────────────
@@ -532,6 +726,80 @@ export class PedestrianSystem {
       k.hopCycle += k.speed * dt * 3.5;
       const hop = Math.max(0, Math.sin(k.hopCycle)) * 0.55;
       k.group.position.y = hop;
+    }
+
+    // ── Hit Characters ──────────────────────────────────────────────────────
+    for (const hc of this.hitChars) {
+      if (hc.splatted) {
+        hc.respawnTimer -= dt;
+        if (hc.respawnTimer <= 0) this._respawnHitChar(hc);
+        continue;
+      }
+
+      const hx = hc.group.position.x;
+      const hz = hc.group.position.z;
+      const dx = hx - vanX;
+      const dz = hz - vanZ;
+      const dist = Math.sqrt(dx * dx + dz * dz);
+
+      // Pre-hit proximity dialogue
+      if (!hc.nearbySpoken && dist < 16) {
+        hc.nearbySpoken = true;
+        this.onHitCharNear?.(hc.charId, hc.preLine);
+      }
+
+      // Splat
+      if (dist < SPLAT_DIST) {
+        hc.splatted = true;
+        hc.respawnTimer = 20 + Math.random() * 5;
+        hc.group.visible = false;
+        const splatMesh = buildSplat(this.scene, hx, hz);
+        this.splats.push({ mesh: splatMesh, life: SPLAT_LIFE });
+        this.onHitCharSplat?.(hc.charId, hc.splatToast);
+        continue;
+      }
+
+      // Scatter when van is close
+      if (!hc.scattering && dist < 7) {
+        hc.scattering = true;
+        hc.scatterTimer = 2.5;
+        const len = Math.max(dist, 0.01);
+        hc.scatterDirX = dx / len;
+        hc.scatterDirZ = dz / len;
+      }
+
+      if (hc.scattering) {
+        hc.group.position.x += hc.scatterDirX * 12 * dt;
+        hc.group.position.z += hc.scatterDirZ * 12 * dt;
+        hc.scatterTimer -= dt;
+        if (hc.scatterTimer <= 0) {
+          hc.scattering = false;
+          if (hc.axis === 'x') hc.pos = Math.max(hc.segStart, Math.min(hc.segEnd, hc.group.position.x));
+          else hc.pos = Math.max(hc.segStart, Math.min(hc.segEnd, hc.group.position.z));
+        }
+      } else {
+        hc.pos += hc.dir * hc.speed * dt;
+        if (hc.pos >= hc.segEnd)       { hc.pos = hc.segEnd;   hc.dir = -1; }
+        else if (hc.pos <= hc.segStart){ hc.pos = hc.segStart; hc.dir =  1; }
+        if (hc.axis === 'x') hc.group.position.set(hc.pos, 0, hc.roadPos);
+        else hc.group.position.set(hc.roadPos, 0, hc.pos);
+      }
+
+      // Facing
+      if (!hc.scattering) {
+        if (hc.axis === 'x') hc.group.rotation.y = hc.dir === 1 ? -Math.PI / 2 : Math.PI / 2;
+        else hc.group.rotation.y = hc.dir === 1 ? Math.PI : 0;
+      } else {
+        hc.group.rotation.y = Math.atan2(hc.scatterDirX, hc.scatterDirZ);
+      }
+
+      // Walk cycle
+      hc.walkCycle += hc.speed * dt * 2;
+      const hcSwing = Math.sin(hc.walkCycle);
+      hc.leftArm.rotation.z  =  hcSwing * 0.4 + 0.15;
+      hc.rightArm.rotation.z = -hcSwing * 0.4 - 0.15;
+      hc.leftLeg.rotation.x  =  hcSwing * 0.5;
+      hc.rightLeg.rotation.x = -hcSwing * 0.5;
     }
 
     // ── Splat decals fade ───────────────────────────────────────────────────

@@ -267,6 +267,15 @@ async function main() {
     hud.showToast('😤 JOSE! Pay me the alimony... I mean ALL the money! 💸', 0xFF1493);
   };
 
+  pedestrians.onHitCharNear = (_charId: string, line: string) => {
+    hud.showToast(`🗣️ "${line}"`, 0xFFCC00);
+  };
+  pedestrians.onHitCharSplat = (_charId: string, toast: string) => {
+    jobManager.money += 10_000;
+    hud.updateMoney(jobManager.money);
+    hud.showToast(toast, 0xFF4400);
+  };
+
   // ── Coffee shop + Bladder mechanic ──────────────────────────────────────────
   const coffeeShop = new CoffeeShop(engine.scene);
   const bladderMeter = new BladderMeter();
