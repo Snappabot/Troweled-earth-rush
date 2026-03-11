@@ -1,14 +1,17 @@
 import * as THREE from 'three';
 import { CrewCharacter, CREW_CONFIGS } from './CrewCharacter';
 
-const CREW_CITY_POSITIONS: Record<string, { x: number; z: number }> = {
-  Jose:     { x: -80,  z: -40 },
-  Jarrad:   { x:  40,  z: -80 },
-  Matt:     { x:  80,  z:  40 },
-  Phil:     { x: -40,  z:  80 },
-  Tsuyoshi: { x: 120,  z: -40 },
-  Fabio:    { x: -120, z:  40 },
-  Joe:      { x:   0,  z: -120 },
+const CREW_CITY_POSITIONS: Record<string, { x: number; z: number; facing: number }> = {
+  // Near Coffee Shop (x=-60, z=-100) — Matt chilling outside
+  Matt:     { x: -52,  z: -88,  facing: 0 },           // sidewalk north of coffee shop, facing south toward it
+  // Near Render Supply Co (x=180, z=-60) — Jose leaning near entrance
+  Jose:     { x: 168,  z: -52,  facing: -Math.PI / 2 },// sidewalk west of supply co, facing east toward it
+  // Spread to map edges and key spots — all off roads
+  Jarrad:   { x: 130,  z:  18,  facing: Math.PI },     // NE area, between roads, facing north
+  Phil:     { x:-130,  z: -18,  facing: Math.PI / 2 }, // SW area, veteran feels distant from action
+  Tsuyoshi: { x:  18,  z:-152,  facing: 0 },           // deep south edge, facing south (off into horizon)
+  Fabio:    { x: -18,  z: 152,  facing: Math.PI },     // deep north edge, facing north
+  Joe:      { x:  68,  z: -18,  facing: Math.PI / 2 }, // east-central, facing west toward traffic
 };
 
 const CREW_DIALOGUE: Record<string, string[]> = {
@@ -139,6 +142,7 @@ export class Characters {
       wrapper.add(nameBoard);
 
       wrapper.position.set(pos.x, 0, pos.z);
+      wrapper.rotation.y = pos.facing;
       this.scene.add(wrapper);
       this.crewMap.set(name, { character, wrapper, pos });
 

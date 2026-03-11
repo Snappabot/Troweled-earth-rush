@@ -293,16 +293,38 @@ export class CrewCharacter {
 
   private _buildIdleClip(): THREE.AnimationClip {
     const D = Math.PI / 180;
-    const dur = 2.4;
-    const t = [0, 0.6, 1.2, 1.8, 2.4];
+    const dur = 3.6;
+    // 5 keyframes spread over a longer loop — slow, relaxed pace
+    const t5 = [0, 0.9, 1.8, 2.7, 3.6];
+    // Head has its own slower look-around cycle
+    const tH = [0, 1.2, 2.4, 3.6];
     const q = (rx: number, ry = 0, rz = 0) =>
       Array.from(new THREE.Quaternion().setFromEuler(new THREE.Euler(rx*D, ry*D, rz*D)).toArray());
 
     return new THREE.AnimationClip('idle', dur, [
-      new THREE.QuaternionKeyframeTrack('Spine.quaternion', t, [...q(0,0,1),...q(0,0,0),...q(0,0,-1),...q(0,0,0),...q(0,0,1)]),
-      new THREE.VectorKeyframeTrack('Hip.position', t, [0,1.00,0, 0,1.01,0, 0,1.00,0, 0,0.99,0, 0,1.00,0]),
-      new THREE.QuaternionKeyframeTrack('LShoulder.quaternion', [0,2.4], [...q(0,0,8),...q(0,0,8)]),
-      new THREE.QuaternionKeyframeTrack('RShoulder.quaternion', [0,2.4], [...q(0,0,-8),...q(0,0,-8)]),
+      // Weight shift — hip sways side to side
+      new THREE.QuaternionKeyframeTrack('Hip.quaternion', t5, [
+        ...q(0,0,3), ...q(0,0,0), ...q(0,0,-3), ...q(0,0,0), ...q(0,0,3),
+      ]),
+      // Subtle hip bob — slightly lower on each weight shift
+      new THREE.VectorKeyframeTrack('Hip.position', t5, [
+        0,1.00,0,  0,0.99,0,  0,1.00,0,  0,0.99,0,  0,1.00,0,
+      ]),
+      // Spine sway — follows hip but delayed
+      new THREE.QuaternionKeyframeTrack('Spine.quaternion', t5, [
+        ...q(1,0,2), ...q(0,0,0), ...q(1,0,-2), ...q(0,0,0), ...q(1,0,2),
+      ]),
+      // Head — slow look left/right (chill look-around)
+      new THREE.QuaternionKeyframeTrack('Head.quaternion', tH, [
+        ...q(0,-18,0), ...q(0,0,0), ...q(0,18,0), ...q(0,-18,0),
+      ]),
+      // Arms hang naturally with slight drift
+      new THREE.QuaternionKeyframeTrack('LShoulder.quaternion', t5, [
+        ...q(0,0,10), ...q(0,0,8), ...q(0,0,6), ...q(0,0,8), ...q(0,0,10),
+      ]),
+      new THREE.QuaternionKeyframeTrack('RShoulder.quaternion', t5, [
+        ...q(0,0,-10), ...q(0,0,-8), ...q(0,0,-6), ...q(0,0,-8), ...q(0,0,-10),
+      ]),
     ]);
   }
 
