@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { CrewCharacter, CREW_CONFIGS } from './CrewCharacter';
+import { CollisionWorld } from '../core/CollisionWorld';
 
 // Positions chosen to sit on sidewalks (clear of building AABBs).
 // Roads at multiples of 40 (±4 edge). Buildings sit in block centres.
@@ -103,12 +104,14 @@ const DIALOGUE_COOLDOWN = 12_000; // ms between lines per character
 
 export class Characters {
   private scene: THREE.Scene;
+  private collisionWorld: CollisionWorld | null = null;
   private crewMap: Map<string, { character: CrewCharacter; wrapper: THREE.Group; pos: { x: number; z: number } }> = new Map();
   private lastDialogue: Map<string, number> = new Map();
   private dialogueIndex: Map<string, number> = new Map();
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, collisionWorld?: CollisionWorld) {
     this.scene = scene;
+    this.collisionWorld = collisionWorld ?? null;
   }
 
   spawnCrewAtCityPositions(): void {
@@ -148,7 +151,13 @@ export class Characters {
       nameBoard.renderOrder = 1;
       wrapper.add(nameBoard);
 
-      wrapper.position.set(pos.x, 0, pos.z);
+      // Resolve out of any building AABB — handles both explicit and procedural buildings
+      let rx = pos.x, rz = pos.z;
+      if (this.collisionWorld) {
+        const resolved = this.collisionWorld.resolveCircle(pos.x, pos.z, 1.2);
+        rx = resolved.x; rz = resolved.z;
+      }
+      wrapper.position.set(rx, 0, rz);
       wrapper.rotation.y = pos.facing;
       this.scene.add(wrapper);
       this.crewMap.set(name, { character, wrapper, pos });

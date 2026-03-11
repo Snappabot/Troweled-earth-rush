@@ -71,7 +71,7 @@ async function main() {
   await engine.init();
 
   // ── Spawn crew scattered across the city ───────────────────────────────────
-  const characters = new Characters(engine.scene);
+  const characters = new Characters(engine.scene, engine.collisionWorld);
   characters.spawnCrewAtCityPositions();
 
   const input = new InputManager();
