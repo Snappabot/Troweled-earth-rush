@@ -15,6 +15,12 @@ const BORONICA_HAIR = 0xFFD700; // blonde
 const GRID   = 40;
 const ROAD_W = 8;
 
+// ── NPC population caps (tune here for performance) ───────────────────────────
+// Mobile safe ceiling: ~80 total NPCs. Each GLB NPC ≈ 10 draw calls.
+// Current: PED_COUNT×2 + 1 Boronica + KANGAROO_COUNT + 10 hit chars
+const PED_COUNT      = 25;  // per axis (x + z) = 50 regular peds total
+const KANGAROO_COUNT = 6;
+
 const SPLAT_DIST      = 1.6;   // van distance to trigger splat
 const YELL_DIST       = 14;    // Boronica yells at van
 const SPLAT_REWARD    = 10_000; // sats per splat
@@ -535,13 +541,13 @@ export class PedestrianSystem {
       });
     };
 
-    for (let i = 0; i < 20; i++) spawnGLBPed('x');
-    for (let i = 0; i < 20; i++) spawnGLBPed('z');
+    for (let i = 0; i < PED_COUNT; i++) spawnGLBPed('x');
+    for (let i = 0; i < PED_COUNT; i++) spawnGLBPed('z');
     spawnBoronica();
   }
 
   private _spawnKangaroos(): void {
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < KANGAROO_COUNT; i++) {
       const group = buildKangaroo();
       // Roos wander on sidewalks & verges
       const axis: 'x' | 'z' = Math.random() > 0.5 ? 'x' : 'z';
@@ -994,6 +1000,22 @@ export class PedestrianSystem {
         // Fade out last 3 seconds
         (s.mesh.material as THREE.MeshBasicMaterial).opacity = (s.life / 3) * 0.88;
       }
+    }
+  }
+
+  /**
+   * Immediately respawn all splatted NPCs.
+   * Call this at mission complete so the world feels fully populated for the next run.
+   */
+  respawnAll(): void {
+    for (const ped of this.pedestrians) {
+      if (ped.splatted) this._respawnPed(ped);
+    }
+    for (const k of this.kangaroos) {
+      if (k.splatted) this._respawnKang(k);
+    }
+    for (const hc of this.hitChars) {
+      if (hc.splatted) this._respawnHitChar(hc);
     }
   }
 }

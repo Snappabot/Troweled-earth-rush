@@ -572,7 +572,7 @@ async function main() {
         hud.updateCrewStatus([], [], false);
         rivalSystem.stop();
         hud.showRaceStrip(false);
-        characters.showAllCrew();
+        characters.showAllCrew(); pedestrians.respawnAll();
         setTimeout(() => {
           const jobs = jobManager.getAvailableJobs();
           jobBoard.show(jobs);
@@ -855,7 +855,7 @@ async function main() {
                   hud.showJobComplete(arrived.title, earned);
                 }
                 hud.updateMoney(jobManager.money);
-                characters.showAllCrew();
+                characters.showAllCrew(); pedestrians.respawnAll();
                 breakActive = null; savedWaypoint = null;
                 coffeeBreakAt = -1; toiletBreakAt = -1; renderBreakAt = -1;
                 jobCompleting = false;
@@ -970,7 +970,7 @@ async function main() {
                       hud.showRaceStrip(false);
                       radio.setVisible(true);
                       hud.showToast('⚔️ CONTRACT STOLEN — Better crew next time 😤', 0xFF3333);
-                      characters.showAllCrew();
+                      characters.showAllCrew(); pedestrians.respawnAll();
                       breakActive = null; savedWaypoint = null;
                       coffeeBreakAt = -1; toiletBreakAt = -1; renderBreakAt = -1;
                       jobCompleting = false;
