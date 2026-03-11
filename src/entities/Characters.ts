@@ -1,17 +1,24 @@
 import * as THREE from 'three';
 import { CrewCharacter, CREW_CONFIGS } from './CrewCharacter';
 
+// Positions chosen to sit on sidewalks (clear of building AABBs).
+// Roads at multiples of 40 (±4 edge). Buildings sit in block centres.
+// Safe rule: keep at least 12 units from any block centre, or hug the road edge.
 const CREW_CITY_POSITIONS: Record<string, { x: number; z: number; facing: number }> = {
-  // Near Coffee Shop (x=-60, z=-100) — Matt chilling outside
-  Matt:     { x: -52,  z: -88,  facing: 0 },           // sidewalk north of coffee shop, facing south toward it
-  // Near Render Supply Co (x=180, z=-60) — Jose leaning near entrance
-  Jose:     { x: 168,  z: -52,  facing: -Math.PI / 2 },// sidewalk west of supply co, facing east toward it
-  // Spread to map edges and key spots — all off roads
-  Jarrad:   { x: 130,  z:  18,  facing: Math.PI },     // NE area, between roads, facing north
-  Phil:     { x:-130,  z: -18,  facing: Math.PI / 2 }, // SW area, veteran feels distant from action
-  Tsuyoshi: { x:  18,  z:-152,  facing: 0 },           // deep south edge, facing south (off into horizon)
-  Fabio:    { x: -18,  z: 152,  facing: Math.PI },     // deep north edge, facing north
-  Joe:      { x:  68,  z: -18,  facing: Math.PI / 2 }, // east-central, facing west toward traffic
+  // Near Coffee Shop (x=-60, z=-100) — sidewalk north of it, clear of AABB (-69 to -51, -106.5 to -93.5)
+  Matt:     { x: -55,  z: -88,  facing: 0 },            // z=-88 is north of coffee shop north face (z=-93.5)
+  // Near Render Supply Co (180,-60) — sidewalk north of it, clear of AABB (168.5–191.5, -67.5 to -52.5)
+  Jose:     { x: 170,  z: -48,  facing: 0 },            // z=-48 is north of supply co north face (z=-52.5)
+  // NE area — sidewalk south of z=0 road, clear of building at (140,20) whose z-range is 15–25
+  Jarrad:   { x: 148,  z:   5,  facing: Math.PI },      // z=5 is well south of building (z starts at 15)
+  // SW area — sidewalk north of z=0 road, x=-130 is east of building at (-140,-60) entirely
+  Phil:     { x:-130,  z:  -8,  facing: Math.PI / 2 },
+  // Deep south — mid-block, no buildings in explicit list near here
+  Tsuyoshi: { x:  18,  z:-152,  facing: 0 },
+  // Deep north — mid-block, no buildings near z=152
+  Fabio:    { x: -18,  z: 152,  facing: Math.PI },
+  // East-central — sidewalk north of z=0 road, z=-8 clears building at (60,-20) whose z starts at -28
+  Joe:      { x:  68,  z:  -8,  facing: Math.PI / 2 },
 };
 
 const CREW_DIALOGUE: Record<string, string[]> = {
