@@ -47,6 +47,8 @@ interface Pedestrian {
   // Boronica-specific
   isBoronica:     boolean;
   boronicaYelled: boolean;
+  mixer?:         THREE.AnimationMixer;
+  isGLB?:         boolean;
 }
 
 interface Kangaroo {
@@ -447,40 +449,95 @@ export class PedestrianSystem {
   // ── Spawn ───────────────────────────────────────────────────────────────────
 
   private _spawnPedestrians(): void {
-    const spawnOne = (axis: 'x' | 'z', isBoronica = false): void => {
-      const bodyColor = isBoronica
-        ? BORONICA_BODY
-        : BODY_COLORS[Math.floor(Math.random() * BODY_COLORS.length)];
+    const VARIANTS = [
+      'blocky-variant-a', 'blocky-variant-e', 'blocky-variant-f', 'blocky-variant-h',
+      'blocky-variant-l', 'blocky-variant-m', 'blocky-variant-n', 'blocky-variant-o',
+    ];
+    const base = (import.meta as any).env.BASE_URL as string;
+    const loader = new GLTFLoader();
+    const dummy = new THREE.Mesh();
 
-      const built = isBoronica
-        ? buildBoronica()
-        : buildPedestrian(bodyColor);
-      const { group, leftArm, rightArm, leftLeg, rightLeg } = built;
-
+    // Boronica — keep as procedural (she has a unique look)
+    const spawnBoronica = (): void => {
+      const { group, leftArm, rightArm, leftLeg, rightLeg } = buildBoronica();
       const roadPos = randomSidewalk();
       const { segStart, segEnd, pos } = randomSegment();
       const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
-      const speed = isBoronica ? 3.5 : 2 + Math.random() * 1.5;
-
       const ped: Pedestrian = {
-        group, axis, roadPos, segStart, segEnd, pos, dir, speed,
+        group, axis: 'z', roadPos, segStart, segEnd, pos, dir, speed: 3.5,
         scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
         walkCycle: Math.random() * Math.PI * 2,
         leftArm, rightArm, leftLeg, rightLeg,
-        splatted: false, respawnTimer: 0, spawnAxis: axis,
-        isBoronica, boronicaYelled: false,
+        splatted: false, respawnTimer: 0, spawnAxis: 'z',
+        isBoronica: true, boronicaYelled: false,
       };
-
       this.pedestrians.push(ped);
       this.scene.add(group);
       this._applyPedPosition(ped);
       this._applyPedFacing(ped);
     };
 
-    for (let i = 0; i < 20; i++) spawnOne('x');
-    for (let i = 0; i < 20; i++) spawnOne('z');
-    // Boronica — always on a z-axis sidewalk so she's visible
-    spawnOne('z', true);
+    // Regular peds — Kenney blocky GLB models, fallback to procedural
+    const spawnGLBPed = (axis: 'x' | 'z'): void => {
+      const variantName = VARIANTS[Math.floor(Math.random() * VARIANTS.length)];
+      const url = `${base}models/characters/${variantName}.glb`;
+      const bodyColor = BODY_COLORS[Math.floor(Math.random() * BODY_COLORS.length)];
+      const roadPos = randomSidewalk();
+      const { segStart, segEnd, pos } = randomSegment();
+      const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
+      const speed = 2 + Math.random() * 1.5;
+
+      loader.load(url, (gltf) => {
+        const model = gltf.scene;
+        model.scale.setScalar(1.55);
+        model.traverse(c => { if ((c as THREE.Mesh).isMesh) c.castShadow = true; });
+        const group = new THREE.Group();
+        group.add(model);
+
+        const ped: Pedestrian = {
+          group, axis, roadPos, segStart, segEnd, pos, dir, speed,
+          scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
+          walkCycle: Math.random() * Math.PI * 2,
+          leftArm: dummy, rightArm: dummy, leftLeg: dummy, rightLeg: dummy,
+          splatted: false, respawnTimer: 0, spawnAxis: axis,
+          isBoronica: false, boronicaYelled: false,
+          isGLB: true,
+        };
+
+        // If model has embedded walk animation (e.g. Mixamo retarget), use it
+        if (gltf.animations.length > 0) {
+          const mixer = new THREE.AnimationMixer(model);
+          const clip = gltf.animations.find(a => a.name.toLowerCase().includes('walk')) ?? gltf.animations[0];
+          mixer.clipAction(clip).play();
+          ped.mixer = mixer;
+        }
+
+        this.pedestrians.push(ped);
+        this.scene.add(group);
+        this._applyPedPosition(ped);
+        this._applyPedFacing(ped);
+      }, undefined, () => {
+        // Fallback: procedural geometry if GLB fails
+        const built = buildPedestrian(bodyColor);
+        const ped: Pedestrian = {
+          group: built.group, axis, roadPos, segStart, segEnd, pos, dir, speed,
+          scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
+          walkCycle: Math.random() * Math.PI * 2,
+          leftArm: built.leftArm, rightArm: built.rightArm,
+          leftLeg: built.leftLeg, rightLeg: built.rightLeg,
+          splatted: false, respawnTimer: 0, spawnAxis: axis,
+          isBoronica: false, boronicaYelled: false,
+        };
+        this.pedestrians.push(ped);
+        this.scene.add(built.group);
+        this._applyPedPosition(ped);
+        this._applyPedFacing(ped);
+      });
+    };
+
+    for (let i = 0; i < 20; i++) spawnGLBPed('x');
+    for (let i = 0; i < 20; i++) spawnGLBPed('z');
+    spawnBoronica();
   }
 
   private _spawnKangaroos(): void {
@@ -770,14 +827,23 @@ export class PedestrianSystem {
 
       this._applyPedFacing(ped);
 
-      // Walk cycle
-      const effSpeed = ped.scattering ? 12 : ped.speed;
-      ped.walkCycle += effSpeed * dt * 2;
-      const swing = Math.sin(ped.walkCycle);
-      ped.leftArm.rotation.z  =  swing * 0.4 + 0.15;
-      ped.rightArm.rotation.z = -swing * 0.4 - 0.15;
-      ped.leftLeg.rotation.x  =  swing * 0.5;
-      ped.rightLeg.rotation.x = -swing * 0.5;
+      // Walk animation
+      if (ped.mixer) {
+        ped.mixer.update(dt);
+      } else if (ped.isGLB) {
+        // Body bob for static Kenney GLB models (no embedded walk anim)
+        ped.walkCycle += (ped.scattering ? 12 : ped.speed) * dt * 2;
+        ped.group.position.y = Math.max(0, Math.abs(Math.sin(ped.walkCycle)) * 0.1);
+      } else {
+        // Procedural arm/leg swing (Boronica + fallback peds)
+        const effSpeed = ped.scattering ? 12 : ped.speed;
+        ped.walkCycle += effSpeed * dt * 2;
+        const swing = Math.sin(ped.walkCycle);
+        ped.leftArm.rotation.z  =  swing * 0.4 + 0.15;
+        ped.rightArm.rotation.z = -swing * 0.4 - 0.15;
+        ped.leftLeg.rotation.x  =  swing * 0.5;
+        ped.rightLeg.rotation.x = -swing * 0.5;
+      }
     }
 
     // ── Kangaroos ───────────────────────────────────────────────────────────
