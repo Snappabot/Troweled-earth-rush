@@ -191,7 +191,7 @@ async function main() {
   // ── Traffic + Pedestrian systems ────────────────────────────────────────────
   const traffic    = new TrafficSystem(engine.scene);
   new ParkedCarSystem(engine.scene);
-  const pedestrians = new PedestrianSystem(engine.scene);
+  const pedestrians = new PedestrianSystem(engine.scene, engine.collisionWorld);
 
   // ── On-foot mode ─────────────────────────────────────────────────────────────
   let playerOnFoot: PlayerOnFoot | null = null;

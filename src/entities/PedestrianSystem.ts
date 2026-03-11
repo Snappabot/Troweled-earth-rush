@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { CollisionWorld } from '../core/CollisionWorld';
 
 // ── Colours ──────────────────────────────────────────────────────────────────
 const BODY_COLORS = [
@@ -128,6 +129,7 @@ interface HitCharacter {
   splatted:       boolean;
   respawnTimer:   number;
   nearbySpoken:   boolean;
+  mixer?:         THREE.AnimationMixer;
 }
 
 // ── Build Helpers ─────────────────────────────────────────────────────────────
@@ -423,6 +425,7 @@ export class PedestrianSystem {
   private hitChars:    HitCharacter[] = [];
   private splats:      SplatDecal[] = [];
   private scene: THREE.Scene;
+  private collisionWorld: CollisionWorld | null = null;
 
   /** Fired on splat: (satsEarned, entityName?) */
   onSplat: ((sats: number, name?: string) => void) | null = null;
@@ -433,8 +436,9 @@ export class PedestrianSystem {
   /** Fired when van splats a hit character */
   onHitCharSplat: ((charId: string, toast: string) => void) | null = null;
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, collisionWorld?: CollisionWorld) {
     this.scene = scene;
+    this.collisionWorld = collisionWorld ?? null;
     this._spawnPedestrians();
     this._spawnKangaroos();
     this._spawnHitCharacters();
@@ -579,6 +583,13 @@ export class PedestrianSystem {
 
         if (axis === 'x') wrapper.position.set(pos, 0, roadPos);
         else wrapper.position.set(roadPos, 0, pos);
+
+        // Set up Mixamo walk animation if the GLB has embedded clips
+        if (gltf.animations.length > 0) {
+          const mixer = new THREE.AnimationMixer(model);
+          mixer.clipAction(gltf.animations[0]).play();
+          hc.mixer = mixer;
+        }
 
         this.scene.add(wrapper);
         this.hitChars.push(hc);
@@ -750,6 +761,13 @@ export class PedestrianSystem {
         this._applyPedPosition(ped);
       }
 
+      // Building collision
+      if (this.collisionWorld) {
+        const resolved = this.collisionWorld.resolveCircle(ped.group.position.x, ped.group.position.z, 0.4);
+        ped.group.position.x = resolved.x;
+        ped.group.position.z = resolved.z;
+      }
+
       this._applyPedFacing(ped);
 
       // Walk cycle
@@ -867,6 +885,15 @@ export class PedestrianSystem {
         else hc.group.position.set(hc.roadPos, 0, hc.pos);
       }
 
+      // Building collision — push hit char out of any building AABB
+      if (this.collisionWorld) {
+        const resolved = this.collisionWorld.resolveCircle(hc.group.position.x, hc.group.position.z, 0.5);
+        hc.group.position.x = resolved.x;
+        hc.group.position.z = resolved.z;
+        if (hc.axis === 'x') hc.pos = resolved.x;
+        else hc.pos = resolved.z;
+      }
+
       // Facing
       if (!hc.scattering) {
         if (hc.axis === 'x') hc.group.rotation.y = hc.dir === 1 ? -Math.PI / 2 : Math.PI / 2;
@@ -875,16 +902,19 @@ export class PedestrianSystem {
         hc.group.rotation.y = Math.atan2(hc.scatterDirX, hc.scatterDirZ);
       }
 
-      // Walk cycle — bob the whole model (loaded GLB models don't have named arm/leg refs)
-      hc.walkCycle += hc.speed * dt * 2;
-      const hcSwing = Math.sin(hc.walkCycle);
-      // Subtle body bob for loaded models
-      hc.group.position.y = Math.max(0, Math.abs(hcSwing) * 0.12);
-      // Procedural fallback arm/leg swing (no-op if dummy meshes)
-      hc.leftArm.rotation.z  =  hcSwing * 0.4 + 0.15;
-      hc.rightArm.rotation.z = -hcSwing * 0.4 - 0.15;
-      hc.leftLeg.rotation.x  =  hcSwing * 0.5;
-      hc.rightLeg.rotation.x = -hcSwing * 0.5;
+      // Update Mixamo animation mixer (for GLB models with embedded clips)
+      if (hc.mixer) {
+        hc.mixer.update(dt);
+      } else {
+        // Walk cycle for procedural fallback models
+        hc.walkCycle += hc.speed * dt * 2;
+        const hcSwing = Math.sin(hc.walkCycle);
+        hc.group.position.y = Math.max(0, Math.abs(hcSwing) * 0.12);
+        hc.leftArm.rotation.z  =  hcSwing * 0.4 + 0.15;
+        hc.rightArm.rotation.z = -hcSwing * 0.4 - 0.15;
+        hc.leftLeg.rotation.x  =  hcSwing * 0.5;
+        hc.rightLeg.rotation.x = -hcSwing * 0.5;
+      }
     }
 
     // ── Splat decals fade ───────────────────────────────────────────────────
