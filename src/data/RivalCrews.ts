@@ -33,10 +33,10 @@ export const RIVAL_CREWS: RivalCrew[] = [
   {
     id: 'perth_plasterers',
     name: 'Perth Plasterers',
-    tagline: 'They drove 3000km just to lose.',
+    tagline: '3000km away. Still the hardest crew on the continent. ⭐⭐⭐⭐⭐',
     color: '#FF4444',
-    difficulty: 0.45,
-    speed: 0.55,
+    difficulty: 1.0,
+    speed: 1.0,
     members: [
       { name: 'Barry',  skinTone: '#D4B090', hairColor: '#444444', hairStyle: 'buzz',  accentColor: '#FF4444' },
       { name: 'Dazza',  skinTone: '#E8C8A0', hairColor: '#8B4513', hairStyle: 'short', accentColor: '#FF4444' },
@@ -46,10 +46,10 @@ export const RIVAL_CREWS: RivalCrew[] = [
   {
     id: 'sydney_stucco',
     name: 'Sydney Stucco',
-    tagline: 'Fancy tools, slow hands.',
+    tagline: 'Fancy tools, fast hands. Tougher than they look. ⭐⭐⭐⭐',
     color: '#4488FF',
-    difficulty: 0.60,
-    speed: 0.65,
+    difficulty: 0.80,
+    speed: 0.80,
     members: [
       { name: 'Blake',   skinTone: '#E0B090', hairColor: '#1a0e00', hairStyle: 'slicked',  accentColor: '#4488FF' },
       { name: 'Jaxon',   skinTone: '#D4A070', hairColor: '#2a1800', hairStyle: 'bun',      accentColor: '#4488FF' },
@@ -59,10 +59,10 @@ export const RIVAL_CREWS: RivalCrew[] = [
   {
     id: 'brisbane_brushmen',
     name: 'Brisbane Brushmen',
-    tagline: 'Rough as guts, twice as slow.',
+    tagline: 'Rough as guts. More capable than you think. ⭐⭐⭐',
     color: '#FF8C00',
-    difficulty: 0.35,
-    speed: 0.42,
+    difficulty: 0.60,
+    speed: 0.60,
     members: [
       { name: 'Cobber', skinTone: '#D4A060', hairColor: '#888888', hairStyle: 'bald',  accentColor: '#FF8C00' },
       { name: 'Mozzie', skinTone: '#C89050', hairColor: '#2a1000', hairStyle: 'afro',  accentColor: '#FF8C00' },
@@ -72,7 +72,7 @@ export const RIVAL_CREWS: RivalCrew[] = [
   {
     id: 'melbourne_mafia',
     name: 'Melbourne Mafia',
-    tagline: 'They know this city. So does Jose.',
+    tagline: 'They know this city. So does Jose. ⭐⭐⭐⭐',
     color: '#9B59B6',
     difficulty: 0.80,
     speed: 0.82,
@@ -85,10 +85,10 @@ export const RIVAL_CREWS: RivalCrew[] = [
   {
     id: 'adelaide_arches',
     name: 'Adelaide Arches',
-    tagline: 'Church Hall heroes. Still lost.',
+    tagline: 'Church hall heroes. Solid mid-tier. ⭐⭐⭐',
     color: '#E74C3C',
-    difficulty: 0.55,
-    speed: 0.58,
+    difficulty: 0.60,
+    speed: 0.60,
     members: [
       { name: 'Murray', skinTone: '#D4A878', hairColor: '#5a3010', hairStyle: 'short',  accentColor: '#E74C3C' },
       { name: 'Cheryl', skinTone: '#F0D0A8', hairColor: '#C87040', hairStyle: 'bun',    accentColor: '#E74C3C' },
@@ -111,10 +111,10 @@ export const RIVAL_CREWS: RivalCrew[] = [
   {
     id: 'tazzy_devils',
     name: 'Tazzy Devils',
-    tagline: 'Remote. Feral. Surprisingly fast.',
+    tagline: 'Remote. Relaxed. Easy pickings. ⭐⭐',
     color: '#1ABC9C',
-    difficulty: 0.70,
-    speed: 0.75,
+    difficulty: 0.40,
+    speed: 0.40,
     members: [
       { name: 'Reg',    skinTone: '#C88858', hairColor: '#333333', hairStyle: 'bald',    accentColor: '#1ABC9C' },
       { name: 'Shelby', skinTone: '#E0B888', hairColor: '#8B4513', hairStyle: 'ponytail',accentColor: '#1ABC9C' },
