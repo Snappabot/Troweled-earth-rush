@@ -283,8 +283,8 @@ export class TowerDefence {
     renderer.domElement.style.display = 'block';
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#1a1a2e');
-    scene.fog = new THREE.Fog('#1a1a2e', 60, 80);
+    scene.background = new THREE.Color('#1e2d3d');
+    scene.fog = new THREE.Fog('#1e2d3d', 65, 95);
 
     // Camera — isometric-ish overhead
     const cam = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
@@ -297,9 +297,9 @@ export class TowerDefence {
     updateCam();
 
     // Lights
-    const ambient = new THREE.AmbientLight('#FFE4C4', 0.6);
+    const ambient = new THREE.AmbientLight('#B8C8D8', 0.5);
     scene.add(ambient);
-    const dirLight = new THREE.DirectionalLight('#FFF8DC', 0.8);
+    const dirLight = new THREE.DirectionalLight('#FFE0B0', 0.9);
     dirLight.position.set(20, 30, 10);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.set(1024, 1024);
@@ -307,22 +307,39 @@ export class TowerDefence {
     dirLight.shadow.camera.left = -30; dirLight.shadow.camera.right = 30;
     dirLight.shadow.camera.top = 30; dirLight.shadow.camera.bottom = -30;
     scene.add(dirLight);
+    // Cool blue fill from opposite side — dusk Melbourne sky feel
+    const fillLight = new THREE.DirectionalLight('#4A70B0', 0.35);
+    fillLight.position.set(-20, 15, -10);
+    scene.add(fillLight);
 
-    // ── Ground ──
-    const groundGeo = new THREE.PlaneGeometry(WORLD_W + 8, WORLD_H + 8);
-    const groundMat = new THREE.MeshStandardMaterial({ color:'#3a3a4a', roughness:0.9 });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.set(WORLD_W / 2, -0.05, WORLD_H / 2);
-    ground.receiveShadow = true;
-    scene.add(ground);
+    // ── Ground — checkerboard construction yard ──
+    const borderGeo = new THREE.PlaneGeometry(WORLD_W + 12, WORLD_H + 12);
+    const borderMat = new THREE.MeshStandardMaterial({ color:'#4a5248', roughness:0.95 });
+    const borderGround = new THREE.Mesh(borderGeo, borderMat);
+    borderGround.rotation.x = -Math.PI / 2;
+    borderGround.position.set(WORLD_W / 2, -0.07, WORLD_H / 2);
+    borderGround.receiveShadow = true;
+    scene.add(borderGround);
+    // Checkerboard tiles
+    const tileGeo = new THREE.PlaneGeometry(CELL, CELL);
+    const tileMat0 = new THREE.MeshStandardMaterial({ color:'#556055', roughness:0.95 });
+    const tileMat1 = new THREE.MeshStandardMaterial({ color:'#687068', roughness:0.9 });
+    for (let gx = 0; gx < GRID_W; gx++) {
+      for (let gz = 0; gz < GRID_H; gz++) {
+        const tile = new THREE.Mesh(tileGeo, (gx + gz) % 2 === 0 ? tileMat0 : tileMat1);
+        tile.rotation.x = -Math.PI / 2;
+        tile.position.set(gx * CELL + CELL / 2, -0.03, gz * CELL + CELL / 2);
+        tile.receiveShadow = true;
+        scene.add(tile);
+      }
+    }
 
     // ── Grid cells (placeable) ──
     const gridOccupied: boolean[][] = Array.from({ length: GRID_W }, () => Array(GRID_H).fill(false));
     const gridMeshes: (THREE.Mesh | null)[][] = Array.from({ length: GRID_W }, () => Array(GRID_H).fill(null));
     const cellGeo = new THREE.BoxGeometry(CELL * 0.92, 0.1, CELL * 0.92);
-    const cellMatNormal = new THREE.MeshStandardMaterial({ color:'#2a2a3a', roughness:0.8, transparent:true, opacity:0.4 });
-    const cellMatHover = new THREE.MeshStandardMaterial({ color:'#4a4a6a', roughness:0.8, transparent:true, opacity:0.6 });
+    const cellMatNormal = new THREE.MeshStandardMaterial({ color:'#4a7a3a', roughness:0.85, transparent:true, opacity:0.55 });
+    const cellMatHover = new THREE.MeshStandardMaterial({ color:'#6aaf50', roughness:0.8, transparent:true, opacity:0.75 });
 
     // ── Build path curves for each path in this level ──
     const pathCurves: THREE.CatmullRomCurve3[] = levelDef.paths.map(pathGrid => {
@@ -363,49 +380,165 @@ export class TowerDefence {
       }
     }
 
-    // ── Path rendering — draw a tube for EACH path ──
+    // ── Path rendering — flat tarmac road segments + construction cones ──
+    const roadMat = new THREE.MeshStandardMaterial({ color:'#8B7355', roughness:0.88 });
+    const dashMat = new THREE.MeshStandardMaterial({ color:'#FFF8DC', roughness:0.7 });
+    const coneMat = new THREE.MeshStandardMaterial({ color:'#FF6600', roughness:0.75 });
+    const coneBaseMat = new THREE.MeshStandardMaterial({ color:'#FFFFFF', roughness:0.7 });
+    const coneGeo = new THREE.ConeGeometry(0.12, 0.35, 6);
+    const coneBaseGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.04, 6);
+    const roadSegGeo = new THREE.BoxGeometry(CELL * 0.97, 0.09, CELL * 0.97);
+
     for (const curve of pathCurves) {
       const pathPoints = curve.getPoints(200);
-      const tubeGeo = new THREE.TubeGeometry(curve, 100, 0.8, 8, false);
-      const pathMesh = new THREE.Mesh(tubeGeo, new THREE.MeshStandardMaterial({ color:'#D2B48C', roughness:0.7 }));
-      pathMesh.position.y = 0.05;
-      scene.add(pathMesh);
 
-      // Lane markings
-      const dashGeo = new THREE.BoxGeometry(0.3, 0.02, 0.15);
-      const dashMat = new THREE.MeshStandardMaterial({ color:'#FFF8DC' });
-      for (let i = 0; i < pathPoints.length; i += 6) {
+      // Flat road tile at each path cell
+      const visitedRoad = new Set<string>();
+      for (const pt of pathPoints) {
+        const rx = Math.round(pt.x / CELL - 0.5);
+        const rz = Math.round(pt.z / CELL - 0.5);
+        const key = `${rx},${rz}`;
+        if (!visitedRoad.has(key)) {
+          visitedRoad.add(key);
+          const road = new THREE.Mesh(roadSegGeo, roadMat);
+          road.position.set(rx * CELL + CELL / 2, 0.045, rz * CELL + CELL / 2);
+          road.receiveShadow = true;
+          scene.add(road);
+        }
+      }
+
+      // Centre dashes
+      const dashGeo = new THREE.BoxGeometry(0.1, 0.02, 0.42);
+      for (let i = 0; i < pathPoints.length; i += 8) {
         const d = new THREE.Mesh(dashGeo, dashMat);
         d.position.copy(pathPoints[i]);
-        d.position.y = 0.9;
-        if (i + 1 < pathPoints.length) d.lookAt(pathPoints[Math.min(i + 1, pathPoints.length - 1)]);
+        d.position.y = 0.1;
+        if (i + 1 < pathPoints.length) {
+          const ahead = pathPoints[Math.min(i + 1, pathPoints.length - 1)];
+          d.lookAt(ahead.x, 0.1, ahead.z);
+        }
         scene.add(d);
+      }
+
+      // Construction cones along path edges
+      for (let i = 4; i < pathPoints.length; i += 14) {
+        const pt = pathPoints[i];
+        const ahead = pathPoints[Math.min(i + 1, pathPoints.length - 1)];
+        const dir = new THREE.Vector3(ahead.x - pt.x, 0, ahead.z - pt.z).normalize();
+        const perp = new THREE.Vector3(-dir.z, 0, dir.x);
+        for (const side of [-1, 1]) {
+          const cx = pt.x + perp.x * side * 1.05;
+          const cz = pt.z + perp.z * side * 1.05;
+          const cone = new THREE.Mesh(coneGeo, coneMat);
+          cone.position.set(cx, 0.18, cz);
+          cone.castShadow = true;
+          scene.add(cone);
+          const coneBase = new THREE.Mesh(coneBaseGeo, coneBaseMat);
+          coneBase.position.set(cx, 0.02, cz);
+          scene.add(coneBase);
+        }
       }
     }
 
-    // ── House / Wall Mesh at end of path 0 ──
+    // ── House / Wall Mesh at end of path 0 — Melbourne terrace style ──
     const endPt = levelDef.paths[0][levelDef.paths[0].length - 1];
     const houseGroup = new THREE.Group();
+
+    // Main brick body
     const houseBody = new THREE.Mesh(
-      new THREE.BoxGeometry(2.5, 2.0, 2.5),
-      new THREE.MeshLambertMaterial({ color: 0xC8A870 })
+      new THREE.BoxGeometry(2.8, 2.4, 2.0),
+      new THREE.MeshLambertMaterial({ color: 0xA06848 })
     );
-    houseBody.position.y = 1.0;
+    houseBody.position.y = 1.2;
     houseBody.castShadow = true;
     houseGroup.add(houseBody);
-    const roofMat = new THREE.MeshLambertMaterial({ color: 0x8B1212 });
-    const roof = new THREE.Mesh(new THREE.ConeGeometry(2.0, 1.4, 4), roofMat);
-    roof.rotation.y = Math.PI / 4;
-    roof.position.y = 2.7;
-    houseGroup.add(roof);
+
+    // White render facade on front face
+    const facade = new THREE.Mesh(
+      new THREE.BoxGeometry(2.82, 1.3, 0.05),
+      new THREE.MeshLambertMaterial({ color: 0xF0EDE0 })
+    );
+    facade.position.set(0, 0.75, 1.02);
+    houseGroup.add(facade);
+
+    // Windows (dark squares with white frames)
+    const winMat = new THREE.MeshLambertMaterial({ color: 0x1A2A3A });
+    const frameMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+    for (const wx of [-0.75, 0.75]) {
+      const frame = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.58, 0.04), frameMat);
+      frame.position.set(wx, 1.45, 1.04);
+      houseGroup.add(frame);
+      const win = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.46, 0.06), winMat);
+      win.position.set(wx, 1.45, 1.05);
+      houseGroup.add(win);
+    }
+
+    // Door
+    const door = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 0.9, 0.06),
+      new THREE.MeshLambertMaterial({ color: 0x3A2010 })
+    );
+    door.position.set(0, 0.45, 1.04);
+    houseGroup.add(door);
+    // Door knob
+    const knob = new THREE.Mesh(
+      new THREE.SphereGeometry(0.04, 5, 5),
+      new THREE.MeshLambertMaterial({ color: 0xFFD700 })
+    );
+    knob.position.set(0.18, 0.45, 1.08);
+    houseGroup.add(knob);
+
+    // Flat terrace roof (parapet-style)
+    const roofSlab = new THREE.Mesh(
+      new THREE.BoxGeometry(3.0, 0.18, 2.2),
+      new THREE.MeshLambertMaterial({ color: 0x8B4A4A })
+    );
+    roofSlab.position.y = 2.5;
+    roofSlab.castShadow = true;
+    houseGroup.add(roofSlab);
+    // Parapet front wall
+    const parapetFront = new THREE.Mesh(
+      new THREE.BoxGeometry(3.05, 0.38, 0.14),
+      new THREE.MeshLambertMaterial({ color: 0xA06848 })
+    );
+    parapetFront.position.set(0, 2.78, 1.08);
+    houseGroup.add(parapetFront);
+
+    // Small front fence/gate
+    const fenceMat2 = new THREE.MeshLambertMaterial({ color: 0xF4F0E8 });
+    for (const fi of [-0.7, 0.7]) {
+      const fpost = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.65, 0.07), fenceMat2);
+      fpost.position.set(fi, 0.33, 1.5);
+      houseGroup.add(fpost);
+    }
+    const frail = new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.06, 0.06), fenceMat2);
+    frail.position.set(0, 0.6, 1.5);
+    houseGroup.add(frail);
+
+    // Garden strip (green patch in front)
+    const gardenPatch = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.06, 0.55),
+      new THREE.MeshLambertMaterial({ color: 0x3A6B2A })
+    );
+    gardenPatch.position.set(0, 0.03, 1.3);
+    houseGroup.add(gardenPatch);
+
+    // Glow ring on ground
     const glowGeo = new THREE.RingGeometry(1.8, 2.2, 32);
     const glowMat = new THREE.MeshBasicMaterial({ color: 0xFFD700, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
     const glowRing = new THREE.Mesh(glowGeo, glowMat);
     glowRing.rotation.x = -Math.PI / 2;
     glowRing.position.y = 0.1;
     houseGroup.add(glowRing);
+
     houseGroup.position.set(endPt[0] * CELL + CELL / 2, 0, endPt[1] * CELL + CELL / 2);
     scene.add(houseGroup);
+
+    // Warm golden point light near house
+    const houseLight = new THREE.PointLight('#FF9944', 1.6, 22);
+    houseLight.position.set(endPt[0] * CELL + CELL / 2, 4.5, endPt[1] * CELL + CELL / 2);
+    scene.add(houseLight);
+
     // Mark house cell as occupied
     if (endPt[0] >= 0 && endPt[0] < GRID_W && endPt[1] >= 0 && endPt[1] < GRID_H) {
       gridOccupied[endPt[0]][endPt[1]] = true;
@@ -461,19 +594,113 @@ export class TowerDefence {
       rivalFigures.push(figGroup);
     }
 
-    // ── Scaffold structures on edges ──
-    const scaffoldMat = new THREE.MeshStandardMaterial({ color:'#DAA520', metalness:0.3 });
-    const poleGeo = new THREE.CylinderGeometry(0.08, 0.08, 4, 6);
-    const barGeo = new THREE.BoxGeometry(2, 0.08, 0.08);
-    for (const sx of [-2, WORLD_W + 2]) {
-      for (let sz = 2; sz < WORLD_H; sz += 5) {
-        const pole = new THREE.Mesh(poleGeo, scaffoldMat);
-        pole.position.set(sx, 2, sz);
-        pole.castShadow = true;
-        scene.add(pole);
-        const bar = new THREE.Mesh(barGeo, scaffoldMat);
-        bar.position.set(sx, 3.5, sz);
-        scene.add(bar);
+    // ── Perimeter — low brick wall ──
+    const brickMat = new THREE.MeshStandardMaterial({ color:'#8B5E3C', roughness:0.9 });
+    const brickCapMat = new THREE.MeshStandardMaterial({ color:'#A0704A', roughness:0.85 });
+    const wallEWGeo = new THREE.BoxGeometry(CELL, 0.8, 0.3);
+    const wallCapEWGeo = new THREE.BoxGeometry(CELL + 0.1, 0.12, 0.42);
+    const wallNSGeo = new THREE.BoxGeometry(0.3, 0.8, CELL);
+    const wallCapNSGeo = new THREE.BoxGeometry(0.42, 0.12, CELL + 0.1);
+    for (const sx of [-0.55, WORLD_W + 0.25]) {
+      for (let gzw = 0; gzw < GRID_H; gzw++) {
+        const wall = new THREE.Mesh(wallEWGeo, brickMat);
+        wall.position.set(sx, 0.4, gzw * CELL + CELL / 2);
+        wall.castShadow = true; scene.add(wall);
+        const cap = new THREE.Mesh(wallCapEWGeo, brickCapMat);
+        cap.position.set(sx, 0.86, gzw * CELL + CELL / 2);
+        scene.add(cap);
+      }
+    }
+    for (const sz of [-0.55, WORLD_H + 0.25]) {
+      for (let gxw = 0; gxw < GRID_W; gxw++) {
+        const wall = new THREE.Mesh(wallNSGeo, brickMat);
+        wall.position.set(gxw * CELL + CELL / 2, 0.4, sz);
+        wall.castShadow = true; scene.add(wall);
+        const cap = new THREE.Mesh(wallCapNSGeo, brickCapMat);
+        cap.position.set(gxw * CELL + CELL / 2, 0.86, sz);
+        scene.add(cap);
+      }
+    }
+
+    // ── Distant Melbourne skyline silhouettes ──
+    const skylineMat = new THREE.MeshStandardMaterial({ color:'#162030', roughness:1.0 });
+    for (const [bx, bz, bw, bh, bd] of [
+      [-10, WORLD_H / 2,      3,  12, 3],
+      [-14, WORLD_H / 2 - 4,  2,   8, 2],
+      [-12, WORLD_H / 2 + 5,  2.5,15, 2.5],
+      [WORLD_W + 10, WORLD_H / 2,     3,  10, 3],
+      [WORLD_W + 14, WORLD_H / 2 + 4, 2,  14, 2],
+      [WORLD_W + 12, WORLD_H / 2 - 5, 2.5, 9, 2.5],
+      [WORLD_W / 2 - 6, -10, 3,  11, 3],
+      [WORLD_W / 2 + 6, -10, 2,   8, 2],
+      [WORLD_W / 2,  WORLD_H + 10, 4, 13, 3],
+      [WORLD_W / 2 - 10, WORLD_H + 10, 2.5, 10, 2.5],
+    ] as [number, number, number, number, number][]) {
+      const bMesh = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), skylineMat);
+      bMesh.position.set(bx, bh / 2, bz);
+      scene.add(bMesh);
+    }
+
+    // ── Street lamps near path ──
+    const lampPostMat = new THREE.MeshStandardMaterial({ color:'#888888', metalness:0.5 });
+    const lampGlowMat = new THREE.MeshBasicMaterial({ color:'#FFEE88', transparent:true, opacity:0.9 });
+    const lampPostGeo = new THREE.CylinderGeometry(0.05, 0.07, 3.5, 6);
+    const lampHeadGeo = new THREE.SphereGeometry(0.18, 8, 6);
+    const lampArmGeo = new THREE.BoxGeometry(0.5, 0.05, 0.05);
+    for (const [lx, lz] of [
+      [3, 0], [9, 0], [15, 0],
+      [3, GRID_H - 1], [9, GRID_H - 1], [15, GRID_H - 1],
+    ] as [number, number][]) {
+      if (pathCells.has(`${lx},${lz}`) || gridOccupied[lx]?.[lz]) continue;
+      const lPost = new THREE.Mesh(lampPostGeo, lampPostMat);
+      lPost.position.set(lx * CELL + CELL / 2, 1.75, lz * CELL + CELL / 2);
+      lPost.castShadow = true; scene.add(lPost);
+      const lArm = new THREE.Mesh(lampArmGeo, lampPostMat);
+      lArm.position.set(lx * CELL + CELL / 2 + 0.25, 3.55, lz * CELL + CELL / 2);
+      scene.add(lArm);
+      const lHead = new THREE.Mesh(lampHeadGeo, lampGlowMat);
+      lHead.position.set(lx * CELL + CELL / 2 + 0.5, 3.55, lz * CELL + CELL / 2);
+      scene.add(lHead);
+      const lLight = new THREE.PointLight('#FFEE88', 0.65, 9);
+      lLight.position.set(lx * CELL + CELL / 2 + 0.5, 3.5, lz * CELL + CELL / 2);
+      scene.add(lLight);
+    }
+
+    // ── Decorative props on ~15% of empty non-path cells ──
+    const propBagMat    = new THREE.MeshStandardMaterial({ color:'#C8B88A', roughness:0.95 });
+    const propBarrelMat = new THREE.MeshStandardMaterial({ color:'#4A5A3A', roughness:0.8 });
+    const propBucketMat = new THREE.MeshStandardMaterial({ color:'#E8A830', roughness:0.8 });
+    const propBoxMat    = new THREE.MeshStandardMaterial({ color:'#CC3A1A', roughness:0.85 });
+    // Deterministic PRNG so layout is stable
+    let _rngState = 12345;
+    const nextRng = () => {
+      _rngState = (_rngState * 1664525 + 1013904223) & 0x7fffffff;
+      return _rngState / 0x7fffffff;
+    };
+    for (let gx = 0; gx < GRID_W; gx++) {
+      for (let gz = 0; gz < GRID_H; gz++) {
+        if (gridOccupied[gx][gz] || pathCells.has(`${gx},${gz}`)) continue;
+        if (nextRng() > 0.15) continue;
+        const pType = Math.floor(nextRng() * 4);
+        const wx2 = gx * CELL + CELL / 2 + (nextRng() - 0.5) * 0.5;
+        const wz2 = gz * CELL + CELL / 2 + (nextRng() - 0.5) * 0.5;
+        let propMesh: THREE.Mesh;
+        if (pType === 0) {
+          propMesh = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.26, 0.26), propBagMat);
+          propMesh.position.set(wx2, 0.13, wz2);
+        } else if (pType === 1) {
+          propMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.42, 8), propBarrelMat);
+          propMesh.position.set(wx2, 0.21, wz2);
+        } else if (pType === 2) {
+          propMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.22, 8), propBucketMat);
+          propMesh.position.set(wx2, 0.11, wz2);
+        } else {
+          propMesh = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.18, 0.22), propBoxMat);
+          propMesh.position.set(wx2, 0.09, wz2);
+        }
+        propMesh.rotation.y = nextRng() * Math.PI * 2;
+        propMesh.castShadow = true;
+        scene.add(propMesh);
       }
     }
 
@@ -612,23 +839,118 @@ export class TowerDefence {
     function createCrewMesh(id: string): THREE.Group {
       const data = CREW[id];
       const g = new THREE.Group();
-      const bodyGeo = new THREE.CylinderGeometry(0.35, 0.4, 1.2, 8);
-      const bodyMat = new THREE.MeshStandardMaterial({ color: data.color });
-      const body = new THREE.Mesh(bodyGeo, bodyMat);
-      body.position.y = 0.9;
-      body.castShadow = true;
-      g.add(body);
-      const headGeo = new THREE.SphereGeometry(0.28, 8, 8);
-      const headMat = new THREE.MeshStandardMaterial({ color: data.skin });
-      const head = new THREE.Mesh(headGeo, headMat);
-      head.position.y = 1.75;
-      head.castShadow = true;
-      g.add(head);
-      const hatGeo = new THREE.CylinderGeometry(0.32, 0.35, 0.15, 8);
-      const hatMat = new THREE.MeshStandardMaterial({ color:'#FFD700' });
-      const hat = new THREE.Mesh(hatGeo, hatMat);
-      hat.position.y = 2.0;
-      g.add(hat);
+      const crewCol = new THREE.Color(data.color);
+      const skinCol = new THREE.Color(data.skin);
+
+      // Legs (dark work pants)
+      const legMat = new THREE.MeshStandardMaterial({ color:'#2A2A3A' });
+      for (const lx of [-0.13, 0.13]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.52, 0.17), legMat);
+        leg.position.set(lx, 0.26, 0);
+        leg.castShadow = true; g.add(leg);
+      }
+      // Boots
+      const bootMat = new THREE.MeshStandardMaterial({ color:'#2A1A0A' });
+      for (const lx of [-0.13, 0.13]) {
+        const boot = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.1, 0.22), bootMat);
+        boot.position.set(lx, 0.05, 0.02);
+        g.add(boot);
+      }
+
+      // Torso (hi-vis crew-colour shirt)
+      const torso = new THREE.Mesh(
+        new THREE.BoxGeometry(0.52, 0.6, 0.3),
+        new THREE.MeshStandardMaterial({ color: crewCol })
+      );
+      torso.position.y = 0.84;
+      torso.castShadow = true; g.add(torso);
+
+      // TEM logo chest plate (gold)
+      const logoPlate = new THREE.Mesh(
+        new THREE.BoxGeometry(0.22, 0.13, 0.02),
+        new THREE.MeshStandardMaterial({ color:'#FFD700', emissive:'#AA8800', emissiveIntensity:0.3 })
+      );
+      logoPlate.position.set(0, 0.88, 0.165);
+      g.add(logoPlate);
+
+      // Arms
+      const armMat = new THREE.MeshStandardMaterial({ color: crewCol });
+      for (const [ax, angle] of [[-0.35, 0.22], [0.35, -0.22]] as [number, number][]) {
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.48, 0.15), armMat);
+        arm.position.set(ax, 0.8, 0);
+        arm.rotation.z = angle;
+        arm.castShadow = true; g.add(arm);
+      }
+
+      // Head (skin tone)
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.24, 8, 8),
+        new THREE.MeshStandardMaterial({ color: skinCol })
+      );
+      head.position.y = 1.42;
+      head.castShadow = true; g.add(head);
+
+      // Yellow hard hat
+      const hat = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.27, 0.29, 0.12, 8),
+        new THREE.MeshStandardMaterial({ color:'#FFD700' })
+      );
+      hat.position.y = 1.62; g.add(hat);
+      const hatBrim = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.33, 0.33, 0.04, 8),
+        new THREE.MeshStandardMaterial({ color:'#FFD700' })
+      );
+      hatBrim.position.y = 1.57; g.add(hatBrim);
+
+      // Distinctive features per crew member
+      if (id === 'jose') {
+        // Dreadlocks — radial cylinder strands
+        const dreadMat = new THREE.MeshStandardMaterial({ color:'#3A1E0A' });
+        for (let d = 0; d < 7; d++) {
+          const ang = (d / 7) * Math.PI * 2;
+          const dr = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.02, 0.3, 4), dreadMat);
+          dr.position.set(Math.cos(ang) * 0.17, 1.26, Math.sin(ang) * 0.17);
+          g.add(dr);
+        }
+      } else if (id === 'matt') {
+        // Blonde flat hair slab
+        const hair = new THREE.Mesh(
+          new THREE.BoxGeometry(0.48, 0.08, 0.48),
+          new THREE.MeshStandardMaterial({ color:'#D4AA44' })
+        );
+        hair.position.y = 1.65; g.add(hair);
+      } else if (id === 'jarrad') {
+        // Topknot bun + stem
+        const knotStem = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.04, 0.04, 0.18, 5),
+          new THREE.MeshStandardMaterial({ color:'#2A1A0A' })
+        );
+        knotStem.position.y = 1.62; g.add(knotStem);
+        const bun = new THREE.Mesh(
+          new THREE.SphereGeometry(0.1, 6, 6),
+          new THREE.MeshStandardMaterial({ color:'#2A1A0A' })
+        );
+        bun.position.y = 1.74; g.add(bun);
+      } else if (id === 'phil') {
+        // Silver hair + glasses
+        const greyHair = new THREE.Mesh(
+          new THREE.BoxGeometry(0.48, 0.07, 0.48),
+          new THREE.MeshStandardMaterial({ color:'#BBBBBB' })
+        );
+        greyHair.position.y = 1.65; g.add(greyHair);
+        const glassMat = new THREE.MeshStandardMaterial({ color:'#333333', metalness:0.6 });
+        for (const gfx of [-0.1, 0.1]) {
+          const lens = new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.014, 4, 8), glassMat);
+          lens.position.set(gfx, 1.41, 0.23);
+          lens.rotation.y = Math.PI / 2;
+          g.add(lens);
+        }
+        // Nose bridge
+        const bridge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.014, 0.014), glassMat);
+        bridge.position.set(0, 1.41, 0.23);
+        g.add(bridge);
+      }
+
       return g;
     }
 
@@ -674,31 +996,117 @@ export class TowerDefence {
 
     function createEnemyMesh(def: EnemyDef): THREE.Group {
       const g = new THREE.Group();
-      const c = def.special === 'boss' ? rivalColor3 : new THREE.Color(def.color);
-      const bodyGeo = new THREE.CapsuleGeometry(0.3 * def.scale, 0.6 * def.scale, 4, 8);
-      const bodyMat = new THREE.MeshStandardMaterial({ color: c, transparent: def.special === 'camo', opacity: def.special === 'camo' ? 0.15 : 1 });
-      const body = new THREE.Mesh(bodyGeo, bodyMat);
-      body.position.y = 0.6 * def.scale + (def.special === 'fly' ? 2 : 0);
-      body.castShadow = true;
-      g.add(body);
-      if (def.special === 'boss') {
-        const hat = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 0.25, 8), new THREE.MeshStandardMaterial({ color:'#FFD700' }));
-        hat.position.y = 1.5; g.add(hat);
+      const sc = def.scale;
+      const isBoss = def.special === 'boss';
+      const isFly  = def.special === 'fly';
+      const isCamo = def.special === 'camo';
+      const yOff   = isFly ? 2 : 0;
+      const opacity = isCamo ? 0.15 : 1;
+      const bodyCol = isBoss ? rivalColor3 : new THREE.Color(def.color);
+      const matOpts: THREE.MeshStandardMaterialParameters = { color: bodyCol, transparent: isCamo, opacity };
+
+      // Legs
+      const legMat = new THREE.MeshStandardMaterial({ color:'#1A1A2A', transparent: isCamo, opacity });
+      for (const lx of [-0.12 * sc, 0.12 * sc]) {
+        const leg = new THREE.Mesh(new THREE.BoxGeometry(0.15 * sc, 0.44 * sc, 0.15 * sc), legMat);
+        leg.position.set(lx, 0.22 * sc + yOff, 0);
+        leg.castShadow = true; g.add(leg);
       }
-      const hpBgGeo = new THREE.PlaneGeometry(1.0 * def.scale, 0.12);
+
+      // Torso (hi-vis / work jacket in def color)
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.44 * sc, 0.52 * sc, 0.26 * sc),
+        new THREE.MeshStandardMaterial(matOpts)
+      );
+      body.position.y = 0.7 * sc + yOff;
+      body.castShadow = true; g.add(body);
+
+      // Arms
+      const armMat = new THREE.MeshStandardMaterial(matOpts);
+      for (const [ax, ang] of [[-0.3 * sc, 0.2], [0.3 * sc, -0.2]] as [number, number][]) {
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.13 * sc, 0.42 * sc, 0.13 * sc), armMat);
+        arm.position.set(ax, 0.66 * sc + yOff, 0);
+        arm.rotation.z = ang; g.add(arm);
+      }
+
+      // Head
+      const headMat = new THREE.MeshStandardMaterial({
+        color: isBoss ? 0xCC9966 : 0xD4A878, transparent: isCamo, opacity,
+      });
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.22 * sc, 7, 7), headMat);
+      head.position.y = 1.12 * sc + yOff;
+      head.castShadow = true; g.add(head);
+
+      // Hat / distinctive headgear per type
+      if (isBoss) {
+        // Boss: dark red hard hat + rival banner on pole
+        const bossHat = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.31 * sc, 0.34 * sc, 0.15 * sc, 8),
+          new THREE.MeshStandardMaterial({ color:'#CC1111' })
+        );
+        bossHat.position.y = 1.33 * sc + yOff; g.add(bossHat);
+        const bossHatBrim = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.38 * sc, 0.38 * sc, 0.04 * sc, 8),
+          new THREE.MeshStandardMaterial({ color:'#CC1111' })
+        );
+        bossHatBrim.position.y = 1.27 * sc + yOff; g.add(bossHatBrim);
+        // Banner pole + flag
+        const pole = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.03, 0.03, 1.5 * sc, 5),
+          new THREE.MeshStandardMaterial({ color:'#888888' })
+        );
+        pole.position.set(0.28 * sc, 1.6 * sc + yOff, 0); g.add(pole);
+        const flag = new THREE.Mesh(
+          new THREE.BoxGeometry(0.55 * sc, 0.28 * sc, 0.02),
+          new THREE.MeshStandardMaterial({ color: bodyCol })
+        );
+        flag.position.set(0.55 * sc, 2.18 * sc + yOff, 0); g.add(flag);
+      } else if (isFly) {
+        // Flier: dark hard hat + spinning rotor hub
+        const flyHat = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.24 * sc, 0.26 * sc, 0.12 * sc, 8),
+          new THREE.MeshStandardMaterial({ color:'#222222' })
+        );
+        flyHat.position.y = 1.26 * sc + yOff; g.add(flyHat);
+        const rotorHub = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.06, 0.06, 0.14, 6),
+          new THREE.MeshStandardMaterial({ color:'#444444' })
+        );
+        rotorHub.position.y = 1.38 * sc + yOff; g.add(rotorHub);
+        const blade = new THREE.Mesh(
+          new THREE.BoxGeometry(0.7 * sc, 0.03, 0.08),
+          new THREE.MeshStandardMaterial({ color:'#AAAAAA', transparent:true, opacity:0.75 })
+        );
+        blade.position.y = 1.46 * sc + yOff; g.add(blade);
+      } else {
+        // Standard / Heavy / others: dark hard hat
+        const hatColor = sc >= 1.0 ? '#222244' : '#333333';
+        const normHat = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.25 * sc, 0.28 * sc, 0.13 * sc, 8),
+          new THREE.MeshStandardMaterial({ color: hatColor })
+        );
+        normHat.position.y = 1.28 * sc + yOff; g.add(normHat);
+        const normBrim = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.32 * sc, 0.32 * sc, 0.04 * sc, 8),
+          new THREE.MeshStandardMaterial({ color: hatColor })
+        );
+        normBrim.position.y = 1.22 * sc + yOff; g.add(normBrim);
+      }
+
+      // HP bar
+      const hpBgGeo = new THREE.PlaneGeometry(1.0 * sc, 0.12);
       const hpBg = new THREE.Mesh(hpBgGeo, new THREE.MeshBasicMaterial({ color:'#333' }));
-      hpBg.position.y = 1.4 * def.scale + (def.special === 'fly' ? 2 : 0);
-      hpBg.rotation.x = -0.5;
-      g.add(hpBg);
-      const hpGeo = new THREE.PlaneGeometry(1.0 * def.scale, 0.12);
+      hpBg.position.y = 1.6 * sc + yOff;
+      hpBg.rotation.x = -0.5; g.add(hpBg);
+      const hpGeo = new THREE.PlaneGeometry(1.0 * sc, 0.12);
       const hpMesh = new THREE.Mesh(hpGeo, new THREE.MeshBasicMaterial({ color:'#44FF44' }));
-      hpMesh.position.y = 1.4 * def.scale + (def.special === 'fly' ? 2 : 0);
+      hpMesh.position.y = 1.6 * sc + yOff;
       hpMesh.position.z = 0.01;
-      hpMesh.rotation.x = -0.5;
-      g.add(hpMesh);
-      g.userData.hpBar = hpMesh;
-      g.userData.hpBg = hpBg;
-      g.userData.body = body;
+      hpMesh.rotation.x = -0.5; g.add(hpMesh);
+
+      g.userData.hpBar  = hpMesh;
+      g.userData.hpBg   = hpBg;
+      g.userData.body   = body;
       return g;
     }
 
