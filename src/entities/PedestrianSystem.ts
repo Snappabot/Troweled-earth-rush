@@ -805,17 +805,14 @@ export class PedestrianSystem {
       }
 
       if (ped.scattering) {
-        ped.group.position.x += ped.scatterDirX * 12 * dt;
-        ped.group.position.z += ped.scatterDirZ * 12 * dt;
-        ped.scatterTimer -= dt;
-        if (ped.scatterTimer <= 0) {
+        ped.group.position.x += ped.scatterDirX * 28 * dt;
+        ped.group.position.z += ped.scatterDirZ * 28 * dt;
+        // Keep running until they flee off the map edge — no snap-back
+        if (Math.abs(ped.group.position.x) > 240 || Math.abs(ped.group.position.z) > 240) {
+          ped.splatted = true;
+          ped.respawnTimer = RESPAWN_DELAY + Math.random() * 5;
+          ped.group.visible = false;
           ped.scattering = false;
-          if (ped.axis === 'x') {
-            ped.pos = Math.max(ped.segStart, Math.min(ped.segEnd, ped.group.position.x));
-          } else {
-            ped.pos = Math.max(ped.segStart, Math.min(ped.segEnd, ped.group.position.z));
-          }
-          this._applyPedPosition(ped);
         }
       } else {
         ped.pos += ped.dir * ped.speed * dt;
@@ -838,11 +835,11 @@ export class PedestrianSystem {
         ped.mixer.update(dt);
       } else if (ped.isGLB) {
         // Body bob for static Kenney GLB models (no embedded walk anim)
-        ped.walkCycle += (ped.scattering ? 12 : ped.speed) * dt * 2;
+        ped.walkCycle += (ped.scattering ? 28 : ped.speed) * dt * 2;
         ped.group.position.y = Math.max(0, Math.abs(Math.sin(ped.walkCycle)) * 0.1);
       } else {
         // Procedural arm/leg swing (Boronica + fallback peds)
-        const effSpeed = ped.scattering ? 12 : ped.speed;
+        const effSpeed = ped.scattering ? 28 : ped.speed;
         ped.walkCycle += effSpeed * dt * 2;
         const swing = Math.sin(ped.walkCycle);
         ped.leftArm.rotation.z  =  swing * 0.4 + 0.15;
@@ -941,13 +938,14 @@ export class PedestrianSystem {
       }
 
       if (hc.scattering) {
-        hc.group.position.x += hc.scatterDirX * 12 * dt;
-        hc.group.position.z += hc.scatterDirZ * 12 * dt;
-        hc.scatterTimer -= dt;
-        if (hc.scatterTimer <= 0) {
+        hc.group.position.x += hc.scatterDirX * 28 * dt;
+        hc.group.position.z += hc.scatterDirZ * 28 * dt;
+        // Run until they flee off the map edge — no snap-back, no disappearing mid-street
+        if (Math.abs(hc.group.position.x) > 240 || Math.abs(hc.group.position.z) > 240) {
+          hc.splatted = true;
+          hc.respawnTimer = 20 + Math.random() * 5;
+          hc.group.visible = false;
           hc.scattering = false;
-          if (hc.axis === 'x') hc.pos = Math.max(hc.segStart, Math.min(hc.segEnd, hc.group.position.x));
-          else hc.pos = Math.max(hc.segStart, Math.min(hc.segEnd, hc.group.position.z));
         }
       } else {
         hc.pos += hc.dir * hc.speed * dt;
