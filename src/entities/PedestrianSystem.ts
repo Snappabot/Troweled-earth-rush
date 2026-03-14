@@ -637,7 +637,7 @@ export class PedestrianSystem {
 
         const hc: HitCharacter = {
           group: wrapper, charId: def.charId, preLine: def.preLine, splatToast: def.splatToast,
-          axis, roadPos, segStart, segEnd, pos, dir, speed: 2.5 + Math.random(),
+          axis, roadPos, segStart, segEnd, pos, dir, speed: 1.25 + Math.random() * 0.5,
           scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
           walkCycle: Math.random() * Math.PI * 2,
           leftArm: dummy, rightArm: dummy, leftLeg: dummy, rightLeg: dummy,
@@ -668,7 +668,7 @@ export class PedestrianSystem {
         const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
         const hc: HitCharacter = {
           group, charId: def.charId, preLine: def.preLine, splatToast: def.splatToast,
-          axis, roadPos, segStart, segEnd, pos, dir, speed: 2.5 + Math.random(),
+          axis, roadPos, segStart, segEnd, pos, dir, speed: 1.25 + Math.random() * 0.5,
           scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
           walkCycle: Math.random() * Math.PI * 2,
           leftArm, rightArm, leftLeg, rightLeg,
