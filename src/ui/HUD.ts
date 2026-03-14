@@ -614,9 +614,9 @@ export class HUD {
     el.textContent = text;
     Object.assign(el.style, {
       position: 'fixed',
-      top: '50%',
+      top: '8%',
       left: '50%',
-      transform: 'translate(-50%, -50%)',
+      transform: 'translate(-50%, 0)',
       background: hex,
       color: '#fff',
       padding: '14px 24px',
