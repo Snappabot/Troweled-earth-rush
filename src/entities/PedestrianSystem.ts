@@ -931,7 +931,7 @@ export class PedestrianSystem {
       // Scatter when van is close
       if (!hc.scattering && dist < 7) {
         hc.scattering = true;
-        hc.scatterTimer = 2.5;
+        hc.scatterTimer = 6.0;  // long enough to flee dramatically but always stay on map
         const len = Math.max(dist, 0.01);
         hc.scatterDirX = dx / len;
         hc.scatterDirZ = dz / len;
@@ -940,12 +940,27 @@ export class PedestrianSystem {
       if (hc.scattering) {
         hc.group.position.x += hc.scatterDirX * 28 * dt;
         hc.group.position.z += hc.scatterDirZ * 28 * dt;
-        // Run until they flee off the map edge — no snap-back, no disappearing mid-street
-        if (Math.abs(hc.group.position.x) > 240 || Math.abs(hc.group.position.z) > 240) {
-          hc.splatted = true;
-          hc.respawnTimer = 20 + Math.random() * 5;
-          hc.group.visible = false;
+        // Bounce off map boundary — named NPCs always stay on the map
+        const BOUND = 225;
+        if (Math.abs(hc.group.position.x) >= BOUND) {
+          hc.scatterDirX *= -1;
+          hc.group.position.x = Math.sign(hc.group.position.x) * BOUND;
+        }
+        if (Math.abs(hc.group.position.z) >= BOUND) {
+          hc.scatterDirZ *= -1;
+          hc.group.position.z = Math.sign(hc.group.position.z) * BOUND;
+        }
+        hc.scatterTimer -= dt;
+        if (hc.scatterTimer <= 0) {
           hc.scattering = false;
+          // Sync patrol to wherever they ended up — no teleport snap-back
+          const { segStart, segEnd } = randomSegment();
+          hc.segStart = segStart;
+          hc.segEnd   = segEnd;
+          hc.roadPos  = hc.axis === 'x' ? hc.group.position.z : hc.group.position.x;
+          hc.pos      = hc.axis === 'x' ? hc.group.position.x : hc.group.position.z;
+          hc.pos      = Math.max(hc.segStart, Math.min(hc.segEnd, hc.pos));
+          hc.dir      = Math.random() > 0.5 ? 1 : -1;
         }
       } else {
         hc.pos += hc.dir * hc.speed * dt;
