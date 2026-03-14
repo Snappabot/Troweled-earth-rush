@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import type { CollisionWorld } from '../core/CollisionWorld';
 
 const GRID   = 40;
 const ROAD_W = 8;
@@ -68,9 +69,11 @@ function buildSpecs(): ParkedSpec[] {
 
 export class ParkedCarSystem {
   private scene: THREE.Scene;
+  private collisionWorld?: CollisionWorld;
 
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, collisionWorld?: CollisionWorld) {
     this.scene = scene;
+    this.collisionWorld = collisionWorld;
     this._load();
   }
 
@@ -111,6 +114,16 @@ export class ParkedCarSystem {
           car.rotation.y = spec.rotY;
           car.position.set(spec.x, 0, spec.z);
           this.scene.add(car);
+
+          // Register a collision box for this parked car so the van bounces off it.
+          // Cars aligned along X have length ~4 along X, width ~2 along Z (and vice versa).
+          // rotY ≈ ±PI/2 → car length along Z; rotY ≈ 0/PI → car length along X.
+          if (this.collisionWorld) {
+            const alongZ = Math.abs(Math.cos(spec.rotY)) < 0.5; // rotY ≈ ±PI/2
+            const hw = alongZ ? 1.2 : 2.2; // half-width in X
+            const hd = alongZ ? 2.2 : 1.2; // half-depth in Z
+            this.collisionWorld.addBox(spec.x, spec.z, hw, hd);
+          }
         }
       });
     }

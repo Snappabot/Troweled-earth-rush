@@ -173,15 +173,14 @@ export class SpillMeter {
     }
   }
 
-  /** Called when the van hits a curb */
-  /** Curb crossing — 2.5% spill */
+  /** Curb crossing — 2.1% spill (-15%) */
   triggerBump(_intensity: number): void {
-    this.addSpill(0.025);
+    this.addSpill(0.021);
   }
 
-  /** Crash into building or traffic car — 30% spill */
+  /** Crash into building or traffic car — 25.5% spill (-15%) */
   triggerCrash(): void {
-    this.addSpill(0.30);
+    this.addSpill(0.255);
   }
 
   /** Reduce current spill by a fraction (0.0–1.0 of max level) */

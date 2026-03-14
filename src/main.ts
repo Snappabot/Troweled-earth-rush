@@ -190,7 +190,7 @@ async function main() {
 
   // ── Traffic + Pedestrian systems ────────────────────────────────────────────
   const traffic    = new TrafficSystem(engine.scene);
-  new ParkedCarSystem(engine.scene);
+  new ParkedCarSystem(engine.scene, engine.collisionWorld);
   const pedestrians = new PedestrianSystem(engine.scene, engine.collisionWorld);
 
   // ── On-foot mode ─────────────────────────────────────────────────────────────
@@ -733,6 +733,8 @@ async function main() {
                   hud.setActiveJob(jobManager.activeJob, 2);
                   hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
                   jobCompleting = false;
+                  // Remind player about the spill meter now that materials are loaded
+                  setTimeout(() => hud.showToast('🪣 Materials loaded — watch the spill meter on the left!', 0xD4A040), 800);
                 },
                 randomFrom(BRAND_SLOGANS)
               );
