@@ -987,18 +987,15 @@ export class PedestrianSystem {
         hc.group.rotation.y = Math.atan2(hc.scatterDirX, hc.scatterDirZ);
       }
 
-      // Update Mixamo animation mixer (for GLB models with embedded clips)
+      // Body bob applied to ALL hit chars — guarantees visible movement even if GLB has
+      // no embedded animation or a very subtle one (Alex Jones, Kanye have 0 clips)
+      hc.walkCycle += hc.speed * dt * 2;
+      const hcSwing = Math.sin(hc.walkCycle);
+      hc.group.position.y = Math.max(0, Math.abs(hcSwing) * 0.14);
+
+      // Also run Mixamo mixer for models that have embedded walk clips (Trump, Elon, Zuck)
       if (hc.mixer) {
         hc.mixer.update(dt);
-      } else {
-        // Walk cycle for procedural fallback models
-        hc.walkCycle += hc.speed * dt * 2;
-        const hcSwing = Math.sin(hc.walkCycle);
-        hc.group.position.y = Math.max(0, Math.abs(hcSwing) * 0.12);
-        hc.leftArm.rotation.z  =  hcSwing * 0.4 + 0.15;
-        hc.rightArm.rotation.z = -hcSwing * 0.4 - 0.15;
-        hc.leftLeg.rotation.x  =  hcSwing * 0.5;
-        hc.rightLeg.rotation.x = -hcSwing * 0.5;
       }
     }
 
