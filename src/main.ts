@@ -272,8 +272,8 @@ async function main() {
     hud.showToast('😤 JOSE! Pay me the alimony... I mean ALL the money! 💸', 0xFF1493);
   };
 
-  pedestrians.onHitCharNear = (_charId: string, line: string) => {
-    hud.showToast(`🗣️ "${line}"`, 0xFFCC00);
+  pedestrians.onHitCharNear = (charId: string, line: string) => {
+    hud.showCharSpeech(charId, line);
   };
   pedestrians.onHitCharSplat = (_charId: string, toast: string) => {
     jobManager.money += 10_000;

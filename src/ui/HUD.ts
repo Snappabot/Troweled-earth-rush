@@ -633,8 +633,87 @@ export class HUD {
       transition: 'opacity 0.5s ease',
     });
     document.body.appendChild(el);
-    setTimeout(() => { el.style.opacity = '0'; }, 2000);
-    setTimeout(() => el.remove(), 2600);
+    setTimeout(() => { el.style.opacity = '0'; }, 6000);
+    setTimeout(() => el.remove(), 6600);
+  }
+
+  /** Show a speech bubble with character face avatar for hit chars */
+  showCharSpeech(charId: string, line: string): void {
+    // Character display names + accent colours
+    const CHARS: Record<string, { name: string; color: string; bg: string; emoji: string }> = {
+      trump:        { name: 'Trump',          color: '#FFD700', bg: '#C8102E', emoji: '🍊' },
+      elon:         { name: 'Elon',           color: '#CCCCFF', bg: '#1A1A2E', emoji: '🚀' },
+      karen:        { name: 'Karen',          color: '#FFB6C1', bg: '#8B0057', emoji: '💅' },
+      flatEarther:  { name: 'Flat Earther',   color: '#CCFFCC', bg: '#1A3A1A', emoji: '🌍' },
+      antiVaxxer:   { name: 'Anti-Vaxxer',    color: '#90EE90', bg: '#2A5A2A', emoji: '💉' },
+      cryptoBro:    { name: 'Crypto Bro',     color: '#FFB300', bg: '#1A1200', emoji: '📈' },
+      zuckerberg:   { name: 'Zuckerberg',     color: '#AAAACC', bg: '#1877F2', emoji: '🤖' },
+      alexJones:    { name: 'Alex Jones',     color: '#FF8888', bg: '#6B0000', emoji: '📢' },
+      kanyeWest:    { name: 'Kanye West',     color: '#DDDDDD', bg: '#111111', emoji: '🎤' },
+      conspiracyGuy:{ name: 'Conspiracy Guy', color: '#BBBBBB', bg: '#2A2A2A', emoji: '🕵️' },
+    };
+    const cfg = CHARS[charId] ?? { name: charId, color: '#FFD080', bg: '#1A1A1A', emoji: '🗣️' };
+
+    const el = document.createElement('div');
+    Object.assign(el.style, {
+      position: 'fixed',
+      top: '12%',
+      left: '50%',
+      transform: 'translate(-50%, 0)',
+      zIndex: '9000',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      background: cfg.bg,
+      border: `2px solid ${cfg.color}`,
+      borderRadius: '18px',
+      padding: '10px 18px 10px 10px',
+      boxShadow: `0 4px 24px rgba(0,0,0,0.7), 0 0 12px ${cfg.color}44`,
+      maxWidth: '80vw',
+      opacity: '1',
+      transition: 'opacity 0.5s ease',
+      pointerEvents: 'none',
+      fontFamily: 'system-ui, sans-serif',
+    });
+
+    // Avatar circle with emoji
+    const avatar = document.createElement('div');
+    Object.assign(avatar.style, {
+      width: '52px', height: '52px', flexShrink: '0',
+      borderRadius: '50%',
+      background: `radial-gradient(circle at 40% 35%, ${cfg.color}55, ${cfg.bg})`,
+      border: `2px solid ${cfg.color}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '26px', lineHeight: '1',
+    });
+    avatar.textContent = cfg.emoji;
+    el.appendChild(avatar);
+
+    // Text column
+    const col = document.createElement('div');
+    Object.assign(col.style, { display: 'flex', flexDirection: 'column', gap: '3px' });
+
+    const nameEl = document.createElement('div');
+    Object.assign(nameEl.style, {
+      color: cfg.color, fontSize: '12px', fontWeight: '900',
+      letterSpacing: '0.5px', textTransform: 'uppercase',
+    });
+    nameEl.textContent = cfg.name;
+
+    const lineEl = document.createElement('div');
+    Object.assign(lineEl.style, {
+      color: '#ffffff', fontSize: '14px', fontWeight: '600',
+      lineHeight: '1.4', maxWidth: '55vw',
+    });
+    lineEl.textContent = `"${line}"`;
+
+    col.appendChild(nameEl);
+    col.appendChild(lineEl);
+    el.appendChild(col);
+
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; }, 6000);
+    setTimeout(() => el.remove(), 6600);
   }
 
   /** Show/hide the race strip */
