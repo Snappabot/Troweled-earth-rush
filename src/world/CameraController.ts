@@ -3,19 +3,28 @@ import * as THREE from 'three';
 const CAMERA_CONFIG = {
   fov: 35,
   height: 38,
-  distance: 30,           // +2m further back
-  rotationSmoothing: 0.0, // no auto-swing — user controls angle via swipe
+  distance: 28,
+  rotationSmoothing: 0.06,
   positionSmoothing: 0.1,
   lookAheadDistance: 6,
+};
+
+const FOOT_CAM = {
+  behind: 7.0,       // pulled back 2m from original 5.0
+  rightOffset: 1.8,
+  height: 2.2,
 };
 
 export class CameraController {
   camera: THREE.PerspectiveCamera;
   private targetPos = new THREE.Vector3();
-  private cameraAngle = 0;   // follows van heading (base)
-  private orbitOffset = 0;   // user-controlled swipe offset
+  private cameraAngle = 0;
+
+  // On-foot swipe orbit
+  private footOrbitOffset = 0;
   private lastTouchX = 0;
   private touching = false;
+  private onFoot = false;
 
   constructor() {
     this.camera = new THREE.PerspectiveCamera(
@@ -28,87 +37,84 @@ export class CameraController {
   }
 
   private _setupSwipe(): void {
-    // Touch swipe
     window.addEventListener('touchstart', (e) => {
-      // Ignore if touch is on a UI element (joystick area = left 40% of screen)
+      if (!this.onFoot) return;
       const t = e.changedTouches[0];
+      // Only right half of screen (left = movement controls)
       if (t.clientX < window.innerWidth * 0.45) return;
       this.touching = true;
       this.lastTouchX = t.clientX;
     }, { passive: true });
 
     window.addEventListener('touchmove', (e) => {
-      if (!this.touching) return;
+      if (!this.touching || !this.onFoot) return;
       const t = e.changedTouches[0];
       const dx = t.clientX - this.lastTouchX;
-      this.orbitOffset -= dx * 0.008; // radians per pixel
+      this.footOrbitOffset -= dx * 0.008;
       this.lastTouchX = t.clientX;
     }, { passive: true });
 
     window.addEventListener('touchend', () => { this.touching = false; }, { passive: true });
 
-    // Mouse drag (desktop)
+    // Mouse drag (desktop, on-foot only)
     let mouseDown = false;
     let lastMouseX = 0;
     window.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return;
+      if (!this.onFoot || e.button !== 0) return;
       mouseDown = true; lastMouseX = e.clientX;
     });
     window.addEventListener('mousemove', (e) => {
-      if (!mouseDown) return;
+      if (!mouseDown || !this.onFoot) return;
       const dx = e.clientX - lastMouseX;
-      this.orbitOffset -= dx * 0.006;
+      this.footOrbitOffset -= dx * 0.006;
       lastMouseX = e.clientX;
     });
     window.addEventListener('mouseup', () => { mouseDown = false; });
   }
 
   followOnFoot(pos: THREE.Vector3, heading: number) {
-    // Over-right-shoulder TPS camera
+    this.onFoot = true;
+
+    // Base angle tracks character heading with swipe offset on top
     let angleDiff = heading - this.cameraAngle;
     while (angleDiff >  Math.PI) angleDiff -= Math.PI * 2;
     while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-    this.cameraAngle += angleDiff * 0.06; // follows heading but not instantly
+    // Only auto-follow when not actively swiping
+    if (!this.touching) this.cameraAngle += angleDiff * 0.06;
 
-    // Character forward: (sin(angle), 0, -cos(angle))
-    // Character right:   (cos(angle), 0,  sin(angle))
-    const behind      = 5.0;
-    const rightOffset = 1.8;
-    const height      = 2.2;
+    const effectiveAngle = this.cameraAngle + this.footOrbitOffset;
 
     this.targetPos.set(
-      pos.x - Math.sin(this.cameraAngle) * behind + Math.cos(this.cameraAngle) * rightOffset,
-      pos.y + height,
-      pos.z + Math.cos(this.cameraAngle) * behind + Math.sin(this.cameraAngle) * rightOffset,
+      pos.x - Math.sin(effectiveAngle) * FOOT_CAM.behind + Math.cos(effectiveAngle) * FOOT_CAM.rightOffset,
+      pos.y + FOOT_CAM.height,
+      pos.z + Math.cos(effectiveAngle) * FOOT_CAM.behind + Math.sin(effectiveAngle) * FOOT_CAM.rightOffset,
     );
     this.camera.position.lerp(this.targetPos, 0.12);
 
-    // Look at a point just ahead and slightly above the character
     const lookAt = new THREE.Vector3(
-      pos.x + Math.sin(this.cameraAngle) * 3,
+      pos.x + Math.sin(effectiveAngle) * 3,
       pos.y + 1.4,
-      pos.z - Math.cos(this.cameraAngle) * 3,
+      pos.z - Math.cos(effectiveAngle) * 3,
     );
     this.camera.lookAt(lookAt);
   }
 
   /** Current camera yaw angle — used for camera-relative player movement */
-  get angle(): number { return this.cameraAngle + this.orbitOffset; }
+  get angle(): number {
+    return this.onFoot ? this.cameraAngle + this.footOrbitOffset : this.cameraAngle;
+  }
 
   follow(vanPos: THREE.Vector3, velocity: THREE.Vector3, heading: number) {
-    // When moving fast, slowly blend orbit offset back to 0 (auto-reset behind van)
-    const speed = velocity.length();
-    if (speed > 8 && !this.touching) {
-      this.orbitOffset *= 0.97; // gentle decay — not instant snap
-    }
+    this.onFoot = false;
+    this.footOrbitOffset = 0; // reset orbit when back in van
 
-    // Base angle tracks van heading (instant — no auto-swing)
-    this.cameraAngle = heading;
-    const effectiveAngle = this.cameraAngle + this.orbitOffset;
+    let angleDiff = heading - this.cameraAngle;
+    while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+    this.cameraAngle += angleDiff * CAMERA_CONFIG.rotationSmoothing;
 
-    // Camera sits BEHIND the van based on effective angle
-    const behindX = Math.sin(effectiveAngle) * -CAMERA_CONFIG.distance;
-    const behindZ = -Math.cos(effectiveAngle) * -CAMERA_CONFIG.distance;
+    const behindX = Math.sin(this.cameraAngle) * -CAMERA_CONFIG.distance;
+    const behindZ = -Math.cos(this.cameraAngle) * -CAMERA_CONFIG.distance;
 
     this.targetPos.set(
       vanPos.x + behindX,
@@ -116,15 +122,14 @@ export class CameraController {
       vanPos.z + behindZ
     );
 
-    // Smooth position follow
     this.camera.position.lerp(this.targetPos, CAMERA_CONFIG.positionSmoothing);
 
-    // Look slightly ahead of van
+    const speed = velocity.length();
     const lookAhead = speed > 0.5
       ? velocity.clone().normalize().multiplyScalar(CAMERA_CONFIG.lookAheadDistance)
       : new THREE.Vector3(0, 0, 0);
     const lookAtTarget = vanPos.clone().add(lookAhead);
-    lookAtTarget.y += 2; // look slightly above ground level
+    lookAtTarget.y += 2;
     this.camera.lookAt(lookAtTarget);
   }
 }
