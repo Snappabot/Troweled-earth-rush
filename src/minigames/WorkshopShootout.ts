@@ -1032,6 +1032,7 @@ export class WorkshopShootout {
     this._drawBackground(W, H);
     this._drawFloor(W, H);
     this._drawWall(W, H);
+    this._drawFactoryProps(W, H);
     this._drawPlayerSideline(W, H);
     this._drawSplatsOnFloor(W, H);
     this._drawBucketAndConnie(W, H);
@@ -1147,6 +1148,261 @@ export class WorkshopShootout {
   }
 
   // ── Player character (right sideline) ──────────────────────────────────────
+  // ── Factory props: mixer vats, pallets, drums, lights, shelving ─────────────
+  private _drawFactoryProps(W: number, H: number): void {
+    const ctx = this.ctx;
+    const horizY = H * 0.28;
+    const botY   = H * 0.92;
+    const wallH  = H * 0.30;
+
+    // Helper: perspective Y for a point at depth t (0=wall, 1=front)
+    const perspY = (t: number) => lerp(horizY, botY, t);
+    // Helper: perspective scale at depth t
+    const perspS = (t: number) => lerp(0.15, 1.0, t);
+
+    // ── Overhead warehouse lights ──────────────────────────────────────────
+    const lightXs = [W * 0.25, W * 0.50, W * 0.75];
+    lightXs.forEach(lx => {
+      // Wire
+      ctx.strokeStyle = 'rgba(80,70,60,0.8)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx, wallH * 0.25); ctx.stroke();
+      // Fixture
+      ctx.fillStyle = '#2A2820';
+      ctx.beginPath();
+      ctx.moveTo(lx - 18, wallH * 0.25);
+      ctx.lineTo(lx + 18, wallH * 0.25);
+      ctx.lineTo(lx + 12, wallH * 0.38);
+      ctx.lineTo(lx - 12, wallH * 0.38);
+      ctx.closePath(); ctx.fill();
+      // Light bulb glow
+      ctx.fillStyle = 'rgba(255,220,120,0.9)';
+      ctx.beginPath(); ctx.arc(lx, wallH * 0.38, 4, 0, Math.PI * 2); ctx.fill();
+      // Light cone onto floor
+      const coneGrad = ctx.createRadialGradient(lx, wallH * 0.38, 5, lx, horizY + (botY - horizY) * 0.5, W * 0.22);
+      coneGrad.addColorStop(0, 'rgba(255,220,100,0.10)');
+      coneGrad.addColorStop(1, 'rgba(255,220,100,0)');
+      ctx.fillStyle = coneGrad;
+      ctx.beginPath();
+      ctx.moveTo(lx - 12, wallH * 0.38);
+      ctx.lineTo(lx - W * 0.14, botY);
+      ctx.lineTo(lx + W * 0.14, botY);
+      ctx.lineTo(lx + 12, wallH * 0.38);
+      ctx.closePath(); ctx.fill();
+    });
+
+    // ── Industrial shelving on left wall (behind player area) ─────────────
+    const shelfX = W * 0.03, shelfW = W * 0.16, shelfTop = wallH * 0.04;
+    const tiers = [wallH * 0.08, wallH * 0.35, wallH * 0.62];
+    // Frame
+    ctx.fillStyle = '#323028';
+    ctx.fillRect(shelfX, shelfTop, 3, wallH * 0.85); // left post
+    ctx.fillRect(shelfX + shelfW, shelfTop, 3, wallH * 0.85); // right post
+    tiers.forEach((ty, ti) => {
+      // Shelf board
+      ctx.fillStyle = '#3A3830'; ctx.fillRect(shelfX, ty, shelfW, 4);
+      // Items on shelf
+      if (ti === 0) {
+        // Pigment pots row — 5 colours matching PIGS
+        const pigColors = ['#111111','#D4B020','#7B5E3A','#CC3322','#336622'];
+        pigColors.forEach((pc, pi) => {
+          const px = shelfX + 5 + pi * (shelfW * 0.19);
+          ctx.fillStyle = '#222'; ctx.fillRect(px, ty - 10, 10, 10); // pot body
+          ctx.fillStyle = pc; ctx.fillRect(px, ty - 12, 10, 4); // coloured lid
+        });
+      } else if (ti === 1) {
+        // Render bags
+        for (let b = 0; b < 3; b++) {
+          const bx = shelfX + 4 + b * (shelfW * 0.32);
+          ctx.fillStyle = '#C8BEA8';
+          rr(ctx, bx, ty - 14, shelfW * 0.28, 14, 3); ctx.fill();
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.font = `bold ${Math.round(H * 0.012)}px system-ui`;
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.fillText('TEM', bx + 3, ty - 7);
+        }
+      } else {
+        // Big buckets with colour lids
+        const lidCols = ['#111','#D4B020','#7B5E3A','#CC3322'];
+        lidCols.forEach((lc, li) => {
+          const bx = shelfX + 3 + li * (shelfW * 0.24);
+          ctx.fillStyle = '#2A2820'; ctx.fillRect(bx, ty - 14, shelfW * 0.20, 14);
+          ctx.fillStyle = lc; ctx.fillRect(bx, ty - 16, shelfW * 0.20, 4);
+        });
+      }
+    });
+
+    // ── Left mixer vat ────────────────────────────────────────────────────
+    const vatLX = W * 0.20, vatDepth = 0.15;
+    const vatS  = perspS(vatDepth) * 1.4;
+    const vatLY = perspY(vatDepth);
+    const vatW  = W * 0.11 * vatS, vatH2 = H * 0.18 * vatS;
+    // Body (trapezoidal — wider at top)
+    ctx.fillStyle = '#6B4A28';
+    ctx.beginPath();
+    ctx.moveTo(vatLX - vatW * 0.7, vatLY);
+    ctx.lineTo(vatLX + vatW * 0.7, vatLY);
+    ctx.lineTo(vatLX + vatW * 0.55, vatLY + vatH2);
+    ctx.lineTo(vatLX - vatW * 0.55, vatLY + vatH2);
+    ctx.closePath(); ctx.fill();
+    // Highlight band
+    ctx.fillStyle = 'rgba(255,160,60,0.12)';
+    ctx.fillRect(vatLX - vatW * 0.65, vatLY + vatH2 * 0.1, vatW * 1.3, vatH2 * 0.15);
+    // Ellipse top
+    ctx.fillStyle = '#7D5A35';
+    ctx.beginPath(); ctx.ellipse(vatLX, vatLY, vatW * 0.72, vatW * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+    // Inner content (render mix — earthy tan)
+    ctx.fillStyle = '#B89870';
+    ctx.beginPath(); ctx.ellipse(vatLX, vatLY + 2, vatW * 0.60, vatW * 0.17, 0, 0, Math.PI * 2); ctx.fill();
+    // Rotating agitator arm
+    const agAngle = this.cheerT * 1.8;
+    ctx.strokeStyle = '#4A3020'; ctx.lineWidth = 2.5 * vatS;
+    ctx.beginPath();
+    ctx.moveTo(vatLX + Math.cos(agAngle) * vatW * 0.50, vatLY + Math.sin(agAngle) * vatW * 0.14);
+    ctx.lineTo(vatLX + Math.cos(agAngle + Math.PI) * vatW * 0.50, vatLY + Math.sin(agAngle + Math.PI) * vatW * 0.14);
+    ctx.stroke();
+    // Centre shaft
+    ctx.fillStyle = '#3A2818';
+    ctx.beginPath(); ctx.arc(vatLX, vatLY, 3 * vatS, 0, Math.PI * 2); ctx.fill();
+    // Legs
+    ctx.strokeStyle = '#3A2818'; ctx.lineWidth = 2 * vatS;
+    [[-0.45, 1], [0.45, 1]].forEach(([lx]) => {
+      ctx.beginPath();
+      ctx.moveTo(vatLX + (lx as number) * vatW, vatLY + vatH2);
+      ctx.lineTo(vatLX + (lx as number) * vatW * 1.1, vatLY + vatH2 + 8 * vatS);
+      ctx.stroke();
+    });
+    // Label
+    ctx.fillStyle = 'rgba(255,200,120,0.6)';
+    ctx.font = `bold ${Math.round(H * 0.018 * vatS)}px system-ui`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('RENDER MIX', vatLX, vatLY + vatH2 + 10 * vatS);
+
+    // ── Right mixer vat ───────────────────────────────────────────────────
+    const vatRX = W * 0.80;
+    const vatRS = perspS(vatDepth) * 1.3;
+    const vatRY = perspY(vatDepth);
+    const vatRW = W * 0.10 * vatRS, vatRH = H * 0.16 * vatRS;
+    ctx.fillStyle = '#4A4A4A';
+    ctx.beginPath();
+    ctx.moveTo(vatRX - vatRW * 0.7, vatRY);
+    ctx.lineTo(vatRX + vatRW * 0.7, vatRY);
+    ctx.lineTo(vatRX + vatRW * 0.55, vatRY + vatRH);
+    ctx.lineTo(vatRX - vatRW * 0.55, vatRY + vatRH);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(200,200,200,0.08)';
+    ctx.fillRect(vatRX - vatRW * 0.65, vatRY + vatRH * 0.1, vatRW * 1.3, vatRH * 0.15);
+    ctx.fillStyle = '#5A5A5A';
+    ctx.beginPath(); ctx.ellipse(vatRX, vatRY, vatRW * 0.72, vatRW * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#D8D0C0';
+    ctx.beginPath(); ctx.ellipse(vatRX, vatRY + 2, vatRW * 0.60, vatRW * 0.17, 0, 0, Math.PI * 2); ctx.fill();
+    const agAngle2 = -this.cheerT * 2.1;
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 2.5 * vatRS;
+    ctx.beginPath();
+    ctx.moveTo(vatRX + Math.cos(agAngle2) * vatRW * 0.50, vatRY + Math.sin(agAngle2) * vatRW * 0.14);
+    ctx.lineTo(vatRX + Math.cos(agAngle2 + Math.PI) * vatRW * 0.50, vatRY + Math.sin(agAngle2 + Math.PI) * vatRW * 0.14);
+    ctx.stroke();
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(vatRX, vatRY, 3 * vatRS, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 2 * vatRS;
+    [[-0.45, 1], [0.45, 1]].forEach(([lx]) => {
+      ctx.beginPath();
+      ctx.moveTo(vatRX + (lx as number) * vatRW, vatRY + vatRH);
+      ctx.lineTo(vatRX + (lx as number) * vatRW * 1.1, vatRY + vatRH + 8 * vatRS);
+      ctx.stroke();
+    });
+    ctx.fillStyle = 'rgba(200,220,255,0.5)';
+    ctx.font = `bold ${Math.round(H * 0.016 * vatRS)}px system-ui`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('PLASTER BASE', vatRX, vatRY + vatRH + 10 * vatRS);
+
+    // ── Pallets of render bags ─────────────────────────────────────────────
+    const pallets = [
+      { x: W * 0.14, t: 0.55, label: 'MARBELLINO', col: '#C8BEA8' },
+      { x: W * 0.86, t: 0.55, label: 'TADELLINO',  col: '#D4C8A0' },
+    ];
+    pallets.forEach(({ x, t, label, col }) => {
+      const s = perspS(t);
+      const py2 = perspY(t);
+      const pw = W * 0.14 * s, ph = H * 0.028 * s;
+      // Pallet base (wooden slats)
+      ctx.fillStyle = '#7A6040';
+      ctx.fillRect(x - pw * 0.5, py2 - ph, pw, ph);
+      ctx.strokeStyle = '#5A4030'; ctx.lineWidth = 1;
+      for (let sl = 0; sl < 4; sl++) {
+        const sx = x - pw * 0.5 + (sl / 3) * pw;
+        ctx.beginPath(); ctx.moveTo(sx, py2 - ph); ctx.lineTo(sx, py2); ctx.stroke();
+      }
+      // Stacked bags (3 layers)
+      for (let row = 0; row < 3; row++) {
+        const bagsInRow = 3 - Math.floor(row / 2);
+        const bw = pw / bagsInRow;
+        for (let b = 0; b < bagsInRow; b++) {
+          const bx = x - pw * 0.5 + b * bw;
+          const by = py2 - ph - (row + 1) * H * 0.03 * s;
+          ctx.fillStyle = row === 0 ? col : `rgba(${parseInt(col.slice(1,3),16)},${parseInt(col.slice(3,5),16)},${parseInt(col.slice(5,7),16)},${0.9 - row * 0.1})`;
+          rr(ctx, bx + 1, by, bw - 2, H * 0.028 * s, 2); ctx.fill();
+          ctx.strokeStyle = 'rgba(0,0,0,0.18)'; ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+      // Label
+      ctx.fillStyle = 'rgba(255,220,160,0.65)';
+      ctx.font = `bold ${Math.round(H * 0.016 * s)}px system-ui`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText(label, x, py2 + 4);
+    });
+
+    // ── Pigment drums on floor ────────────────────────────────────────────
+    const drums = [
+      { x: W * 0.30, t: 0.72, col: '#111111', label: 'B' },
+      { x: W * 0.38, t: 0.68, col: '#D4B020', label: 'Y' },
+      { x: W * 0.62, t: 0.70, col: '#7B5E3A', label: 'L' },
+      { x: W * 0.70, t: 0.66, col: '#CC3322', label: 'R' },
+    ];
+    drums.forEach(({ x, t, col, label }) => {
+      const s = perspS(t);
+      const dy = perspY(t);
+      const dw = W * 0.038 * s, dh = H * 0.065 * s;
+      // Drum body
+      ctx.fillStyle = col === '#111111' ? '#1A1A1A' : col;
+      ctx.fillRect(x - dw * 0.5, dy - dh, dw, dh);
+      // Top ellipse
+      ctx.fillStyle = col;
+      ctx.beginPath(); ctx.ellipse(x, dy - dh, dw * 0.5, dw * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+      // Bottom ellipse (shadow)
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath(); ctx.ellipse(x, dy, dw * 0.5, dw * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+      // Highlight band
+      ctx.fillStyle = 'rgba(255,255,255,0.08)';
+      ctx.fillRect(x - dw * 0.5, dy - dh * 0.7, dw, dh * 0.12);
+      // Label
+      ctx.fillStyle = col === '#111111' ? '#AAAAAA' : '#FFFFFF';
+      ctx.font = `900 ${Math.round(H * 0.022 * s)}px system-ui`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(label, x, dy - dh * 0.5);
+      // Shadow on floor
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.beginPath(); ctx.ellipse(x, dy + 1, dw * 0.55, dw * 0.12, 0, 0, Math.PI * 2); ctx.fill();
+    });
+
+    // ── TEM sign on wall ──────────────────────────────────────────────────
+    const signX = W * 0.50, signY = wallH * 0.22;
+    ctx.fillStyle = 'rgba(255,180,50,0.18)';
+    ctx.font = `900 ${Math.round(H * 0.048)}px system-ui,sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('TROWELED EARTH', signX, signY);
+    // Grungy underline
+    ctx.strokeStyle = 'rgba(255,180,50,0.12)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(signX - W * 0.22, signY + H * 0.024);
+    ctx.lineTo(signX + W * 0.22, signY + H * 0.024);
+    ctx.stroke();
+
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  }
+
   private _drawPlayerSideline(W: number, H: number): void {
     const ctx   = this.ctx;
     const px    = W * 0.84;
