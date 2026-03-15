@@ -560,7 +560,7 @@ export class PedestrianSystem {
 
     // Models known to have broken geometry (head-only, buried below ground, etc.)
     // These always use procedural fallback
-    const BROKEN_MODELS = new Set(['alexJones', 'kanyeWest']);
+    const BROKEN_MODELS = new Set(['alexJones', 'kanyeWest', 'trump']);
 
     HIT_CHAR_DEFS.forEach((def, i) => {
       const filename = this._charIdToFile(def.charId);
