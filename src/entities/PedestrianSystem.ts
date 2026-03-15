@@ -805,8 +805,8 @@ export class PedestrianSystem {
       }
 
       if (ped.scattering) {
-        ped.group.position.x += ped.scatterDirX * 17 * dt;
-        ped.group.position.z += ped.scatterDirZ * 17 * dt;
+        ped.group.position.x += ped.scatterDirX * 8 * dt;
+        ped.group.position.z += ped.scatterDirZ * 8 * dt;
         // Keep running until they flee off the map edge — no snap-back
         if (Math.abs(ped.group.position.x) > 240 || Math.abs(ped.group.position.z) > 240) {
           ped.splatted = true;
@@ -835,11 +835,11 @@ export class PedestrianSystem {
         ped.mixer.update(dt);
       } else if (ped.isGLB) {
         // Body bob for static Kenney GLB models (no embedded walk anim)
-        ped.walkCycle += (ped.scattering ? 17 : ped.speed) * dt * 2;
+        ped.walkCycle += (ped.scattering ? 8 : ped.speed) * dt * 2;
         ped.group.position.y = Math.max(0, Math.abs(Math.sin(ped.walkCycle)) * 0.1);
       } else {
         // Procedural arm/leg swing (Boronica + fallback peds)
-        const effSpeed = ped.scattering ? 17 : ped.speed;
+        const effSpeed = ped.scattering ? 8 : ped.speed;
         ped.walkCycle += effSpeed * dt * 2;
         const swing = Math.sin(ped.walkCycle);
         ped.leftArm.rotation.z  =  swing * 0.4 + 0.15;
@@ -938,8 +938,8 @@ export class PedestrianSystem {
       }
 
       if (hc.scattering) {
-        hc.group.position.x += hc.scatterDirX * 17 * dt;
-        hc.group.position.z += hc.scatterDirZ * 17 * dt;
+        hc.group.position.x += hc.scatterDirX * 8 * dt;
+        hc.group.position.z += hc.scatterDirZ * 8 * dt;
         // Bounce off map boundary — named NPCs always stay on the map
         const BOUND = 225;
         if (Math.abs(hc.group.position.x) >= BOUND) {
