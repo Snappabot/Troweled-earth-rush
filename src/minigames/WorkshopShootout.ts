@@ -255,9 +255,19 @@ export class WorkshopShootout {
 
     this._buildDOM();
     this._setupInput();
-    this._startTimer();
-    this.lastTs = performance.now();
-    this.rafId = requestAnimationFrame(ts => this._loop(ts));
+
+    // Show tutorial on first play, then start timer after dismiss
+    if (!localStorage.getItem('tem-shootout-tutorial-seen')) {
+      this._showTutorial(() => {
+        this._startTimer();
+        this.lastTs = performance.now();
+        this.rafId = requestAnimationFrame(ts => this._loop(ts));
+      });
+    } else {
+      this._startTimer();
+      this.lastTs = performance.now();
+      this.rafId = requestAnimationFrame(ts => this._loop(ts));
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -407,8 +417,9 @@ export class WorkshopShootout {
     controls.style.cssText = `
       position:absolute;bottom:0;left:0;right:0;z-index:12100;
       background:rgba(0,0,0,0.80);backdrop-filter:blur(4px);
-      padding:8px 10px 10px;
+      padding:8px 10px env(safe-area-inset-bottom, 14px);
       display:flex;align-items:flex-end;gap:6px;
+      box-sizing:border-box;
     `;
 
     // Pigment buttons (5)
@@ -749,6 +760,16 @@ export class WorkshopShootout {
       this.shots[key]++;
       this.totalShots++;
       if (this.shotsTotalEl) this.shotsTotalEl.textContent = `🎯 ${this.totalShots} shot${this.totalShots !== 1 ? "s" : ""}`;
+      // Pulse the MIX button after 3rd shot to hint player it exists
+      if (this.totalShots === 3) {
+        this.mixBtnEl.style.animation = 'mixBtnPulse 0.6s ease-in-out 3';
+        if (!document.getElementById('mix-btn-pulse-style')) {
+          const s = document.createElement('style');
+          s.id = 'mix-btn-pulse-style';
+          s.textContent = `@keyframes mixBtnPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.12);box-shadow:0 0 18px #FFD080;} }`;
+          document.head.appendChild(s);
+        }
+      }
       this._refreshCounts();
       this.currentMix = computeMix(this.shots);
       this.bkFlashT   = 0.5;
@@ -847,6 +868,108 @@ export class WorkshopShootout {
   // ─────────────────────────────────────────────────────────────────────────
   // TIMER
   // ─────────────────────────────────────────────────────────────────────────
+
+  private _showTutorial(onDone: () => void): void {
+    const steps = [
+      {
+        title: '🎨 Colour Mixing',
+        body:  'Match the target colour by shooting the right pigment buckets into the mix.\n\nThe formula is shown at the top — B=Black, Y=Yellow, L=Umber, R=Red, G=Green.',
+        highlight: 'top',
+      },
+      {
+        title: '👇 Select a Colour',
+        body:  'Tap a colour button at the bottom to select it.\nThe selected colour glows — that\'s what you\'ll shoot next.',
+        highlight: 'bottom',
+      },
+      {
+        title: '🎯 Tap to Shoot',
+        body:  'Tap anywhere on the court to throw a bucket.\nShoot at Connie to steal her shots — but don\'t miss!',
+        highlight: 'court',
+      },
+      {
+        title: '🔩 Hit MIX to Finish',
+        body:  'Once you\'ve added the right number of each colour, hit the MIX button (bottom right) to complete the mix.\n\nThe closer your mix to the formula, the better the result!',
+        highlight: 'mix',
+      },
+    ];
+
+    let step = 0;
+    const panel = document.createElement('div');
+    panel.style.cssText = `
+      position:absolute;inset:0;z-index:14000;
+      background:rgba(0,0,0,0.78);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      padding:24px 20px;box-sizing:border-box;
+      font-family:system-ui,sans-serif;
+    `;
+
+    const card = document.createElement('div');
+    card.style.cssText = `
+      background:rgba(20,18,14,0.97);border-radius:20px;
+      border:2px solid rgba(200,168,106,0.35);
+      padding:28px 24px 20px;max-width:340px;width:100%;
+      display:flex;flex-direction:column;gap:14px;
+      box-shadow:0 8px 40px rgba(0,0,0,0.7);
+    `;
+
+    const title = document.createElement('div');
+    title.style.cssText = `color:#C8A86A;font-size:18px;font-weight:900;text-align:center;`;
+
+    const body = document.createElement('div');
+    body.style.cssText = `color:rgba(255,255,255,0.88);font-size:14px;line-height:1.6;text-align:center;white-space:pre-line;`;
+
+    const dots = document.createElement('div');
+    dots.style.cssText = `display:flex;justify-content:center;gap:8px;`;
+
+    const nextBtn = document.createElement('button');
+    nextBtn.style.cssText = `
+      background:linear-gradient(135deg,#C8A86A,#8B6A30);color:#1A1208;
+      border:none;border-radius:12px;padding:13px 28px;
+      font-size:15px;font-weight:900;cursor:pointer;
+      touch-action:manipulation;width:100%;margin-top:4px;
+    `;
+
+    const skipBtn = document.createElement('button');
+    skipBtn.style.cssText = `
+      background:none;border:none;color:rgba(255,255,255,0.3);
+      font-size:12px;cursor:pointer;touch-action:manipulation;
+      padding:4px;text-decoration:underline;
+    `;
+    skipBtn.textContent = 'Skip tutorial';
+
+    card.appendChild(title);
+    card.appendChild(body);
+    card.appendChild(dots);
+    card.appendChild(nextBtn);
+    card.appendChild(skipBtn);
+    panel.appendChild(card);
+    this.overlay.appendChild(panel);
+
+    const render = () => {
+      const s = steps[step];
+      title.textContent = s.title;
+      body.textContent = s.body;
+      nextBtn.textContent = step < steps.length - 1 ? 'Next →' : "Let's Mix! 🔩";
+      dots.innerHTML = steps.map((_, i) =>
+        `<div style="width:8px;height:8px;border-radius:50%;background:${i === step ? '#C8A86A' : 'rgba(255,255,255,0.2)'}"></div>`
+      ).join('');
+    };
+
+    const finish = () => {
+      localStorage.setItem('tem-shootout-tutorial-seen', '1');
+      panel.remove();
+      onDone();
+    };
+
+    nextBtn.addEventListener('click', () => {
+      step++;
+      if (step >= steps.length) finish();
+      else render();
+    });
+    skipBtn.addEventListener('click', finish);
+
+    render();
+  }
 
   private _startTimer(): void {
     this.timerInt = setInterval(() => {
