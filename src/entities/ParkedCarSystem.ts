@@ -119,9 +119,12 @@ export class ParkedCarSystem {
           // Cars aligned along X have length ~4 along X, width ~2 along Z (and vice versa).
           // rotY ≈ ±PI/2 → car length along Z; rotY ≈ 0/PI → car length along X.
           if (this.collisionWorld) {
-            const alongZ = Math.abs(Math.cos(spec.rotY)) < 0.5; // rotY ≈ ±PI/2
-            const hw = alongZ ? 1.2 : 2.2; // half-width in X
-            const hd = alongZ ? 2.2 : 1.2; // half-depth in Z
+            // Match actual car footprint — same values traffic cars use.
+            // Car body: ~1.15 wide, ~2.15 long (at scale 0.82).
+            // rotY ≈ ±PI/2 → car length runs along Z axis; rotY ≈ 0/PI → along X.
+            const alongZ = Math.abs(Math.cos(spec.rotY)) < 0.5;
+            const hw = alongZ ? 1.15 : 2.15; // half-extent in X
+            const hd = alongZ ? 2.15 : 1.15; // half-extent in Z
             this.collisionWorld.addBox(spec.x, spec.z, hw, hd);
           }
         }
