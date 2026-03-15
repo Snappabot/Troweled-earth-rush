@@ -88,14 +88,11 @@ export class VanModel {
     wrapL.renderOrder = 1;
     this.bodyGroup.add(wrapL);
 
-    const wrapTexR = new THREE.TextureLoader().load(`${base}assets/tem_wrap.png`);
-    wrapTexR.colorSpace = THREE.SRGBColorSpace;
-    wrapTexR.repeat.x = -1; wrapTexR.offset.x = 1;
-    const wrapMatR = new THREE.MeshLambertMaterial({
-      map: wrapTexR, transparent: false, depthWrite: true,
-    });
-    const wrapR = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 0.80), wrapMatR);
-    wrapR.rotation.y = Math.PI / 2;
+    // Right side — same texture, same material, face outward via DoubleSide isn't needed.
+    // Rotate Y by -PI/2 so the plane faces right (+X) with texture reading front-to-back.
+    const wrapR = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 0.80), wrapMat);
+    wrapR.rotation.y = -Math.PI / 2;
+    wrapR.scale.x = -1; // flip horizontally so text reads correctly on this side
     wrapR.position.set(1.21, 1.10, 0.5);
     wrapR.renderOrder = 1;
     this.bodyGroup.add(wrapR);
