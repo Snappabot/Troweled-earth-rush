@@ -46,6 +46,7 @@ import { WorkshopShootout } from './minigames/WorkshopShootout';
 import { RivalSystem } from './gameplay/RivalSystem';
 import { PlayerOnFoot } from './entities/PlayerOnFoot';
 import { WeaponSelector } from './ui/WeaponSelector';
+import { ZoneIndicator, ZONE_COLORS } from './gameplay/ZoneIndicator';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -99,6 +100,7 @@ async function main() {
     }
   );
   const waypointSystem = new WaypointSystem(engine.scene);
+  const zones = new ZoneIndicator(engine.scene);
 
   // ── Rival System — 3 rival crews race to the job site ─────────────────────
   const rivalSystem = new RivalSystem(engine.scene);
@@ -133,6 +135,9 @@ async function main() {
             rivalSystem.start(job.position);
             hud.showRaceStrip(true);
             waypointSystem.setTarget(JobManager.WORKSHOP_POS);
+            // Workshop zone — orange, stop to enter
+            zones.clear();
+            zones.add({ id: 'workshop', x: JobManager.WORKSHOP_POS.x, z: JobManager.WORKSHOP_POS.z, radius: 9, color: ZONE_COLORS.workshop, label: 'WORKSHOP' });
             hud.setActiveJob(job, 1);
             hud.updateCrewStatus([], [], false);
             { const pn = hud.getPlayerChar()?.name ?? 'Driver'; hud.showToast(`🚐 Let's go ${pn}! Pick up supplies first.`, 0xD4A040); }
@@ -544,6 +549,7 @@ async function main() {
     }
 
     waypointSystem.update(dt, vanX, vanZ);
+    zones.update(dt, vanX, vanZ, physics.speed);
 
     // ── Rival System — update vans + HUD race strip ───────────────────────────
     if (rivalSystem.isActive()) {
@@ -565,6 +571,7 @@ async function main() {
         breakActive = null; savedWaypoint = null;
         coffeeBreakAt = -1; toiletBreakAt = -1; renderBreakAt = -1;
         waypointSystem.setTarget(null);
+        zones.clear();
         hud.updateTravelTimer(null);
         hud.showTimerFail(150_000);
         hud.setActiveJob(null, 1);
@@ -609,6 +616,7 @@ async function main() {
         breakActive = 'coffee';
         savedWaypoint = waypointSystem.currentTarget;
         waypointSystem.setTarget(COFFEE_POS);
+        zones.add({ id: 'coffee', x: COFFEE_POS.x, z: COFFEE_POS.z, radius: 8, color: ZONE_COLORS.coffee, label: 'CAFÉ' });
         hud.showToast('☕ Gagging for a coffee — hit the cafe NOW!', 0xD4622A);
       }
       // Toilet urge fires
@@ -619,6 +627,7 @@ async function main() {
         bladderMeter.isUrgent = true;
         savedWaypoint = waypointSystem.currentTarget;
         waypointSystem.setTarget(TOILET_POS);
+        zones.add({ id: 'toilet', x: TOILET_POS.x, z: TOILET_POS.z, radius: 8, color: ZONE_COLORS.toilet, label: 'TOILET' });
         hud.showToast('🚽 Bursting! Find the toilet before you ruin the plastering!', 0xFF5722);
       }
       else if (renderBreakAt > 0 && jobElapsed >= renderBreakAt) {
@@ -643,6 +652,8 @@ async function main() {
         breakActive = null;
         const restore = savedWaypoint;
         savedWaypoint = null;
+        // Remove break zone circle
+        zones.remove('coffee'); zones.remove('toilet'); zones.remove('render');
 
         if (kind === 'coffee') {
           bladderMeter.drinkCoffee();
@@ -694,7 +705,7 @@ async function main() {
 
     // ── Phase 1: workshop arrival → Marbellino Mixer → supplies loaded ──────
     if (jobManager.activeJob && jobManager.activePhase === 1 && !breakActive && !jobCompleting) {
-      if (jobManager.checkPhase1Arrival(vanX, vanZ)) {
+      if (jobManager.checkPhase1Arrival(vanX, vanZ) && physics.speed < 3) {
         jobCompleting = true;
         spillMeter.level = 0;
         connie.playLaugh();
@@ -729,6 +740,13 @@ async function main() {
                     const crewPos = characters.getCrewPosition(firstCrew);
                     waypointSystem.setTarget(crewPos);
                   }
+                  // Replace workshop zone with crew pickup zones
+                  zones.clear();
+                  for (const cn of jobManager.crewToPickup) {
+                    const cp = characters.getCrewPosition(cn);
+                    const col = (ZONE_COLORS as Record<string, number>)[cn] ?? 0xFFFFFF;
+                    zones.add({ id: `crew_${cn}`, x: cp.x, z: cp.z, radius: 8, color: col, label: cn.toUpperCase() });
+                  }
                   hud.showPhase1Complete();
                   hud.setActiveJob(jobManager.activeJob, 2);
                   hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
@@ -753,9 +771,10 @@ async function main() {
         const crewPos = characters.getCrewPosition(name);
         const dist = jobManager.distanceToPoint(vanX, vanZ, crewPos.x, crewPos.z);
 
-        if (dist < 10) {
+        if (dist < 10 && physics.speed < 3) {
           jobCompleting = true;
           characters.hideCrew(name);
+          zones.remove(`crew_${name}`); // remove this crew member's zone
           const allCollected = jobManager.pickupCrew(name);
 
           hud.updateCrewStatus(
@@ -773,6 +792,11 @@ async function main() {
               () => {
                 jobManager.advanceToPhase3();
                 waypointSystem.setTarget(jobManager.activeJob!.position);
+                // All crew aboard — show green job site zone
+                zones.clear();
+                if (jobManager.activeJob) {
+                  zones.add({ id: 'jobsite', x: jobManager.activeJob.position.x, z: jobManager.activeJob.position.z, radius: jobManager.activeJob.triggerRadius ?? 10, color: ZONE_COLORS.jobSite, label: 'JOB SITE' });
+                }
                 hud.showCrewPickup(name, null);
                 hud.setActiveJob(jobManager.activeJob, 3);
                 jobCompleting = false;
@@ -812,10 +836,11 @@ async function main() {
       !jobCompleting &&
       !miniGameManager.isActive()
     ) {
-      const arrived = jobManager.checkArrival(vanX, vanZ);
+      const arrived = (physics.speed < 3) ? jobManager.checkArrival(vanX, vanZ) : null;
       if (arrived !== null) {
         jobCompleting = true;
         waypointSystem.setTarget(null);
+        zones.clear();
 
         dialoguePause.show(
           `🏗️ ${arrived.title}`,
