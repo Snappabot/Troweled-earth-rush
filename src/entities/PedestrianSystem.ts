@@ -558,9 +558,36 @@ export class PedestrianSystem {
     const base = (import.meta as any).env.BASE_URL as string;
     const loader = new GLTFLoader();
 
+    // Models known to have broken geometry (head-only, buried below ground, etc.)
+    // These always use procedural fallback
+    const BROKEN_MODELS = new Set(['alexJones', 'kanyeWest']);
+
     HIT_CHAR_DEFS.forEach((def, i) => {
       const filename = this._charIdToFile(def.charId);
       const url = `${base}models/characters/${filename}.glb`;
+
+      if (BROKEN_MODELS.has(def.charId)) {
+        // Skip GLB load — spawn procedural immediately
+        const spawnXZ = HIT_CHAR_POSITIONS[i];
+        const axis: 'x' | 'z' = Math.abs(spawnXZ.x) >= Math.abs(spawnXZ.z) ? 'x' : 'z';
+        const roadPos = randomSidewalk();
+        const { segStart, segEnd, pos } = randomSegment();
+        const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
+        const { group, leftArm, rightArm, leftLeg, rightLeg } = buildHitChar(def.charId, def.bodyColor, def.accentColor);
+        const hc: HitCharacter = {
+          group, charId: def.charId, preLine: def.preLine, splatToast: def.splatToast,
+          axis, roadPos, segStart, segEnd, pos, dir, speed: 1.25 + Math.random() * 0.5,
+          scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
+          walkCycle: Math.random() * Math.PI * 2,
+          leftArm, rightArm, leftLeg, rightLeg,
+          splatted: false, respawnTimer: 0, nearbySpoken: false,
+        };
+        if (axis === 'x') group.position.set(pos, 0, roadPos);
+        else group.position.set(roadPos, 0, pos);
+        this.scene.add(group);
+        this.hitChars.push(hc);
+        return;
+      }
 
       loader.load(url, (gltf) => {
         const model = gltf.scene;
