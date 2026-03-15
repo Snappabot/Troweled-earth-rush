@@ -4,8 +4,12 @@ import { CollisionWorld } from '../core/CollisionWorld';
 
 // ── Colours ──────────────────────────────────────────────────────────────────
 const BODY_COLORS = [
+  // Shirts
   0xF4A261, 0xE76F51, 0x2A9D8F, 0x264653,
   0xE9C46A, 0xA8DADC, 0xFF6B6B, 0x6B4226,
+  0x3D5A80, 0x98C1D9, 0xE84855, 0x2B2D42,
+  0x8D99AE, 0xEF233C, 0x06D6A0, 0xFFB703,
+  0x023047, 0xFB8500, 0x219EBC, 0x8ECAE6,
 ];
 const SKIN_COLOR  = 0xFFDBAC;
 const ROOS_COLOR  = 0xC8A05A; // kangaroo tan
@@ -142,6 +146,9 @@ interface HitCharacter {
 
 // ── Build Helpers ─────────────────────────────────────────────────────────────
 
+const SKIN_TONES = [0xFFDBAC, 0xF1C27D, 0xE0AC69, 0xC68642, 0x8D5524, 0xFFCBA4, 0xD4A880, 0xB07850];
+const PANT_COLORS = [0x2A2A2A, 0x3A5080, 0x222230, 0x4A3020, 0x1A3A1A, 0x3A2A40, 0x50402A, 0x1A2A3A];
+
 function buildPedestrian(bodyColor: number): {
   group: THREE.Group;
   leftArm: THREE.Mesh; rightArm: THREE.Mesh;
@@ -149,7 +156,10 @@ function buildPedestrian(bodyColor: number): {
 } {
   const group   = new THREE.Group();
   const bodyMat = new THREE.MeshLambertMaterial({ color: bodyColor });
-  const skinMat = new THREE.MeshLambertMaterial({ color: SKIN_COLOR });
+  const skinColor = SKIN_TONES[Math.floor(Math.random() * SKIN_TONES.length)];
+  const pantColor = PANT_COLORS[Math.floor(Math.random() * PANT_COLORS.length)];
+  const skinMat = new THREE.MeshLambertMaterial({ color: skinColor });
+  const pantMat = new THREE.MeshLambertMaterial({ color: pantColor });
 
   const body = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.35, 1.1, 7), bodyMat);
   body.position.set(0, 0.55, 0); group.add(body);
@@ -163,10 +173,10 @@ function buildPedestrian(bodyColor: number): {
   const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.65, 0.15), bodyMat);
   rightArm.position.set(0.45, 0.75, 0); rightArm.rotation.z = -0.15; group.add(rightArm);
 
-  const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.55, 0.18), bodyMat);
+  const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.55, 0.18), pantMat);
   leftLeg.position.set(-0.18, 0, 0.05); group.add(leftLeg);
 
-  const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.55, 0.18), bodyMat);
+  const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.55, 0.18), pantMat);
   rightLeg.position.set(0.18, 0, -0.05); group.add(rightLeg);
 
   return { group, leftArm, rightArm, leftLeg, rightLeg };
@@ -455,12 +465,6 @@ export class PedestrianSystem {
   // ── Spawn ───────────────────────────────────────────────────────────────────
 
   private _spawnPedestrians(): void {
-    const VARIANTS = [
-      'blocky-variant-a', 'blocky-variant-e', 'blocky-variant-f', 'blocky-variant-h',
-      'blocky-variant-l', 'blocky-variant-m', 'blocky-variant-n', 'blocky-variant-o',
-    ];
-    const base = (import.meta as any).env.BASE_URL as string;
-    const loader = new GLTFLoader();
     const dummy = new THREE.Mesh();
 
     // Boronica — keep as procedural (she has a unique look)
@@ -484,65 +488,30 @@ export class PedestrianSystem {
     };
 
     // Regular peds — Kenney blocky GLB models, fallback to procedural
-    const spawnGLBPed = (axis: 'x' | 'z'): void => {
-      const variantName = VARIANTS[Math.floor(Math.random() * VARIANTS.length)];
-      const url = `${base}models/characters/${variantName}.glb`;
+    const spawnProceduralPed = (axis: 'x' | 'z'): void => {
       const bodyColor = BODY_COLORS[Math.floor(Math.random() * BODY_COLORS.length)];
       const roadPos = randomSidewalk();
       const { segStart, segEnd, pos } = randomSegment();
       const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
       const speed = 2 + Math.random() * 1.5;
-
-      loader.load(url, (gltf) => {
-        const model = gltf.scene;
-        model.scale.setScalar(1.55);
-        model.traverse(c => { if ((c as THREE.Mesh).isMesh) c.castShadow = true; });
-        const group = new THREE.Group();
-        group.add(model);
-
-        const ped: Pedestrian = {
-          group, axis, roadPos, segStart, segEnd, pos, dir, speed,
-          scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
-          walkCycle: Math.random() * Math.PI * 2,
-          leftArm: dummy, rightArm: dummy, leftLeg: dummy, rightLeg: dummy,
-          splatted: false, respawnTimer: 0, spawnAxis: axis,
-          isBoronica: false, boronicaYelled: false,
-          isGLB: true,
-        };
-
-        // If model has embedded walk animation (e.g. Mixamo retarget), use it
-        if (gltf.animations.length > 0) {
-          const mixer = new THREE.AnimationMixer(model);
-          const clip = gltf.animations.find(a => a.name.toLowerCase().includes('walk')) ?? gltf.animations[0];
-          mixer.clipAction(clip).play();
-          ped.mixer = mixer;
-        }
-
-        this.pedestrians.push(ped);
-        this.scene.add(group);
-        this._applyPedPosition(ped);
-        this._applyPedFacing(ped);
-      }, undefined, () => {
-        // Fallback: procedural geometry if GLB fails
-        const built = buildPedestrian(bodyColor);
-        const ped: Pedestrian = {
-          group: built.group, axis, roadPos, segStart, segEnd, pos, dir, speed,
-          scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
-          walkCycle: Math.random() * Math.PI * 2,
-          leftArm: built.leftArm, rightArm: built.rightArm,
-          leftLeg: built.leftLeg, rightLeg: built.rightLeg,
-          splatted: false, respawnTimer: 0, spawnAxis: axis,
-          isBoronica: false, boronicaYelled: false,
-        };
-        this.pedestrians.push(ped);
-        this.scene.add(built.group);
-        this._applyPedPosition(ped);
-        this._applyPedFacing(ped);
-      });
+      const built = buildPedestrian(bodyColor);
+      const ped: Pedestrian = {
+        group: built.group, axis, roadPos, segStart, segEnd, pos, dir, speed,
+        scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
+        walkCycle: Math.random() * Math.PI * 2,
+        leftArm: built.leftArm, rightArm: built.rightArm,
+        leftLeg: built.leftLeg, rightLeg: built.rightLeg,
+        splatted: false, respawnTimer: 0, spawnAxis: axis,
+        isBoronica: false, boronicaYelled: false,
+      };
+      this.pedestrians.push(ped);
+      this.scene.add(built.group);
+      this._applyPedPosition(ped);
+      this._applyPedFacing(ped);
     };
 
-    for (let i = 0; i < PED_COUNT; i++) spawnGLBPed('x');
-    for (let i = 0; i < PED_COUNT; i++) spawnGLBPed('z');
+    for (let i = 0; i < PED_COUNT; i++) spawnProceduralPed('x');
+    for (let i = 0; i < PED_COUNT; i++) spawnProceduralPed('z');
     spawnBoronica();
   }
 
@@ -595,9 +564,19 @@ export class PedestrianSystem {
 
       loader.load(url, (gltf) => {
         const model = gltf.scene;
-        // Scale to match pedestrian height (~1.55 units)
-        model.scale.setScalar(1.8);
-        // Ensure shadows
+
+        // Auto-normalise: compute actual bounding box and scale to TARGET_HEIGHT
+        const TARGET_HEIGHT = 1.75; // units — matches crew character height
+        model.updateMatrixWorld(true);
+        const bbox = new THREE.Box3().setFromObject(model);
+        const modelHeight = bbox.max.y - bbox.min.y;
+        const autoScale = modelHeight > 0.01 ? TARGET_HEIGHT / modelHeight : 1.0;
+        model.scale.setScalar(autoScale);
+        // Recompute after scale and lift feet to y=0
+        model.updateMatrixWorld(true);
+        const bbox2 = new THREE.Box3().setFromObject(model);
+        model.position.y = -bbox2.min.y;
+
         model.traverse(c => { if ((c as THREE.Mesh).isMesh) { c.castShadow = true; } });
 
         const wrapper = new THREE.Group();
@@ -622,7 +601,7 @@ export class PedestrianSystem {
           new THREE.PlaneGeometry(2.4, 0.6),
           new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false })
         );
-        label.position.set(0, 5.5, 0);
+        label.position.set(0, 2.4, 0);
         label.renderOrder = 1;
         wrapper.add(label);
 
