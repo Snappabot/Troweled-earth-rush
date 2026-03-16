@@ -50,7 +50,7 @@ export class CameraController {
       if (!this.touching || !this.onFoot) return;
       const t = e.changedTouches[0];
       const dx = t.clientX - this.lastTouchX;
-      this.footOrbitOffset -= dx * 0.008;
+      this.footOrbitOffset -= dx * 0.003;
       this.lastTouchX = t.clientX;
     }, { passive: true });
 
@@ -66,7 +66,7 @@ export class CameraController {
     window.addEventListener('mousemove', (e) => {
       if (!mouseDown || !this.onFoot) return;
       const dx = e.clientX - lastMouseX;
-      this.footOrbitOffset -= dx * 0.006;
+      this.footOrbitOffset -= dx * 0.002;
       lastMouseX = e.clientX;
     });
     window.addEventListener('mouseup', () => { mouseDown = false; });
