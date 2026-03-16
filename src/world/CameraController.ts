@@ -75,13 +75,19 @@ export class CameraController {
   followOnFoot(pos: THREE.Vector3, heading: number) {
     this.onFoot = true;
 
-    // Base angle tracks character heading with swipe offset on top
-    let angleDiff = heading - this.cameraAngle;
-    while (angleDiff >  Math.PI) angleDiff -= Math.PI * 2;
-    while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-    // Only auto-follow when not actively swiping
-    if (!this.touching) this.cameraAngle += angleDiff * 0.06;
+    if (this.touching) {
+      // While swiping: freeze base angle, swipe directly controls orbit
+      this.cameraAngle = heading; // keep in sync so release feels natural
+    } else {
+      // Not swiping: slowly return orbit offset to 0, base follows heading
+      this.footOrbitOffset *= 0.93;
+      let angleDiff = heading - this.cameraAngle;
+      while (angleDiff >  Math.PI) angleDiff -= Math.PI * 2;
+      while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+      this.cameraAngle += angleDiff * 0.06;
+    }
 
+    // Camera sits BEHIND the character at effectiveAngle
     const effectiveAngle = this.cameraAngle + this.footOrbitOffset;
 
     this.targetPos.set(
@@ -91,6 +97,7 @@ export class CameraController {
     );
     this.camera.position.lerp(this.targetPos, 0.12);
 
+    // Look at point ahead of where camera is facing
     const lookAt = new THREE.Vector3(
       pos.x + Math.sin(effectiveAngle) * 3,
       pos.y + 1.4,
