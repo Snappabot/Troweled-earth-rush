@@ -465,8 +465,6 @@ export class PedestrianSystem {
   // ── Spawn ───────────────────────────────────────────────────────────────────
 
   private _spawnPedestrians(): void {
-    const dummy = new THREE.Mesh();
-
     // Boronica — keep as procedural (she has a unique look)
     const spawnBoronica = (): void => {
       const { group, leftArm, rightArm, leftLeg, rightLeg } = buildBoronica();
@@ -487,31 +485,124 @@ export class PedestrianSystem {
       this._applyPedFacing(ped);
     };
 
-    // Regular peds — Kenney blocky GLB models, fallback to procedural
-    const spawnProceduralPed = (axis: 'x' | 'z'): void => {
-      const bodyColor = BODY_COLORS[Math.floor(Math.random() * BODY_COLORS.length)];
+    // Regular peds — KayKit adventurer GLB with Walk animation, colour-tinted clones
+    const base = (import.meta as any).env.BASE_URL as string;
+    const loader = new GLTFLoader();
+    const dummy = new THREE.Mesh();
+
+    // Shirt/body colour tints applied to body mesh
+    const SHIRT_COLORS = [
+      0xF4A261, 0xE76F51, 0x2A9D8F, 0x264653, 0xE9C46A,
+      0xA8DADC, 0xFF6B6B, 0x3D5A80, 0x98C1D9, 0xE84855,
+      0x2B2D42, 0x06D6A0, 0xFFB703, 0x219EBC, 0xFB8500,
+    ];
+
+    let pedGLTF: any = null;
+    const pendingPeds: { axis: 'x'|'z' }[] = [];
+
+    const spawnFromGLTF = (axis: 'x'|'z', gltf: any): void => {
+      const shirtColor = SHIRT_COLORS[Math.floor(Math.random() * SHIRT_COLORS.length)];
+      const model = gltf.scene.clone(true);
+
+      // Tint the body mesh with a random shirt colour
+      model.traverse((c: any) => {
+        if (c.isMesh && c.name && c.name.toLowerCase().includes('body')) {
+          c.material = c.material.clone();
+          c.material.color.setHex(shirtColor);
+        }
+      });
+
+      // Auto-normalise height to 1.75
+      const TARGET_HEIGHT = 1.75;
+      model.updateMatrixWorld(true);
+      const bbox = new THREE.Box3().setFromObject(model);
+      const mh = bbox.max.y - bbox.min.y;
+      const sc = mh > 0.01 ? TARGET_HEIGHT / mh : 1.0;
+      model.scale.setScalar(sc);
+      model.updateMatrixWorld(true);
+      const bbox2 = new THREE.Box3().setFromObject(model);
+      model.position.y = -bbox2.min.y;
+
+      model.traverse((c: any) => { if (c.isMesh) c.castShadow = true; });
+
+      const group = new THREE.Group();
+      group.add(model);
+
       const roadPos = randomSidewalk();
       const { segStart, segEnd, pos } = randomSegment();
       const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
       const speed = 2 + Math.random() * 1.5;
-      const built = buildPedestrian(bodyColor);
+
       const ped: Pedestrian = {
-        group: built.group, axis, roadPos, segStart, segEnd, pos, dir, speed,
+        group, axis, roadPos, segStart, segEnd, pos, dir, speed,
         scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
         walkCycle: Math.random() * Math.PI * 2,
-        leftArm: built.leftArm, rightArm: built.rightArm,
-        leftLeg: built.leftLeg, rightLeg: built.rightLeg,
+        leftArm: dummy, rightArm: dummy, leftLeg: dummy, rightLeg: dummy,
         splatted: false, respawnTimer: 0, spawnAxis: axis,
         isBoronica: false, boronicaYelled: false,
+        isGLB: true,
       };
+
+      // Walk animation
+      const walkClip = gltf.animations.find((a: any) => a.name.toLowerCase().includes('walk'));
+      if (walkClip) {
+        const mixer = new THREE.AnimationMixer(model);
+        // Offset start time so peds don't all step in sync
+        const action = mixer.clipAction(walkClip);
+        action.play();
+        action.time = Math.random() * walkClip.duration;
+        mixer.update(0);
+        ped.mixer = mixer;
+      }
+
       this.pedestrians.push(ped);
-      this.scene.add(built.group);
+      this.scene.add(group);
       this._applyPedPosition(ped);
       this._applyPedFacing(ped);
     };
 
-    for (let i = 0; i < PED_COUNT; i++) spawnProceduralPed('x');
-    for (let i = 0; i < PED_COUNT; i++) spawnProceduralPed('z');
+    const spawnGLBPed = (axis: 'x'|'z'): void => {
+      if (pedGLTF) {
+        spawnFromGLTF(axis, pedGLTF);
+      } else {
+        pendingPeds.push({ axis });
+      }
+    };
+
+    loader.load(`${base}models/characters/ped-adventurer.glb`, (gltf) => {
+      pedGLTF = gltf;
+      // Spawn all queued peds now that model is loaded
+      pendingPeds.forEach(p => spawnFromGLTF(p.axis, pedGLTF));
+      pendingPeds.length = 0;
+    }, undefined, () => {
+      // Fallback: procedural if GLB fails
+      const spawnProceduralPed = (axis: 'x'|'z'): void => {
+        const bodyColor = BODY_COLORS[Math.floor(Math.random() * BODY_COLORS.length)];
+        const roadPos = randomSidewalk();
+        const { segStart, segEnd, pos } = randomSegment();
+        const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
+        const speed = 2 + Math.random() * 1.5;
+        const built = buildPedestrian(bodyColor);
+        const ped: Pedestrian = {
+          group: built.group, axis, roadPos, segStart, segEnd, pos, dir, speed,
+          scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,
+          walkCycle: Math.random() * Math.PI * 2,
+          leftArm: built.leftArm, rightArm: built.rightArm,
+          leftLeg: built.leftLeg, rightLeg: built.rightLeg,
+          splatted: false, respawnTimer: 0, spawnAxis: axis,
+          isBoronica: false, boronicaYelled: false,
+        };
+        this.pedestrians.push(ped);
+        this.scene.add(built.group);
+        this._applyPedPosition(ped);
+        this._applyPedFacing(ped);
+      };
+      for (let i = 0; i < PED_COUNT; i++) spawnProceduralPed('x');
+      for (let i = 0; i < PED_COUNT; i++) spawnProceduralPed('z');
+    });
+
+    for (let i = 0; i < PED_COUNT; i++) spawnGLBPed('x');
+    for (let i = 0; i < PED_COUNT; i++) spawnGLBPed('z');
     spawnBoronica();
   }
 
