@@ -47,6 +47,7 @@ import { RivalSystem } from './gameplay/RivalSystem';
 import { PlayerOnFoot } from './entities/PlayerOnFoot';
 import { WeaponSelector } from './ui/WeaponSelector';
 import { ZoneIndicator, ZONE_COLORS } from './gameplay/ZoneIndicator';
+import { CityAudio } from './audio/CityAudio';
 
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
@@ -65,6 +66,8 @@ async function main() {
   // ── Intro cinematic → Start menu → Character creator ─────────────────────────
   const introAudio = await new IntroSequence().play();
   await new StartMenu().show(introAudio);
+  const cityAudio = new CityAudio();
+  cityAudio.start(); // AudioContext allowed after user gesture (StartMenu click)
   const playerChar = await new CharacterCreator().show();
   setPlayerName(playerChar.name); // persist for leaderboard
 
@@ -97,6 +100,7 @@ async function main() {
     engine.collisionWorld,
     () => {
       if (jobManager.activePhase >= 2) spillMeter.triggerCrash();
+      cityAudio.playCrash();
     }
   );
   const waypointSystem = new WaypointSystem(engine.scene);
@@ -260,6 +264,7 @@ async function main() {
   pedestrians.onSplat = (sats: number, name?: string) => {
     jobManager.money += sats;
     hud.updateMoney(jobManager.money);
+    cityAudio.playPedScatter();
     if (name === 'boronica') {
       hud.showToast("💸 Boronica's gonna need that alimony now!", 0xFF69B4);
     } else if (name === 'kangaroo') {
@@ -274,6 +279,7 @@ async function main() {
 
   pedestrians.onHitCharNear = (charId: string, line: string) => {
     hud.showCharSpeech(charId, line);
+    cityAudio.playHitChar(charId);
   };
   pedestrians.onHitCharSplat = (_charId: string, toast: string) => {
     jobManager.money += 10_000;
@@ -324,6 +330,9 @@ async function main() {
 
   // Guard to prevent job completion firing more than once per arrival
   let jobCompleting = false;
+
+  // Horn debounce — only trigger cityAudio.honk() once per press
+  let _hornWasDown = false;
 
   // ── Contested job tracking for leaderboard ────────────────────────────────
   let _contestedJobTitle   = '';
@@ -528,6 +537,7 @@ async function main() {
       const impactMag = Math.sqrt(trafficResult.impactX ** 2 + trafficResult.impactZ ** 2);
       physics.applyImpulse(trafficResult.impactX, trafficResult.impactZ);
       van.triggerBump(Math.min(1.0, 0.4 + impactMag * 0.3)); // camera shake
+      cityAudio.playCrash();
 
       if (jobActive) {
         // Only spill/damage materials after they've been picked up (Phase 2+)
@@ -880,6 +890,7 @@ async function main() {
                   hud.showPenalty(arrived.title, Math.abs(earned));
                 } else {
                   hud.showJobComplete(arrived.title, earned);
+                  cityAudio.playMissionComplete();
                 }
                 hud.updateMoney(jobManager.money);
                 characters.showAllCrew(); pedestrians.respawnAll();
@@ -1027,6 +1038,15 @@ async function main() {
       engine.camera.follow(van.mesh.position, van.velocity, van.heading);
     }
     hud.update(physics.speed, spillMeter.level);
+
+    // ── City audio — engine rumble + horn ─────────────────────────────────────
+    cityAudio.updateEngine(physics.speed, 1);
+    if (input.honk && !_hornWasDown) {
+      cityAudio.honk();
+      _hornWasDown = true;
+    } else if (!input.honk) {
+      _hornWasDown = false;
+    }
   });
 
   // Job board is opened by the player via the menu — not auto-shown
