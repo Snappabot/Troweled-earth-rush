@@ -412,6 +412,8 @@ async function main() {
         // Reveal UI
         hud.setVisible(true);
         gameMenu.setVisible(true);
+        // Key-turn engine start sequence
+        cityAudio.startEngine();
         // Hint toast
         hud.showToast('☰  Tap the menu to pick up contracts!', 0xC4920A);
       }

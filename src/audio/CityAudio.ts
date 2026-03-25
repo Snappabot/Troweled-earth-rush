@@ -50,8 +50,7 @@ export class CityAudio {
       this.masterGain.gain.value = this.muted ? 0 : 1;
       this.masterGain.connect(this.ctx.destination);
 
-      this._startEngine();
-      this._startAmbient();
+      this._startAmbient(); // ambient city starts immediately; engine waits for key-turn
     } catch (e) {
       console.warn('[CityAudio] AudioContext creation failed:', e);
     }
@@ -61,10 +60,10 @@ export class CityAudio {
   updateEngine(speed: number, _gear: number): void {
     if (!this.ctx || !this.engineOsc || !this.engineGain) return;
     const t = this.ctx.currentTime;
-    // Speed 0 → 80 Hz idle, speed ~30 → 180 Hz
+    // Speed 0 → 45 Hz idle rumble, top speed → 90 Hz. Stays low and bassy.
     const normSpeed = Math.min(1, speed / 30);
-    const targetFreq = 80 + normSpeed * 100;
-    const targetVol  = 0.08 + normSpeed * 0.18;
+    const targetFreq = 45 + normSpeed * 45;
+    const targetVol  = 0.04 + normSpeed * 0.07; // quiet — max 0.11
     this.engineOsc.frequency.setTargetAtTime(targetFreq, t, 0.1);
     this.engineGain.gain.setTargetAtTime(targetVol, t, 0.1);
   }
@@ -214,36 +213,68 @@ export class CityAudio {
 
   // ── Private helpers ──────────────────────────────────────────────────────────
 
+  /** Key-turn sequence + engine start. Call when cinematic ends. */
+  startEngine(): void {
+    if (!this.ctx || !this.masterGain || this.engineOsc) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+
+    // 1. Ignition click (short noise burst)
+    const clickBuf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
+    const cd = clickBuf.getChannelData(0);
+    for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() * 2 - 1) * (1 - i / cd.length);
+    const clickSrc = ctx.createBufferSource();
+    clickSrc.buffer = clickBuf;
+    const clickGain = ctx.createGain();
+    clickGain.gain.value = 0.25;
+    clickSrc.connect(clickGain); clickGain.connect(this.masterGain);
+    clickSrc.start(now);
+
+    // 2. Crank sound (rising noise, 0.6s at 0.35s)
+    const crankBuf = ctx.createBuffer(1, ctx.sampleRate * 0.6, ctx.sampleRate);
+    const cr = crankBuf.getChannelData(0);
+    for (let i = 0; i < cr.length; i++) cr[i] = (Math.random() * 2 - 1) * Math.sin(i / crankBuf.length * Math.PI);
+    const crankFilter = ctx.createBiquadFilter();
+    crankFilter.type = 'bandpass'; crankFilter.frequency.value = 120; crankFilter.Q.value = 0.8;
+    const crankSrc = ctx.createBufferSource();
+    crankSrc.buffer = crankBuf;
+    const crankGain = ctx.createGain();
+    crankGain.gain.value = 0.18;
+    crankSrc.connect(crankFilter); crankFilter.connect(crankGain); crankGain.connect(this.masterGain);
+    crankSrc.start(now + 0.35);
+
+    // 3. Engine catches — start low rumble at 1.1s
+    setTimeout(() => { this._startEngine(); }, 1100);
+  }
+
   private _startEngine(): void {
     if (!this.ctx || !this.masterGain) return;
+    const ctx = this.ctx;
 
-    // WaveShaper for slight overdrive
-    const shaper = this.ctx.createWaveShaper();
-    shaper.curve = this._makeDistortionCurve(60);
-    shaper.oversample = '2x';
-    this.engineShaper = shaper;
+    // Low-pass filtered sine pair — sounds like a diesel rumble, not a buzz
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 180;
+    filter.Q.value = 0.5;
 
-    const osc  = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 45; // very low — idle rumble
 
-    // Add slight detuned oscillator for richness
-    const osc2  = this.ctx.createOscillator();
-    const gain2 = this.ctx.createGain();
-    osc2.type = 'sawtooth';
-    osc2.frequency.value = 83; // slightly detuned
-    gain2.gain.value = 0.04;
-    osc2.connect(gain2);
-    gain2.connect(shaper);
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.value = 48; // slight detune for beating effect
 
-    osc.type = 'sawtooth';
-    osc.frequency.value = 80;
-    gain.gain.value = 0.08;
-    osc.connect(gain);
-    gain.connect(shaper);
-    shaper.connect(this.masterGain);
+    const gain = ctx.createGain();
+    gain.gain.value = 0; // start silent, ramp up
 
-    osc.start();
-    osc2.start();
+    osc.connect(filter); osc2.connect(filter);
+    filter.connect(gain); gain.connect(this.masterGain);
+
+    osc.start(); osc2.start();
+
+    // Ramp engine in gently over 0.8s
+    gain.gain.setTargetAtTime(0.06, ctx.currentTime, 0.3);
 
     this.engineOsc  = osc;
     this.engineGain = gain;
