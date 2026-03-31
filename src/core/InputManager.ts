@@ -102,12 +102,12 @@ export class InputManager {
     this.brakeBtnEl = brakeBtn;
 
     brakeBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       this.braking = true;
       brakeBtn.style.background = 'rgba(220, 50, 50, 0.9)';
     }, { passive: false });
     brakeBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       this.braking = false;
       brakeBtn.style.background = 'rgba(220, 50, 50, 0.6)';
     }, { passive: false });
@@ -139,13 +139,13 @@ export class InputManager {
     document.body.appendChild(gasBtn);
 
     gasBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       this.accelerating = true;
       gasBtn.style.background = 'rgba(50, 200, 50, 0.9)';
       this.onGasPress?.();
     }, { passive: false });
     gasBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       this.accelerating = false;
       gasBtn.style.background = 'rgba(50, 200, 50, 0.6)';
     }, { passive: false });
@@ -277,7 +277,7 @@ export class InputManager {
     let didLongPress = false;
 
     radioBtn.addEventListener('touchstart', (e) => {
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       didLongPress = false;
       radioBtn.style.transform = 'scale(1.08)';
       longPressTimer = setTimeout(() => {
@@ -292,7 +292,7 @@ export class InputManager {
     }, { passive: false });
 
     radioBtn.addEventListener('touchend', (e) => {
-      e.preventDefault();
+      e.preventDefault(); e.stopPropagation();
       radioBtn.style.transform = 'scale(1.0)';
       if (longPressTimer) { clearTimeout(longPressTimer); longPressTimer = null; }
       if (!didLongPress && this.radio) {
