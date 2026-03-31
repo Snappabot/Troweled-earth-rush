@@ -1,25 +1,20 @@
 /**
- * CityAudio — Web Audio API city sound engine for TEM Rush.
- * All sounds are synthesised inline — no external files required.
+ * CityAudio — synthesised city soundscape for TEM Rush.
+ * No external files. All Web Audio API.
  */
 
-interface CharVoice {
-  pitch: number;
-  rate: number;
-  line: string;
-}
-
-const CHAR_VOICES: Record<string, CharVoice> = {
-  trump:        { pitch: 0.8,  rate: 0.9,  line: "Tremendous! Nobody gets hit by vans better than me!" },
-  elon:         { pitch: 1.2,  rate: 1.1,  line: "To the moon! Or the road. Same thing." },
-  karen:        { pitch: 1.4,  rate: 1.2,  line: "I want to speak to the van driver immediately!" },
-  zuckerberg:   { pitch: 0.9,  rate: 0.8,  line: "I am a human. I am experiencing fear." },
-  kanye:        { pitch: 0.85, rate: 0.95, line: "This van is a genius. I approve." },
-  alexjones:    { pitch: 1.0,  rate: 1.3,  line: "THE VAN IS IN THE PLASTER! THE PLASTER IS IN THE VAN!" },
-  flatearther:  { pitch: 1.1,  rate: 1.0,  line: "The van follows the edge! There is no edge!" },
-  antivaxxer:   { pitch: 1.2,  rate: 1.1,  line: "My essential oils cannot protect me from this!" },
-  cryptobro:    { pitch: 1.0,  rate: 1.2,  line: "This is actually bullish for crypto!" },
-  conspiracyguy:{ pitch: 0.9,  rate: 0.85, line: "They planned this. The van. The plaster. All connected." },
+const CHAR_LINES: Record<string, string> = {
+  trump:         "Tremendous! Nobody gets hit by vans better than me!",
+  elon:          "To the moon! Or the road. Same thing.",
+  karen:         "I want to speak to the van driver immediately!",
+  zuckerberg:    "I am a human. I am experiencing fear.",
+  kanyewest:     "This van is a genius. I approve.",
+  kanye:         "This van is a genius. I approve.",
+  alexjones:     "THE VAN IS IN THE PLASTER! THE PLASTER IS IN THE VAN!",
+  flatearther:   "The van follows the edge! There is no edge!",
+  antivaxxer:    "My essential oils cannot protect me from this!",
+  cryptobro:     "This is actually bullish for crypto!",
+  conspiracyguy: "They planned this. The van. The plaster. All connected.",
 };
 
 export class CityAudio {
@@ -27,385 +22,259 @@ export class CityAudio {
   private masterGain: GainNode | null = null;
   private muted = false;
 
-  // Engine oscillator (persistent)
   private engineOsc: OscillatorNode | null = null;
+  private engineOsc2: OscillatorNode | null = null;
   private engineGain: GainNode | null = null;
-  private engineShaper: WaveShaperNode | null = null;
-
-  // Ambient state
   private ambientStarted = false;
-  private honkScheduled = false;
-
-  // Horn debounce
-  private _hornActive = false;
+  private speechQueue: string[] = [];
+  private speaking = false;
 
   constructor() {}
 
-  /** Call once after first user interaction. Creates AudioContext and starts all loops. */
   start(): void {
     if (this.ctx) return;
     try {
-      this.ctx = new AudioContext();
+      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = this.muted ? 0 : 1;
       this.masterGain.connect(this.ctx.destination);
-
-      this._startAmbient(); // ambient city starts immediately; engine waits for key-turn
+      this._startAmbient();
     } catch (e) {
-      console.warn('[CityAudio] AudioContext creation failed:', e);
+      console.warn('[CityAudio] init failed:', e);
     }
   }
 
-  /** Call every frame with current van speed (m/s) and gear (unused for now). */
-  updateEngine(speed: number, _gear: number): void {
-    if (!this.ctx || !this.engineOsc || !this.engineGain) return;
-    const t = this.ctx.currentTime;
-    // Speed 0 → 45 Hz idle rumble, top speed → 90 Hz. Stays low and bassy.
-    const normSpeed = Math.min(1, speed / 30);
-    const targetFreq = 45 + normSpeed * 45;
-    const targetVol  = 0.04 + normSpeed * 0.07; // quiet — max 0.11
-    this.engineOsc.frequency.setTargetAtTime(targetFreq, t, 0.1);
-    this.engineGain.gain.setTargetAtTime(targetVol, t, 0.1);
-  }
-
-  /** Two-tone van horn — A4 + E5, 0.4 s square wave. */
-  honk(): void {
-    if (!this.ctx || !this.masterGain) return;
-    const freqs = [440, 659];
-    const now = this.ctx.currentTime;
-    for (const freq of freqs) {
-      const osc  = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.18, now);
-      gain.gain.linearRampToValueAtTime(0, now + 0.4);
-      osc.connect(gain);
-      gain.connect(this.masterGain);
-      osc.start(now);
-      osc.stop(now + 0.42);
-    }
-  }
-
-  /** Play a funny speech line for a hit character. Falls back to synth beep. */
-  playHitChar(charId: string): void {
-    const key = charId.toLowerCase().replace(/[^a-z]/g, '');
-    const voice = CHAR_VOICES[key] ?? null;
-
-    if (typeof window !== 'undefined' && window.speechSynthesis && voice) {
-      // Cancel any ongoing speech first
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(voice.line);
-      utter.pitch = voice.pitch;
-      utter.rate  = voice.rate;
-      utter.volume = this.muted ? 0 : 0.9;
-      window.speechSynthesis.speak(utter);
-    } else {
-      // Synth fallback: short ascending beep pair
-      this._synth(880, 'sine', 0.1, 0.08);
-      setTimeout(() => this._synth(1100, 'sine', 0.07, 0.06), 80);
-    }
-  }
-
-  /** Short FM yelp — random pitch 400-800 Hz, 0.15 s. */
-  playPedScatter(): void {
-    if (!this.ctx || !this.masterGain) return;
-    const baseFreq = 400 + Math.random() * 400;
-    const now = this.ctx.currentTime;
-    const carrier = this.ctx.createOscillator();
-    const modulator = this.ctx.createOscillator();
-    const modGain   = this.ctx.createGain();
-    const outGain   = this.ctx.createGain();
-
-    carrier.type  = 'sine';
-    carrier.frequency.value = baseFreq;
-    modulator.type = 'sine';
-    modulator.frequency.value = baseFreq * 3.5;
-    modGain.gain.value = baseFreq * 2;
-
-    modulator.connect(modGain);
-    modGain.connect(carrier.frequency);
-
-    outGain.gain.setValueAtTime(0.22, now);
-    outGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-
-    carrier.connect(outGain);
-    outGain.connect(this.masterGain);
-
-    modulator.start(now); modulator.stop(now + 0.16);
-    carrier.start(now);   carrier.stop(now + 0.16);
-  }
-
-  /** Low thud crash — sine burst at 60 Hz + filtered noise burst. */
-  playCrash(): void {
-    if (!this.ctx || !this.masterGain) return;
-    const now = this.ctx.currentTime;
-
-    // Sine thud
-    const osc  = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(80, now);
-    osc.frequency.exponentialRampToValueAtTime(40, now + 0.4);
-    gain.gain.setValueAtTime(0.6, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-    osc.start(now);
-    osc.stop(now + 0.5);
-
-    // Noise burst
-    this._noiseBurst(0.3, 0.3, 200, 0.35);
-  }
-
-  /** Cheerful 5-note fanfare: C E G C5 E5 ascending arpeggio. */
-  playMissionComplete(): void {
-    if (!this.ctx || !this.masterGain) return;
-    const ctx = this.ctx;
-    const masterGain = this.masterGain;
-    const notes = [261.63, 329.63, 392.00, 523.25, 659.25]; // C4 E4 G4 C5 E5
-    const stepTime = 0.12;
-    const now = ctx.currentTime;
-
-    notes.forEach((freq, i) => {
-      const t    = now + i * stepTime;
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.35, t + 0.02);
-      gain.gain.setValueAtTime(0.35, t + stepTime * 0.6);
-      gain.gain.linearRampToValueAtTime(0, t + stepTime * 1.2);
-      osc.connect(gain);
-      gain.connect(masterGain);
-      osc.start(t);
-      osc.stop(t + stepTime * 1.3);
-    });
-
-    // Final chord bloom: all three notes together
-    const chordStart = now + notes.length * stepTime;
-    [261.63, 329.63, 392.00].forEach(freq => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, chordStart);
-      gain.gain.linearRampToValueAtTime(0.2, chordStart + 0.04);
-      gain.gain.exponentialRampToValueAtTime(0.001, chordStart + 0.7);
-      osc.connect(gain);
-      gain.connect(masterGain);
-      osc.start(chordStart);
-      osc.stop(chordStart + 0.75);
-    });
-  }
-
-  setMuted(muted: boolean): void {
-    this.muted = muted;
-    if (this.masterGain) {
-      this.masterGain.gain.setTargetAtTime(muted ? 0 : 1, this.ctx!.currentTime, 0.05);
-    }
-    // Also mute speech synthesis
-    if (muted && typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-    }
-  }
-
-  // ── Private helpers ──────────────────────────────────────────────────────────
-
-  /** Key-turn sequence + engine start. Call when cinematic ends. */
   startEngine(): void {
     if (!this.ctx || !this.masterGain || this.engineOsc) return;
     const ctx = this.ctx;
     const now = ctx.currentTime;
 
-    // 1. Ignition click (short noise burst)
-    const clickBuf = ctx.createBuffer(1, ctx.sampleRate * 0.04, ctx.sampleRate);
-    const cd = clickBuf.getChannelData(0);
-    for (let i = 0; i < cd.length; i++) cd[i] = (Math.random() * 2 - 1) * (1 - i / cd.length);
-    const clickSrc = ctx.createBufferSource();
-    clickSrc.buffer = clickBuf;
-    const clickGain = ctx.createGain();
-    clickGain.gain.value = 0.25;
-    clickSrc.connect(clickGain); clickGain.connect(this.masterGain);
-    clickSrc.start(now);
-
-    // 2. Crank sound (rising noise, 0.6s at 0.35s)
-    const crankBuf = ctx.createBuffer(1, ctx.sampleRate * 0.6, ctx.sampleRate);
-    const cr = crankBuf.getChannelData(0);
-    for (let i = 0; i < cr.length; i++) cr[i] = (Math.random() * 2 - 1) * Math.sin(i / crankBuf.length * Math.PI);
-    const crankFilter = ctx.createBiquadFilter();
-    crankFilter.type = 'bandpass'; crankFilter.frequency.value = 120; crankFilter.Q.value = 0.8;
-    const crankSrc = ctx.createBufferSource();
-    crankSrc.buffer = crankBuf;
-    const crankGain = ctx.createGain();
-    crankGain.gain.value = 0.18;
-    crankSrc.connect(crankFilter); crankFilter.connect(crankGain); crankGain.connect(this.masterGain);
-    crankSrc.start(now + 0.35);
-
-    // 3. Engine catches — start low rumble at 1.1s
-    setTimeout(() => { this._startEngine(); }, 1100);
+    // Click
+    this._noiseBurst(0.3, 0.05, 400, 0.005, now);
+    // Crank — bandpass noise 0.4s
+    this._noiseBurst(0.15, 0.5, 100, 0.05, now + 0.3);
+    // Engine catches at ~1s
+    setTimeout(() => this._startEngineLoop(), 950);
   }
 
-  private _startEngine(): void {
-    if (!this.ctx || !this.masterGain) return;
+  private _startEngineLoop(): void {
+    if (!this.ctx || !this.masterGain || this.engineOsc) return;
     const ctx = this.ctx;
 
-    // Low-pass filtered sine pair — sounds like a diesel rumble, not a buzz
+    // Two detuned low-frequency oscillators through a lowpass — diesel rumble
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
-    filter.frequency.value = 180;
-    filter.Q.value = 0.5;
+    filter.frequency.value = 120;
+    filter.Q.value = 1.2;
 
-    const osc = ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = 45; // very low — idle rumble
-
+    const osc  = ctx.createOscillator();
     const osc2 = ctx.createOscillator();
-    osc2.type = 'sine';
-    osc2.frequency.value = 48; // slight detune for beating effect
+    osc.type  = 'sawtooth'; osc.frequency.value  = 48;
+    osc2.type = 'sawtooth'; osc2.frequency.value = 51;
 
     const gain = ctx.createGain();
-    gain.gain.value = 0; // start silent, ramp up
+    gain.gain.value = 0;
 
     osc.connect(filter); osc2.connect(filter);
     filter.connect(gain); gain.connect(this.masterGain);
 
     osc.start(); osc2.start();
-
-    // Ramp engine in gently over 0.8s
-    gain.gain.setTargetAtTime(0.06, ctx.currentTime, 0.3);
+    // Ramp in
+    gain.gain.setTargetAtTime(0.09, ctx.currentTime, 0.4);
 
     this.engineOsc  = osc;
+    this.engineOsc2 = osc2;
     this.engineGain = gain;
   }
+
+  updateEngine(speed: number, _gear: number): void {
+    if (!this.ctx || !this.engineOsc || !this.engineGain) return;
+    const t = this.ctx.currentTime;
+    const norm = Math.min(1, speed / 28);
+    // 48Hz idle → 85Hz fast. Very low rumble, stays bassy.
+    const freq   = 48 + norm * 37;
+    const freq2  = freq + 3;
+    const vol    = 0.05 + norm * 0.08; // max 0.13 — never overpowering
+    this.engineOsc.frequency.setTargetAtTime(freq,  t, 0.12);
+    if (this.engineOsc2) this.engineOsc2.frequency.setTargetAtTime(freq2, t, 0.12);
+    this.engineGain.gain.setTargetAtTime(vol, t, 0.12);
+  }
+
+  honk(): void {
+    if (!this.ctx || !this.masterGain) return;
+    // Two-tone car horn: 390Hz + 490Hz sine, 0.5s
+    this._tone(390, 'sine', 0.22, 0.5);
+    this._tone(490, 'sine', 0.18, 0.5);
+  }
+
+  /** NPC speech via Web Speech API — queued so lines don't overlap */
+  playHitChar(charId: string): void {
+    const key  = charId.toLowerCase().replace(/[^a-z]/g, '');
+    const line = CHAR_LINES[key] ?? null;
+    if (!line) return;
+
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      this.speechQueue.push(line);
+      this._drainSpeechQueue();
+    }
+  }
+
+  private _drainSpeechQueue(): void {
+    if (this.speaking || this.speechQueue.length === 0) return;
+    this.speaking = true;
+    const line = this.speechQueue.shift()!;
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(line);
+    utter.volume = this.muted ? 0 : 1;
+    utter.rate   = 1.0;
+    utter.pitch  = 1.0;
+    utter.onend  = () => { this.speaking = false; this._drainSpeechQueue(); };
+    utter.onerror = () => { this.speaking = false; this._drainSpeechQueue(); };
+    window.speechSynthesis.speak(utter);
+  }
+
+  playPedScatter(): void {
+    if (!this.ctx || !this.masterGain) return;
+    // Short rising yelp — sine sweep 300→600Hz
+    const now  = this.ctx.currentTime;
+    const osc  = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(200 + Math.random() * 200, now);
+    osc.frequency.exponentialRampToValueAtTime(600 + Math.random() * 300, now + 0.12);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+    osc.connect(gain); gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.15);
+  }
+
+  playCrash(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+    // Low thud
+    const osc  = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(90, now);
+    osc.frequency.exponentialRampToValueAtTime(35, now + 0.5);
+    gain.gain.setValueAtTime(0.7, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+    osc.connect(gain); gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.6);
+    // Noise crunch
+    this._noiseBurst(0.4, 0.3, 250, 0.01, now);
+  }
+
+  playMissionComplete(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const notes = [261.63, 329.63, 392.00, 523.25, 659.25];
+    notes.forEach((freq, i) => {
+      const t = now + i * 0.11;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.3, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      osc.connect(gain); gain.connect(this.masterGain!);
+      osc.start(t); osc.stop(t + 0.2);
+    });
+  }
+
+  setMuted(muted: boolean): void {
+    this.muted = muted;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setTargetAtTime(muted ? 0 : 1, this.ctx.currentTime, 0.05);
+    }
+    if (muted && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+  }
+
+  // ── Private helpers ──────────────────────────────────────────────────────────
 
   private _startAmbient(): void {
     if (!this.ctx || !this.masterGain || this.ambientStarted) return;
     this.ambientStarted = true;
-
-    // 1. Low distant rumble — filtered noise
-    this._startRumble();
-
-    // 2. Occasional random traffic honks
-    this._scheduleRandomHonk();
-
-    // 3. Occasional crowd murmur bursts
-    this._scheduleCrowdMurmur();
+    // Constant low city rumble — filtered noise, very quiet
+    this._rumbleLoop();
+    // Distant traffic honks — proper car horn tones, not beeps
+    this._scheduleTrafficHonk();
   }
 
-  private _startRumble(): void {
+  private _rumbleLoop(): void {
     if (!this.ctx || !this.masterGain) return;
-    const bufferSize = this.ctx.sampleRate * 2;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data   = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+    const ctx = this.ctx;
+    const sr  = ctx.sampleRate;
+    const buf = ctx.createBuffer(1, sr * 3, sr);
+    const d   = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
 
-    const source = this.ctx.createBufferSource();
-    source.buffer = buffer;
-    source.loop   = true;
+    const src    = ctx.createBufferSource();
+    src.buffer   = buf;
+    src.loop     = true;
 
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.value = 80;
-    filter.Q.value = 0.5;
+    const filter = ctx.createBiquadFilter();
+    filter.type  = 'lowpass';
+    filter.frequency.value = 60; // very low — only the deep rumble passes
 
-    const gain = this.ctx.createGain();
-    gain.gain.value = 0.03;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.025; // barely audible undertone
 
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.masterGain);
-    source.start();
+    src.connect(filter); filter.connect(gain); gain.connect(this.masterGain);
+    src.start();
   }
 
-  private _scheduleRandomHonk(): void {
+  private _scheduleTrafficHonk(): void {
     if (!this.ctx) return;
-    const delay = 8000 + Math.random() * 12000; // 8-20 s
-    this.honkScheduled = true;
+    const delay = 7000 + Math.random() * 14000;
     setTimeout(() => {
       if (!this.ctx || !this.masterGain) return;
-      const freq = 300 + Math.random() * 300; // 300-600 Hz
-      const now  = this.ctx.currentTime;
-      const osc  = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'square';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.06, now);
-      gain.gain.linearRampToValueAtTime(0, now + 0.35);
-      osc.connect(gain);
-      gain.connect(this.masterGain);
-      osc.start(now);
-      osc.stop(now + 0.38);
-      this._scheduleRandomHonk(); // reschedule
+      // Real car horn: two close sine tones
+      const base = 330 + Math.random() * 120; // 330–450Hz
+      const dur  = 0.25 + Math.random() * 0.3;
+      this._tone(base,      'sine', 0.05, dur);
+      this._tone(base * 1.26, 'sine', 0.04, dur); // perfect fourth above
+      this._scheduleTrafficHonk();
     }, delay);
   }
 
-  private _scheduleCrowdMurmur(): void {
-    if (!this.ctx) return;
-    const delay = 12000 + Math.random() * 18000; // 12-30 s
-    setTimeout(() => {
-      if (!this.ctx || !this.masterGain) return;
-      this._noiseBurst(0.08, 1.5, 800, 0.06);
-      this._scheduleCrowdMurmur();
-    }, delay);
-  }
-
-  /** Short noise burst: duration s, filter cutoff Hz, volume. */
-  private _noiseBurst(vol: number, duration: number, cutoffHz: number, attackTime: number): void {
+  private _tone(freq: number, type: OscillatorType, vol: number, dur: number, startAt?: number): void {
     if (!this.ctx || !this.masterGain) return;
-    const sampleRate = this.ctx.sampleRate;
-    const length     = Math.ceil(sampleRate * duration);
-    const buffer     = this.ctx.createBuffer(1, length, sampleRate);
-    const data       = buffer.getChannelData(0);
-    for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
-
-    const source = this.ctx.createBufferSource();
-    source.buffer = buffer;
-
-    const filter = this.ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.value = cutoffHz;
-    filter.Q.value = 1.2;
-
-    const gain = this.ctx.createGain();
-    const now  = this.ctx.currentTime;
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(vol, now + attackTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.masterGain);
-    source.start(now);
-    source.stop(now + duration + 0.05);
-  }
-
-  /** Quick one-shot synth tone. */
-  private _synth(freq: number, type: OscillatorType, vol: number, duration: number): void {
-    if (!this.ctx || !this.masterGain) return;
-    const now  = this.ctx.currentTime;
+    const now  = startAt ?? this.ctx.currentTime;
     const osc  = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    osc.type = type;
-    osc.frequency.value = freq;
+    osc.type = type; osc.frequency.value = freq;
     gain.gain.setValueAtTime(vol, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-    osc.start(now);
-    osc.stop(now + duration + 0.01);
+    gain.gain.setValueAtTime(vol, now + dur * 0.8);
+    gain.gain.linearRampToValueAtTime(0, now + dur);
+    osc.connect(gain); gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + dur + 0.01);
   }
 
-  private _makeDistortionCurve(amount: number): Float32Array<ArrayBuffer> {
-    const n = 256;
-    const buf  = new ArrayBuffer(n * 4);
-    const curve = new Float32Array(buf);
-    const deg   = Math.PI / 180;
-    for (let i = 0; i < n; i++) {
-      const x = (i * 2) / n - 1;
-      curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
-    }
-    return curve;
+  private _noiseBurst(vol: number, dur: number, cutoff: number, attack: number, startAt?: number): void {
+    if (!this.ctx || !this.masterGain) return;
+    const ctx  = this.ctx;
+    const now  = startAt ?? ctx.currentTime;
+    const sr   = ctx.sampleRate;
+    const len  = Math.ceil(sr * dur);
+    const buf  = ctx.createBuffer(1, len, sr);
+    const d    = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+
+    const src    = ctx.createBufferSource();
+    src.buffer   = buf;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type  = 'lowpass';
+    filter.frequency.value = cutoff;
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(vol, now + attack);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    src.connect(filter); filter.connect(gain); gain.connect(this.masterGain);
+    src.start(now); src.stop(now + dur + 0.05);
   }
 }
