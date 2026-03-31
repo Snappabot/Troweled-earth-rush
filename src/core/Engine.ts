@@ -854,6 +854,7 @@ export class Engine {
     this.addBox(g, 0x5A7A4A, 12, 0.6, 0.8, 0, 0.6, -8);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 9.5, 7.5);
     this.scene.add(g);
   }
 
@@ -915,6 +916,7 @@ export class Engine {
     this.addBox(g, 0x3A6A3A, 10, 0.7, 0.8, 0, 0.35, -7.5);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 8, 6.5);
     this.scene.add(g);
   }
 
@@ -971,6 +973,7 @@ export class Engine {
     }
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 8.5, 7);
     this.scene.add(g);
   }
 
@@ -1026,6 +1029,7 @@ export class Engine {
     this.addBox(g, 0x888880, 20, 0.3, 0.3, 0, 3.1, -8.8);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 9.5, 7.5);
     this.scene.add(g);
   }
 
@@ -1082,6 +1086,7 @@ export class Engine {
     this.addBox(g, 0xB0A088, 20, 0.8, 0.3, 0, 0.4, -10);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 10.5, 7.5);
     this.scene.add(g);
   }
 
@@ -1200,6 +1205,7 @@ export class Engine {
     this.addBox(g, 0x334455, 3.0, 1.5, 0.15, 7.5, 6.5, -6.55);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 10.5, 6.5);
     this.scene.add(g);
   }
 
@@ -1308,6 +1314,7 @@ export class Engine {
     this.addBox(g, oliveDrk, 2.5, 0.2, 1.0, -3, 0.1, -7.5);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 6.5, 5.5);
     this.scene.add(g);
   }
 
@@ -1454,6 +1461,7 @@ export class Engine {
     this.addBox(g, cShadow, 22.5, 0.3, 14.5, 0, 0.15, 0);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 10.5, 7);
     this.scene.add(g);
   }
 
@@ -1506,6 +1514,7 @@ export class Engine {
     this.addBox(g, iron, 2.4, 0.08, 0.08, -7.02, 5.0,  -6.7);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 8.5, 6);
     this.scene.add(g);
   }
 
@@ -1562,6 +1571,7 @@ export class Engine {
     }
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 10, 4);
     this.scene.add(g);
   }
 
@@ -1603,6 +1613,7 @@ export class Engine {
     this.addBox(g, 0x223344, 0.8, 3.0, 0.15, 0, 3.5, -7.0);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 9.5, 4.5);
     this.scene.add(g);
   }
 
@@ -1655,6 +1666,7 @@ export class Engine {
     this.addBox(g, iron,    17.2, 0.1, 1.6, 0, 8.12, -7.2, 0.1, 0, 0);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 7.5, 5.5);
     this.scene.add(g);
   }
 
@@ -1704,6 +1716,7 @@ export class Engine {
     g.add(palmFan);
 
     g.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 5.5, 5);
     this.scene.add(g);
   }
 
@@ -1841,6 +1854,8 @@ export class Engine {
 
     g.position.set(x, 0, z);
     this.scene.add(g);
+    // Coffee shop body 14×10 — register solid collider
+    this.collisionWorld.addBox(x, z, 7.5, 5.5);
   }
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -2763,6 +2778,7 @@ export class Engine {
     group.add(blob);
 
     group.position.set(x, 0, z);
+    this.collisionWorld.addBox(x, z, 3.5, 3);
     this.scene.add(group);
   }
 
