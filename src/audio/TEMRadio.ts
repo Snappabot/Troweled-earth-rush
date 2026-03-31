@@ -247,7 +247,7 @@ class RadioAudioEngine {
   private beatCount = 0;
   private currentStation: Station | null = null;
   private nodes: AudioNode[] = [];
-  private schedulerTimer = 0;
+  private _schedulerTimer: ReturnType<typeof setInterval> | null = null;
   private compressor!: DynamicsCompressorNode;
   private realAudioEl: HTMLAudioElement | null = null;
   private realAudioActive = false;
@@ -307,11 +307,11 @@ class RadioAudioEngine {
     if (!this.ctx || !this.currentStation) return;
     if (this.ctx.state === 'suspended') this.ctx.resume();
     this.nextBeatTime = this.ctx.currentTime + 0.05;
-    this.schedulerTimer = window.setInterval(() => this._schedule(), this.scheduleInterval * 1000);
+    this._schedulerTimer = setInterval(() => this._schedule(), this.scheduleInterval * 1000);
   }
 
   stop(): void {
-    clearInterval(this.schedulerTimer);
+    if (this._schedulerTimer !== null) { clearInterval(this._schedulerTimer); this._schedulerTimer = null; }
     this.nodes.forEach(n => { try { (n as any).stop?.(); n.disconnect(); } catch {} });
     this.nodes = [];
     this.currentStation = null;

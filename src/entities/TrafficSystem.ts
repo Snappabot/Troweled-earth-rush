@@ -80,7 +80,7 @@ export class TrafficSystem {
         });
         this.templates.set(vtype.slug, tmpl);
         if (--remaining === 0) this._spawn();
-      }, undefined, () => { if (--remaining === 0) this._spawn(); });
+      }, undefined, (err) => { console.warn(`[TrafficSystem] Failed to load ${vtype.slug}.glb`, err); if (--remaining === 0) this._spawn(); });
     }
   }
 
@@ -89,6 +89,16 @@ export class TrafficSystem {
     if (!tmpl) return new THREE.Group();
     const g = tmpl.clone(true);
     g.scale.setScalar(vtype.scale);
+    // Clone materials so emissive changes don't bleed across cars
+    g.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        if (Array.isArray(child.material)) {
+          child.material = child.material.map((m: THREE.Material) => m.clone());
+        } else if (child.material) {
+          child.material = child.material.clone();
+        }
+      }
+    });
     return g;
   }
 

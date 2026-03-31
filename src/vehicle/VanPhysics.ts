@@ -53,6 +53,8 @@ export class VanPhysics {
   private _speed = 0;
   private velocityAngle = 0;
   private prevPos = new THREE.Vector3();
+  private _tmpDir = new THREE.Vector3();
+  private _tmpMove = new THREE.Vector3();
   private onBump?: (intensity: number) => void;
   private onBuildingHit?: () => void;
   private collisionWorld?: CollisionWorld;
@@ -114,13 +116,9 @@ export class VanPhysics {
     this.velocityAngle += angleDiff * gripStrength * dt;
 
     // --- MOVE VAN ---
-    const dir = new THREE.Vector3(
-      Math.sin(this.velocityAngle),
-      0,
-      -Math.cos(this.velocityAngle)
-    );
-    this.van.velocity.copy(dir).multiplyScalar(this._speed);
-    this.van.mesh.position.add(this.van.velocity.clone().multiplyScalar(dt));
+    this._tmpDir.set(Math.sin(this.velocityAngle), 0, -Math.cos(this.velocityAngle));
+    this.van.velocity.copy(this._tmpDir).multiplyScalar(this._speed);
+    this.van.mesh.position.add(this._tmpMove.copy(this.van.velocity).multiplyScalar(dt));
 
     // Van faces heading — shows drift angle visually
     this.van.mesh.rotation.y = -this.van.heading;

@@ -509,6 +509,7 @@ async function main() {
       speechBubble.setScreenPosition(sx, sy);
     }
 
+    pedestrians.updateFrustum(engine.camera.camera);
     pedestrians.update(dt, vanX, vanZ);
 
     // ── On-foot mode ──────────────────────────────────────────────────────────

@@ -51,6 +51,9 @@ export class CameraController {
       const t = e.changedTouches[0];
       const dx = t.clientX - this.lastTouchX;
       this.footOrbitOffset -= dx * 0.003;
+      this.footOrbitOffset = ((this.footOrbitOffset % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      if (this.footOrbitOffset > Math.PI) this.footOrbitOffset -= Math.PI * 2;
+      this.footOrbitOffset = Math.max(-Math.PI * 4, Math.min(Math.PI * 4, this.footOrbitOffset));
       this.lastTouchX = t.clientX;
     }, { passive: true });
 
@@ -67,6 +70,9 @@ export class CameraController {
       if (!mouseDown || !this.onFoot) return;
       const dx = e.clientX - lastMouseX;
       this.footOrbitOffset -= dx * 0.002;
+      this.footOrbitOffset = ((this.footOrbitOffset % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+      if (this.footOrbitOffset > Math.PI) this.footOrbitOffset -= Math.PI * 2;
+      this.footOrbitOffset = Math.max(-Math.PI * 4, Math.min(Math.PI * 4, this.footOrbitOffset));
       lastMouseX = e.clientX;
     });
     window.addEventListener('mouseup', () => { mouseDown = false; });

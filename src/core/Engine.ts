@@ -16,6 +16,7 @@ export class Engine {
   private clouds: { mesh: THREE.Group; speed: number }[] = [];
   private updateCallbacks: Array<(dt: number) => void> = [];
   private lastTime = 0;
+  private _matCache = new Map<number, THREE.MeshLambertMaterial>();
 
   // ── TE Plaster Palette ──
   private readonly C = {
@@ -434,9 +435,11 @@ export class Engine {
     x: number, y: number, z: number,
     rx = 0, ry = 0, rz = 0
   ) {
+    let mat = this._matCache.get(color);
+    if (!mat) { mat = new THREE.MeshLambertMaterial({ color }); this._matCache.set(color, mat); }
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(w, h, d),
-      new THREE.MeshLambertMaterial({ color })
+      mat
     );
     mesh.position.set(x, y, z);
     if (rx !== 0) mesh.rotation.x = rx;

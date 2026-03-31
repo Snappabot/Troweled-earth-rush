@@ -444,6 +444,8 @@ export class PedestrianSystem {
   private splats:      SplatDecal[] = [];
   private scene: THREE.Scene;
   private collisionWorld: CollisionWorld | null = null;
+  private _frustum = new THREE.Frustum();
+  private _projScreenMatrix = new THREE.Matrix4();
 
   /** Fired on splat: (satsEarned, entityName?) */
   onSplat: ((sats: number, name?: string) => void) | null = null;
@@ -864,6 +866,11 @@ export class PedestrianSystem {
     k.group.visible = true;
   }
 
+  updateFrustum(camera: THREE.PerspectiveCamera): void {
+    this._projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    this._frustum.setFromProjectionMatrix(this._projScreenMatrix);
+  }
+
   // ── Update ──────────────────────────────────────────────────────────────────
 
   update(dt: number, vanX: number, vanZ: number): void {
@@ -931,22 +938,25 @@ export class PedestrianSystem {
 
       this._applyPedFacing(ped);
 
-      // Walk animation
-      if (ped.mixer) {
-        ped.mixer.update(dt);
-      } else if (ped.isGLB) {
-        // Body bob for static Kenney GLB models (no embedded walk anim)
-        ped.walkCycle += (ped.scattering ? 8 : ped.speed) * dt * 2;
-        ped.group.position.y = Math.max(0, Math.abs(Math.sin(ped.walkCycle)) * 0.1);
-      } else {
-        // Procedural arm/leg swing (Boronica + fallback peds)
-        const effSpeed = ped.scattering ? 8 : ped.speed;
-        ped.walkCycle += effSpeed * dt * 2;
-        const swing = Math.sin(ped.walkCycle);
-        ped.leftArm.rotation.z  =  swing * 0.4 + 0.15;
-        ped.rightArm.rotation.z = -swing * 0.4 - 0.15;
-        ped.leftLeg.rotation.x  =  swing * 0.5;
-        ped.rightLeg.rotation.x = -swing * 0.5;
+      // Walk animation — only animate when in frustum (position still updates above)
+      const inFrustum = this._frustum.containsPoint(ped.group.position);
+      if (inFrustum) {
+        if (ped.mixer) {
+          ped.mixer.update(dt);
+        } else if (ped.isGLB) {
+          // Body bob for static Kenney GLB models (no embedded walk anim)
+          ped.walkCycle = (ped.walkCycle + (ped.scattering ? 8 : ped.speed) * dt * 2) % (Math.PI * 2);
+          ped.group.position.y = Math.max(0, Math.abs(Math.sin(ped.walkCycle)) * 0.1);
+        } else {
+          // Procedural arm/leg swing (Boronica + fallback peds)
+          const effSpeed = ped.scattering ? 8 : ped.speed;
+          ped.walkCycle = (ped.walkCycle + effSpeed * dt * 2) % (Math.PI * 2);
+          const swing = Math.sin(ped.walkCycle);
+          ped.leftArm.rotation.z  =  swing * 0.4 + 0.15;
+          ped.rightArm.rotation.z = -swing * 0.4 - 0.15;
+          ped.leftLeg.rotation.x  =  swing * 0.5;
+          ped.rightLeg.rotation.x = -swing * 0.5;
+        }
       }
     }
 
@@ -1090,7 +1100,7 @@ export class PedestrianSystem {
 
       // Body bob applied to ALL hit chars — guarantees visible movement even if GLB has
       // no embedded animation or a very subtle one (Alex Jones, Kanye have 0 clips)
-      hc.walkCycle += hc.speed * dt * 2;
+      hc.walkCycle = (hc.walkCycle + hc.speed * dt * 2) % (Math.PI * 2);
       const hcSwing = Math.sin(hc.walkCycle);
       hc.group.position.y = Math.max(0, Math.abs(hcSwing) * 0.14);
 

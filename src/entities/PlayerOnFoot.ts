@@ -96,6 +96,8 @@ export class PlayerOnFoot {
   private _velY = 0;
   private _grounded = true;
 
+  private static readonly MAX_DECALS = 150;
+
   // Effect pools
   private _decals: Decal[] = [];
   private _projectiles: Projectile[] = [];
@@ -214,6 +216,12 @@ export class PlayerOnFoot {
     decal.lookAt(decal.position.clone().add(worldNormal));
 
     this.scene.add(decal);
+    if (this._decals.length >= PlayerOnFoot.MAX_DECALS) {
+      const oldest = this._decals.shift()!;
+      this.scene.remove(oldest.mesh);
+      oldest.mesh.geometry.dispose();
+      (oldest.mesh.material as THREE.Material).dispose();
+    }
     this._decals.push({ mesh: decal, timer: 10, life: 10 });
   }
 
@@ -228,6 +236,12 @@ export class PlayerOnFoot {
     blob.rotation.x = -Math.PI / 2;
     blob.position.set(x, 0.05, z);
     this.scene.add(blob);
+    if (this._decals.length >= PlayerOnFoot.MAX_DECALS) {
+      const oldest = this._decals.shift()!;
+      this.scene.remove(oldest.mesh);
+      oldest.mesh.geometry.dispose();
+      (oldest.mesh.material as THREE.Material).dispose();
+    }
     this._decals.push({ mesh: blob, timer: 6, life: 6 });
   }
 
@@ -482,6 +496,12 @@ export class PlayerOnFoot {
             const splatMesh = new THREE.Mesh(splatGeo, splatMat);
             splatMesh.position.copy(p.mesh.position);
             this.scene.add(splatMesh);
+            if (this._decals.length >= PlayerOnFoot.MAX_DECALS) {
+              const oldest = this._decals.shift()!;
+              this.scene.remove(oldest.mesh);
+              oldest.mesh.geometry.dispose();
+              (oldest.mesh.material as THREE.Material).dispose();
+            }
             this._decals.push({ mesh: splatMesh, timer: 2, life: 2 });
             splat = true;
           }
@@ -519,6 +539,12 @@ export class PlayerOnFoot {
           splatMesh.position.copy(hit.point).addScaledVector(worldNormal, 0.04);
           splatMesh.lookAt(splatMesh.position.clone().add(worldNormal));
           this.scene.add(splatMesh);
+          if (this._decals.length >= PlayerOnFoot.MAX_DECALS) {
+            const oldest = this._decals.shift()!;
+            this.scene.remove(oldest.mesh);
+            oldest.mesh.geometry.dispose();
+            (oldest.mesh.material as THREE.Material).dispose();
+          }
           this._decals.push({ mesh: splatMesh, timer: 8, life: 8 });
           splat = true;
         }
@@ -530,6 +556,8 @@ export class PlayerOnFoot {
           this._spawnGroundBlob(p.mesh.position.x, p.mesh.position.z, 0.35, '#E8E4D8');
         }
         this.scene.remove(p.mesh);
+        p.mesh.geometry.dispose();
+        (p.mesh.material as THREE.Material).dispose();
         this._projectiles.splice(i, 1);
       }
     }
