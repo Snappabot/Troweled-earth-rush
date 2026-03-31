@@ -22,7 +22,7 @@ const ROAD_W = 8;
 // ── NPC population caps (tune here for performance) ───────────────────────────
 // Mobile safe ceiling: ~80 total NPCs. Each GLB NPC ≈ 10 draw calls.
 // Current: PED_COUNT×2 + 1 Boronica + KANGAROO_COUNT + 10 hit chars
-const PED_COUNT      = 25;  // per axis (x + z) = 50 regular peds total
+const PED_COUNT      = 30;  // per axis (x + z) = 60 regular peds total
 const KANGAROO_COUNT = 6;
 
 const SPLAT_DIST      = 1.6;   // van distance to trigger splat
@@ -527,6 +527,8 @@ export class PedestrianSystem {
 
       const group = new THREE.Group();
       group.add(model);
+      group.userData['isNPC'] = true;
+      group.userData['isPed'] = true;
 
       const roadPos = randomSidewalk();
       const { segStart, segEnd, pos } = randomSegment();
@@ -583,6 +585,8 @@ export class PedestrianSystem {
         const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
         const speed = 2 + Math.random() * 1.5;
         const built = buildPedestrian(bodyColor);
+        built.group.userData['isNPC'] = true;
+        built.group.userData['isPed'] = true;
         const ped: Pedestrian = {
           group: built.group, axis, roadPos, segStart, segEnd, pos, dir, speed,
           scattering: false, scatterTimer: 0, scatterDirX: 0, scatterDirZ: 0,

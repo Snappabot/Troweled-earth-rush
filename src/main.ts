@@ -205,6 +205,7 @@ async function main() {
   // ── On-foot mode ─────────────────────────────────────────────────────────────
   let playerOnFoot: PlayerOnFoot | null = null;
   let isOnFoot = false;
+  let prevJump = false;
   const weaponSelector = new WeaponSelector();
 
   // "EXIT VAN" button — top-right, visible when slow
@@ -518,6 +519,9 @@ async function main() {
     if (isOnFoot && playerOnFoot) {
       playerOnFoot.selectedWeapon  = weaponSelector.selectedWeapon;
       playerOnFoot.selectedPaintHex = weaponSelector.selectedHex;
+      // Jump — fire once on press
+      if (input.jump && !prevJump) playerOnFoot.jump();
+      prevJump = input.jump;
       // Pass camera angle so joystick is camera-relative
       playerOnFoot.update(dt, input.steerAxis, -input.joystickForward, input.accelerating, engine.camera.angle);
       engine.camera.followOnFoot(playerOnFoot.position, playerOnFoot.heading);

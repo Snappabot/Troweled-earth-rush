@@ -5,8 +5,8 @@ export const WEAPONS = [
   { id: 'trowel', name: 'Trowel',        icon: '🪚', range: 2.5, damage: 1, desc: 'Trowel render onto wall' },
   { id: 'roller', name: 'Float Roller',  icon: '🎨', range: 3.5, damage: 1, desc: 'Roll paint in a wide strip' },
   { id: 'hawk',   name: 'Plaster Hawk',  icon: '🪣', range: 8,   damage: 1, desc: 'Throw plaster (ranged)' },
-  { id: 'pole',   name: 'Scaffold Pole', icon: '🔧', range: 4.5, damage: 1, desc: 'Heavy swing — knocks back' },
-  { id: 'bucket', name: 'Render Bucket', icon: '🪤', range: 3,   damage: 1, desc: 'Splash render AOE around feet' },
+  { id: 'pole',   name: 'Scaffold Pole', icon: '🔧', range: 4.5, damage: 1, desc: 'Place scaffold platform' },
+  { id: 'bucket', name: 'Render Gun',    icon: '🔫', range: 3,   damage: 1, desc: 'Shoot Marbellino at NPCs' },
 ];
 
 // ── Weapon mesh builders ──────────────────────────────────────────────────────
@@ -66,7 +66,9 @@ interface Projectile {
   speed: number;
   timer: number;
   paintHex: string;
+  isRenderGun?: boolean;
 }
+interface Scaffold { mesh: THREE.Mesh; timer: number; }
 
 // ── Main class ────────────────────────────────────────────────────────────────
 
@@ -90,9 +92,15 @@ export class PlayerOnFoot {
   private _attackTimer = 0;
   private _actionCooldown = 0;
 
+  // Jump / vertical physics
+  private _velY = 0;
+  private _grounded = true;
+
   // Effect pools
   private _decals: Decal[] = [];
   private _projectiles: Projectile[] = [];
+  private _scaffolds: Scaffold[] = [];
+  private _muzzleFlash: { mesh: THREE.Mesh; timer: number } | null = null;
 
   // Callback for action results
   onAction: ((msg: string, color: number) => void) | null = null;
@@ -223,6 +231,13 @@ export class PlayerOnFoot {
     this._decals.push({ mesh: blob, timer: 6, life: 6 });
   }
 
+  // ── Jump ──────────────────────────────────────────────────────────────────────
+  jump(): void {
+    if (!this._grounded) return;
+    this._velY = 8;
+    this._grounded = false;
+  }
+
   // ── TOOLS ─────────────────────────────────────────────────────────────────────
 
   /** Trowel — close-range rectangular render stroke on wall */
@@ -283,38 +298,58 @@ export class PlayerOnFoot {
     this.onAction?.(`🪣 Plaster hawk launched!`, 0xBBBBBB);
   }
 
-  /** Pole — heavy swing, no surface effect — big animation + screen shake toast */
+  /** Pole — places a scaffold platform the player can jump onto */
   private _usePole(): void {
-    // Exaggerated swing animation
-    this._attackTimer = 0.55;
-    this._swinging = true;
-    this.onAction?.(`🔧 SCAFFOLD POLE — WHOOSH!`, 0x888888);
-  }
-
-  /** Bucket — AOE render splash around the player's feet */
-  private _useBucket(): void {
     const px = this.group.position.x;
     const pz = this.group.position.z;
-    const count = 9;
-    for (let i = 0; i < count; i++) {
-      const angle = (i / count) * Math.PI * 2 + Math.random() * 0.4;
-      const r = 0.6 + Math.random() * 2.2;
-      this._spawnGroundBlob(
-        px + Math.cos(angle) * r,
-        pz + Math.sin(angle) * r,
-        0.18 + Math.random() * 0.28,
-        this.selectedPaintHex
-      );
+    const platform = new THREE.Mesh(
+      new THREE.BoxGeometry(3, 0.3, 3),
+      new THREE.MeshLambertMaterial({ color: 0xA0A0A0 })
+    );
+    platform.position.set(px, 2.5, pz);
+    this.scene.add(platform);
+
+    // Enforce max 5 scaffolds — remove oldest first
+    if (this._scaffolds.length >= 5) {
+      const oldest = this._scaffolds.shift()!;
+      this.scene.remove(oldest.mesh);
     }
-    // Also paint the wall ahead if close enough
-    const hit = this._raycastPaintable(3);
-    if (hit) {
-      const mat = (hit.object as THREE.Mesh).material as THREE.MeshLambertMaterial;
-      mat.color.set(this.selectedPaintHex);
-      mat.needsUpdate = true;
-      this._spawnWallDecal(hit, 1.4, 1.2);
+    this._scaffolds.push({ mesh: platform, timer: 15 });
+    this.onAction?.(`🔧 Scaffold placed! Jump to reach it.`, 0xA0A0A0);
+  }
+
+  /** Render Gun — fires a white plaster ball that awards points on NPC hit */
+  private _useBucket(): void {
+    const startPos = this.group.position.clone().add(new THREE.Vector3(0, 1.1, 0));
+    const projMesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18, 6, 4),
+      new THREE.MeshLambertMaterial({ color: 0xFFFFFF })
+    );
+    projMesh.position.copy(startPos);
+    this.scene.add(projMesh);
+    this._projectiles.push({
+      mesh: projMesh,
+      dir: this._forwardDir().clone(),
+      speed: 28,
+      timer: 0.6,
+      paintHex: '#FFFFFF',
+      isRenderGun: true,
+    });
+
+    // Muzzle flash
+    if (this._muzzleFlash) {
+      this.scene.remove(this._muzzleFlash.mesh);
+      this._muzzleFlash = null;
     }
-    this.onAction?.(`🪤 Render bucket splashed!`, 0xBBBBAA);
+    const flash = new THREE.Mesh(
+      new THREE.SphereGeometry(0.12, 5, 4),
+      new THREE.MeshBasicMaterial({ color: 0xFFFFFF })
+    );
+    const fwd = this._forwardDir();
+    flash.position.copy(this.group.position).add(new THREE.Vector3(0, 1.1, 0)).addScaledVector(fwd, 0.6);
+    this.scene.add(flash);
+    this._muzzleFlash = { mesh: flash, timer: 0.1 };
+    this.onAction?.(`🔫 Render Gun fired!`, 0xFFFFFF);
   }
 
   // ── Main action — called by GAS button ────────────────────────────────────────
@@ -328,13 +363,67 @@ export class PlayerOnFoot {
       case 'pole':   this._usePole();   break;
       case 'bucket': this._useBucket(); break;
     }
-    this._actionCooldown = 0.38;
+    this._actionCooldown = this.selectedWeapon === 'bucket' ? 0.2 : 0.38;
   }
 
   // ── Update loop ───────────────────────────────────────────────────────────────
   update(dt: number, jx: number, jy: number, sprint: boolean, camAngle = 0): void {
     // Cooldowns
     if (this._actionCooldown > 0) this._actionCooldown -= dt;
+
+    // ── Vertical physics (jump + gravity) ────────────────────────────────────
+    this._velY -= 18 * dt;
+    this.group.position.y += this._velY * dt;
+
+    // Check scaffold collision — can stand on platforms
+    let onScaffold = false;
+    const px = this.group.position.x;
+    const py = this.group.position.y;
+    const pz = this.group.position.z;
+    for (const sc of this._scaffolds) {
+      const top = sc.mesh.position.y + 0.15; // half height 0.15
+      const dx = Math.abs(px - sc.mesh.position.x);
+      const dz = Math.abs(pz - sc.mesh.position.z);
+      if (dx <= 1.5 && dz <= 1.5 && py >= top - 0.35 && py <= top + 0.4 && this._velY <= 0) {
+        this.group.position.y = top;
+        this._velY = 0;
+        this._grounded = true;
+        onScaffold = true;
+        break;
+      }
+    }
+
+    // Ground clamp
+    if (!onScaffold && this.group.position.y <= 0) {
+      this.group.position.y = 0;
+      this._velY = 0;
+      this._grounded = true;
+    }
+
+    // ── Scaffold fade/expire ──────────────────────────────────────────────────
+    for (let i = this._scaffolds.length - 1; i >= 0; i--) {
+      const sc = this._scaffolds[i];
+      sc.timer -= dt;
+      if (sc.timer < 2) {
+        const mat = sc.mesh.material as THREE.MeshLambertMaterial;
+        mat.transparent = true;
+        mat.opacity = Math.max(0, sc.timer / 2);
+        mat.needsUpdate = true;
+      }
+      if (sc.timer <= 0) {
+        this.scene.remove(sc.mesh);
+        this._scaffolds.splice(i, 1);
+      }
+    }
+
+    // ── Muzzle flash ─────────────────────────────────────────────────────────
+    if (this._muzzleFlash) {
+      this._muzzleFlash.timer -= dt;
+      if (this._muzzleFlash.timer <= 0) {
+        this.scene.remove(this._muzzleFlash.mesh);
+        this._muzzleFlash = null;
+      }
+    }
 
     const speed = sprint ? 14 : 8;
     const len = Math.sqrt(jx * jx + jy * jy);
@@ -379,8 +468,27 @@ export class PlayerOnFoot {
       p.timer -= dt;
       p.mesh.position.addScaledVector(p.dir, p.speed * dt);
 
-      // Check paintable mesh collision
+      // Check NPC hit for render gun projectiles
       let splat = false;
+      if (!splat && p.isRenderGun) {
+        this.scene.traverse(o => {
+          if (splat) return;
+          if (o.userData['isNPC'] && o.position.distanceTo(p.mesh.position) < 0.8) {
+            // Award points
+            this.onAction?.(`🔫 +2000 sats! Marbellino hit!`, 0xFFD700);
+            // Plaster splat on NPC
+            const splatGeo = new THREE.SphereGeometry(0.15, 5, 4);
+            const splatMat = new THREE.MeshBasicMaterial({ color: 0xFFFFFF });
+            const splatMesh = new THREE.Mesh(splatGeo, splatMat);
+            splatMesh.position.copy(p.mesh.position);
+            this.scene.add(splatMesh);
+            this._decals.push({ mesh: splatMesh, timer: 2, life: 2 });
+            splat = true;
+          }
+        });
+      }
+
+      // Check paintable mesh collision
       if (!splat) {
         const meshes: THREE.Mesh[] = [];
         this.scene.traverse(o => {
@@ -463,8 +571,12 @@ export class PlayerOnFoot {
   dispose(): void {
     this._decals.forEach(d => this.scene.remove(d.mesh));
     this._projectiles.forEach(p => this.scene.remove(p.mesh));
+    this._scaffolds.forEach(s => this.scene.remove(s.mesh));
+    if (this._muzzleFlash) this.scene.remove(this._muzzleFlash.mesh);
     this._decals = [];
     this._projectiles = [];
+    this._scaffolds = [];
+    this._muzzleFlash = null;
     this.scene.remove(this.group);
   }
 }

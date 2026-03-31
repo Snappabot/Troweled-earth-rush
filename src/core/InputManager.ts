@@ -8,6 +8,7 @@ export class InputManager {
   accelerating = false;
   braking = false;
   horn = false;
+  jump = false;
   /** Exposed so on-foot mode can hide it */
   brakeBtnEl: HTMLDivElement | null = null;
   /** Fires once on GAS press — set by main.ts for on-foot attack */
@@ -323,6 +324,43 @@ export class InputManager {
         showPopup();
       }
     });
+
+    // ── JUMP button — top-right, blue ─────────────────────────────────────────
+    const jumpBtn = document.createElement('div');
+    jumpBtn.style.cssText = `
+      position: fixed;
+      top: 30px;
+      right: 30px;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: rgba(40, 100, 220, 0.6);
+      border: 3px solid rgba(100, 160, 255, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      z-index: 100;
+      touch-action: none;
+      user-select: none;
+    `;
+    jumpBtn.textContent = '📦';
+    document.body.appendChild(jumpBtn);
+
+    jumpBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      this.jump = true;
+      jumpBtn.style.background = 'rgba(40, 100, 220, 0.9)';
+    }, { passive: false });
+    jumpBtn.addEventListener('touchend', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      this.jump = false;
+      jumpBtn.style.background = 'rgba(40, 100, 220, 0.6)';
+    }, { passive: false });
+    // Keyboard fallback (Space bar)
+    window.addEventListener('keydown', (e) => { if (e.code === 'Space') this.jump = true; });
+    window.addEventListener('keyup',   (e) => { if (e.code === 'Space') this.jump = false; });
   }
 
   /** Wire up the radio — call from main.ts after TEMRadio is created */
