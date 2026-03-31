@@ -4,8 +4,8 @@ const CAMERA_CONFIG = {
   fov: 35,
   height: 38,
   distance: 28,
-  rotationSmoothing: 0.06,
-  positionSmoothing: 0.1,
+  rotationSmoothing: 0.025,
+  positionSmoothing: 0.04,
   lookAheadDistance: 6,
 };
 
@@ -90,7 +90,7 @@ export class CameraController {
       let angleDiff = heading - this.cameraAngle;
       while (angleDiff >  Math.PI) angleDiff -= Math.PI * 2;
       while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
-      this.cameraAngle += angleDiff * 0.06;
+      this.cameraAngle += angleDiff * 0.025;
     }
 
     // Camera sits BEHIND the character at effectiveAngle
@@ -101,7 +101,7 @@ export class CameraController {
       pos.y + FOOT_CAM.height,
       pos.z + Math.cos(effectiveAngle) * FOOT_CAM.behind + Math.sin(effectiveAngle) * FOOT_CAM.rightOffset,
     );
-    this.camera.position.lerp(this.targetPos, 0.12);
+    this.camera.position.lerp(this.targetPos, 0.05);
 
     // Look at point ahead of where camera is facing
     const lookAt = new THREE.Vector3(
