@@ -329,10 +329,10 @@ export class InputManager {
     const jumpBtn = document.createElement('div');
     jumpBtn.style.cssText = `
       position: fixed;
-      top: 30px;
-      right: 30px;
-      width: 70px;
-      height: 70px;
+      bottom: 140px;
+      right: 130px;
+      width: 90px;
+      height: 90px;
       border-radius: 50%;
       background: rgba(40, 100, 220, 0.6);
       border: 3px solid rgba(100, 160, 255, 0.8);
