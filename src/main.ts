@@ -211,13 +211,13 @@ async function main() {
   // "EXIT VAN" button — top-right, visible when slow
   const exitVanBtn = document.createElement('button');
   exitVanBtn.textContent = '🚪 EXIT VAN';
-  exitVanBtn.style.cssText = `position:fixed;top:60px;right:10px;z-index:5000;padding:8px 14px;background:rgba(0,0,0,0.85);color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;`;
+  exitVanBtn.style.cssText = `position:fixed;top:110px;right:10px;z-index:5000;padding:8px 14px;background:rgba(0,0,0,0.85);color:#FFD700;border:2px solid #FFD700;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;`;
   document.body.appendChild(exitVanBtn);
 
   // "GET IN VAN" button — hidden until on foot
   const getInVanBtn = document.createElement('button');
   getInVanBtn.textContent = '🚐 GET IN VAN';
-  getInVanBtn.style.cssText = `position:fixed;top:60px;right:10px;z-index:5000;padding:8px 14px;background:rgba(0,0,0,0.85);color:#E8A830;border:2px solid #E8A830;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;display:none;`;
+  getInVanBtn.style.cssText = `position:fixed;top:110px;right:10px;z-index:5000;padding:8px 14px;background:rgba(0,0,0,0.85);color:#E8A830;border:2px solid #E8A830;border-radius:8px;font-size:13px;font-weight:700;letter-spacing:1px;cursor:pointer;touch-action:manipulation;display:none;`;
   document.body.appendChild(getInVanBtn);
 
   // Enter on-foot mode

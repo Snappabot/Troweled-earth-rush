@@ -106,7 +106,7 @@ export class WeaponSelector {
     // ── Colour chip — only visible when trowel selected ───────────────────────
     this.colourBtn = document.createElement('div');
     this.colourBtn.style.cssText = `
-      position:fixed; bottom:140px; left:50%;
+      position:fixed; bottom:270px; left:50%;
       transform:translateX(-50%);
       display:none;
       background:rgba(10,10,20,0.92);
