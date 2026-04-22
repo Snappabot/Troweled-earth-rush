@@ -329,6 +329,30 @@ async function main() {
   hud.setVisible(false);
   gameMenu.setVisible(false);
 
+  // Skip intro button
+  const skipBtn = document.createElement('button');
+  skipBtn.textContent = 'SKIP INTRO';
+  Object.assign(skipBtn.style, {
+    position: 'fixed', bottom: '24px', right: '24px', zIndex: '9999',
+    background: 'rgba(0,0,0,0.55)', color: 'rgba(255,255,255,0.7)',
+    border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px',
+    padding: '8px 18px', fontSize: '12px', fontWeight: '700',
+    letterSpacing: '1px', cursor: 'pointer', fontFamily: 'system-ui,sans-serif',
+    touchAction: 'manipulation',
+  });
+  document.body.appendChild(skipBtn);
+  const skipIntro = () => {
+    cinematicTime = CINEMATIC_DURATION;
+    cinematicActive = false;
+    hud.setVisible(true);
+    gameMenu.setVisible(true);
+    cityAudio.startEngine();
+    hud.showToast('☰  Tap the menu to pick up contracts!', 0xC4920A);
+    skipBtn.remove();
+  };
+  skipBtn.addEventListener('click', skipIntro);
+  skipBtn.addEventListener('touchstart', (e) => { e.preventDefault(); skipIntro(); }, { passive: false });
+
   // Guard to prevent job completion firing more than once per arrival
   let jobCompleting = false;
 
@@ -410,13 +434,11 @@ async function main() {
 
       if (t >= 1) {
         cinematicActive = false;
-        // Reveal UI
         hud.setVisible(true);
         gameMenu.setVisible(true);
-        // Key-turn engine start sequence
         cityAudio.startEngine();
-        // Hint toast
         hud.showToast('☰  Tap the menu to pick up contracts!', 0xC4920A);
+        skipBtn.remove();
       }
       return; // skip all gameplay during cinematic
     }
