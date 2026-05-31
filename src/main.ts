@@ -57,6 +57,10 @@ const CREW_PICKUP_QUIPS: Record<string, string> = {
   Phil:     "Phil sips the last of his tea, unhurried. \"Right then. Let's go.\" He fastens his seatbelt twice.",
   Tsuyoshi: "Tsuyoshi vaults in without opening the door. His mohawk grazes the roof lining.",
   Fabio:    "Fabio loads in, trowel over his shoulder. \"You're late. Ehhhh —\" he waves it off. \"I found a pizza place nearby. Very acceptable.\"",
+  Joe:      "Joe shoulders the bucket and climbs in. \"I had a plan for today. This wasn't it.\" He shrugs anyway.",
+  Connie:   "Connie is already inside. You didn't see her get in. She is laughing at something on her phone.",
+  Kev:      "Big Kev squeezes in sideways. The van settles. \"Don't take the speed bumps fast,\" he says, taking the speed bumps fast.",
+  Darren:   "Darren climbs in mid-sentence. \"— and that's why the council was wrong.\" He hasn't said good morning yet.",
 };
 
 async function main() {

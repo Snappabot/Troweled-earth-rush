@@ -339,13 +339,21 @@ export class TowerDefence {
     const gridMeshes: (THREE.Mesh | null)[][] = Array.from({ length: GRID_W }, () => Array(GRID_H).fill(null));
     const cellGeo = new THREE.BoxGeometry(CELL * 0.92, 0.1, CELL * 0.92);
     const cellMatNormal = new THREE.MeshStandardMaterial({ color:'#4a7a3a', roughness:0.85, transparent:true, opacity:0.55 });
-    const cellMatHover = new THREE.MeshStandardMaterial({ color:'#6aaf50', roughness:0.8, transparent:true, opacity:0.75 });
+
+    // Single hover indicator mesh — reused across all cells (was 264 material clones)
+    const hoverMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(CELL * 0.95, 0.15, CELL * 0.95),
+      new THREE.MeshStandardMaterial({ color:'#6aaf50', roughness:0.8, transparent:true, opacity:0.8, emissive:'#2a5a20', emissiveIntensity:0.3 })
+    );
+    hoverMesh.visible = false;
+    scene.add(hoverMesh);
 
     // ── Build path curves for each path in this level ──
     const pathCurves: THREE.CatmullRomCurve3[] = levelDef.paths.map(pathGrid => {
       const pts = pathGrid.map(([gx, gz]) => new THREE.Vector3(gx * CELL, 0, gz * CELL));
       return new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.3);
     });
+    const pathPointsCache: THREE.Vector3[][] = pathCurves.map(c => c.getPoints(200));
 
     // Mark ALL path cells as occupied
     const pathCells = new Set<string>();
@@ -371,7 +379,7 @@ export class TowerDefence {
     for (let gx = 0; gx < GRID_W; gx++) {
       for (let gz = 0; gz < GRID_H; gz++) {
         if (gridOccupied[gx][gz]) continue;
-        const mesh = new THREE.Mesh(cellGeo, cellMatNormal.clone());
+        const mesh = new THREE.Mesh(cellGeo, cellMatNormal);
         mesh.position.set(gx * CELL + CELL / 2, 0.05, gz * CELL + CELL / 2);
         mesh.receiveShadow = true;
         mesh.userData = { gx, gz };
@@ -389,8 +397,8 @@ export class TowerDefence {
     const coneBaseGeo = new THREE.CylinderGeometry(0.15, 0.15, 0.04, 6);
     const roadSegGeo = new THREE.BoxGeometry(CELL * 0.97, 0.09, CELL * 0.97);
 
-    for (const curve of pathCurves) {
-      const pathPoints = curve.getPoints(200);
+    for (let pi = 0; pi < pathCurves.length; pi++) {
+      const pathPoints = pathPointsCache[pi];
 
       // Flat road tile at each path cell
       const visitedRoad = new Set<string>();
@@ -994,6 +1002,20 @@ export class TowerDefence {
       return g;
     }
 
+    function disposeGroup(group: THREE.Object3D): void {
+      group.traverse(obj => {
+        const mesh = obj as THREE.Mesh;
+        if (mesh.geometry) mesh.geometry.dispose();
+        if (mesh.material) {
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((m: THREE.Material) => m.dispose());
+          } else {
+            (mesh.material as THREE.Material).dispose();
+          }
+        }
+      });
+    }
+
     function createEnemyMesh(def: EnemyDef): THREE.Group {
       const g = new THREE.Group();
       const sc = def.scale;
@@ -1309,6 +1331,7 @@ export class TowerDefence {
     function killEnemy(e: Enemy, tower: PlacedTower) {
       e.alive = false;
       scene.remove(e.mesh);
+      disposeGroup(e.mesh);
       let reward = e.def.reward * 1000;
       if (tower.special === 'payout') reward = Math.floor(reward * 1.5);
       sats += reward;
@@ -1455,13 +1478,27 @@ export class TowerDefence {
     }
 
     function updateGridHighlights() {
-      for (let gx = 0; gx < GRID_W; gx++) {
-        for (let gz = 0; gz < GRID_H; gz++) {
-          const m = gridMeshes[gx][gz];
-          if (!m) continue;
-          m.material = selectedTowerType ? cellMatHover.clone() : cellMatNormal.clone();
-        }
+      // Hide hover indicator if no tower is selected for placement
+      if (!selectedTowerType) hoverMesh.visible = false;
+    }
+
+    function moveHoverIndicator(clientX: number, clientY: number) {
+      if (!selectedTowerType) { hoverMesh.visible = false; return; }
+      pointer.x = (clientX / window.innerWidth) * 2 - 1;
+      pointer.y = -(clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(pointer, cam);
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const intersection = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersection);
+      if (!intersection) { hoverMesh.visible = false; return; }
+      const gx = Math.floor(intersection.x / CELL);
+      const gz = Math.floor(intersection.z / CELL);
+      if (gx < 0 || gx >= GRID_W || gz < 0 || gz >= GRID_H || gridOccupied[gx][gz]) {
+        hoverMesh.visible = false;
+        return;
       }
+      hoverMesh.position.set(gx * CELL + CELL / 2, 0.08, gz * CELL + CELL / 2);
+      hoverMesh.visible = true;
     }
 
     function updateUI() {
@@ -1555,7 +1592,9 @@ export class TowerDefence {
         onTap(e.touches[0].clientX, e.touches[0].clientY);
       }
     };
+    const handleMove = (e: MouseEvent) => moveHoverIndicator(e.clientX, e.clientY);
     renderer.domElement.addEventListener('click', handleClick);
+    renderer.domElement.addEventListener('pointermove', handleMove);
     renderer.domElement.addEventListener('touchstart', handleTouch, { passive: false });
 
     let lastPinchDist = 0;
@@ -1713,6 +1752,7 @@ export class TowerDefence {
         if (e.pathProgress >= 1) {
           e.alive = false;
           scene.remove(e.mesh);
+          disposeGroup(e.mesh);
           lives--;
           // Flash house red
           (houseBody.material as THREE.MeshLambertMaterial).color.set(0xFF2222);

@@ -523,7 +523,8 @@ export class Engine {
     this.addRooftopDetails(group, 16, 14, 10, sx, sz);
 
     // Random rotation 0/90/180/270°
-    group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
+    const rotStepsA = Math.floor(this.seed(sx, sz, 101) * 4);
+    group.rotation.y = rotStepsA * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
     // Tag main wall mesh as paintable (first child = main body)
@@ -531,7 +532,10 @@ export class Engine {
       (group.children[0] as THREE.Mesh).userData['paintable'] = true;
       (group.children[0] as THREE.Mesh).userData['buildingName'] = 'Building';
     }
-    this.registerBuildingCollider(x, z, 8.5, 7.5, sx, sz);
+    {
+      const needsSwap = rotStepsA === 1 || rotStepsA === 3;
+      this.registerBuildingCollider(x, z, needsSwap ? 7.5 : 8.5, needsSwap ? 8.5 : 7.5, sx, sz);
+    }
   }
 
   // ────────────────────────────────────────────────
@@ -581,7 +585,8 @@ export class Engine {
     // Rooftop details
     this.addRooftopDetails(group, 14, 12, 8, sx, sz);
 
-    group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
+    const rotStepsB = Math.floor(this.seed(sx, sz, 101) * 4);
+    group.rotation.y = rotStepsB * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
     // Tag main wall mesh as paintable (index 1 = terracotta main body; index 0 = shadow)
@@ -589,7 +594,10 @@ export class Engine {
       (group.children[1] as THREE.Mesh).userData['paintable'] = true;
       (group.children[1] as THREE.Mesh).userData['buildingName'] = 'Building';
     }
-    this.registerBuildingCollider(x, z, 7.5, 6.5, sx, sz);
+    {
+      const needsSwap = rotStepsB === 1 || rotStepsB === 3;
+      this.registerBuildingCollider(x, z, needsSwap ? 6.5 : 7.5, needsSwap ? 7.5 : 6.5, sx, sz);
+    }
   }
 
   // ────────────────────────────────────────────────
@@ -619,7 +627,8 @@ export class Engine {
     this.addBox(group, C.charcoal, 4, 3, 4, 0, h + 1.5, 0);
 
     // Towers are square — rotation doesn't matter visually, but keep for consistency
-    group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
+    const rotStepsC = Math.floor(this.seed(sx, sz, 101) * 4);
+    group.rotation.y = rotStepsC * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
     // Tag main tower body mesh as paintable (index 2 = tower body)
@@ -627,7 +636,10 @@ export class Engine {
       (group.children[2] as THREE.Mesh).userData['paintable'] = true;
       (group.children[2] as THREE.Mesh).userData['buildingName'] = 'Building';
     }
-    this.registerBuildingCollider(x, z, 4.5, 4.5, sx, sz);
+    {
+      const needsSwap = rotStepsC === 1 || rotStepsC === 3;
+      this.registerBuildingCollider(x, z, needsSwap ? 4.5 : 4.5, needsSwap ? 4.5 : 4.5, sx, sz);
+    }
   }
 
   // ────────────────────────────────────────────────
@@ -677,7 +689,8 @@ export class Engine {
     // Rooftop details
     this.addRooftopDetails(group, 13, 11, 7, sx, sz);
 
-    group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
+    const rotStepsD = Math.floor(this.seed(sx, sz, 101) * 4);
+    group.rotation.y = rotStepsD * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
     // Tag main wall mesh as paintable (index 0 = warm cream main body)
@@ -685,7 +698,10 @@ export class Engine {
       (group.children[0] as THREE.Mesh).userData['paintable'] = true;
       (group.children[0] as THREE.Mesh).userData['buildingName'] = 'Building';
     }
-    this.registerBuildingCollider(x, z, 7.0, 6.0, sx, sz);
+    {
+      const needsSwap = rotStepsD === 1 || rotStepsD === 3;
+      this.registerBuildingCollider(x, z, needsSwap ? 6.0 : 7.0, needsSwap ? 7.0 : 6.0, sx, sz);
+    }
   }
 
   // ────────────────────────────────────────────────
@@ -767,10 +783,14 @@ export class Engine {
     // Rooftop details (on shed — limited to small items)
     this.addRooftopDetails(group, 22, 18, 5.2, sx, sz);
 
-    group.rotation.y = Math.floor(this.seed(sx, sz, 101) * 4) * (Math.PI / 2);
+    const rotStepsE = Math.floor(this.seed(sx, sz, 101) * 4);
+    group.rotation.y = rotStepsE * (Math.PI / 2);
     group.position.set(x, 0, z);
     this.scene.add(group);
-    this.registerBuildingCollider(x, z, 11.5, 9.5, sx, sz);
+    {
+      const needsSwap = rotStepsE === 1 || rotStepsE === 3;
+      this.registerBuildingCollider(x, z, needsSwap ? 9.5 : 11.5, needsSwap ? 11.5 : 9.5, sx, sz);
+    }
   }
 
   // ────────────────────────────────────────────────────────────────────────────

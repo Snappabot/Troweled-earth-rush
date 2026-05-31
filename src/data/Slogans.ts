@@ -62,6 +62,17 @@ export const GAME_TIPS: string[] = [
   "The van has been in worse situations. The plaster has not.",
   "This city has 240 square units of roads and exactly one decent flat white. Find it.",
   "The walls remember every hand that shaped them.\nThe van remembers nothing. Drive carefully.",
+  // Wildlife & city hazards
+  "WILDLIFE TIP: That's a kangaroo. Do not hit it. Or do. You'll think about it for weeks either way.",
+  "RESPAWN TIP: You will get splatted. The crew will respawn near the workshop. The plaster will not.",
+  "LEADERBOARD TIP: The leaderboard is watching. So is Connie. She finds it all very funny.",
+  "LORE TIP: If Connie appears in a place she shouldn't, she's still right. She has always been right.",
+  "RADIO TIP: TEM Radio plays three songs on rotation. You will know the third one by Tuesday.",
+  "DRIVING TIP: Driving full speed into a coffee shop counts as 'site survey'. The coffee does not survive.",
+  "MINIGAME TIP: The scaffold pole mini-game ends when the pole stops moving. The pole rarely stops moving.",
+  "SPILL TIP: Every bump adds to the spill meter. Every spill subtracts from the pay. Maths is brutal.",
+  "RIVAL TIP: Rival crews will undercut you, outpace you, and then misspell 'Marbellino'. Take the small wins.",
+  "PAY TIP: Yes, you get paid in sats. No, we won't explain. Yes, the plaster is still real.",
 ];
 
 export const JOB_OPENERS: string[] = [
