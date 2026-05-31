@@ -86,8 +86,87 @@ export class CharacterCreator {
 
   show(): Promise<PlayerCharacter> {
     return new Promise((resolve) => {
+      // ── Check for saved character — skip creator for returning players ──────
+      try {
+        const raw = localStorage.getItem('tem_rush_character');
+        if (raw) {
+          const saved: PlayerCharacter = JSON.parse(raw);
+          if (saved?.name?.trim()) {
+            this._buildReturnScreen(saved, resolve);
+            return;
+          }
+        }
+      } catch { /* ignore parse errors */ }
       this._build(resolve);
     });
+  }
+
+  /** Fast-return screen for players who already have a saved character */
+  private _buildReturnScreen(saved: PlayerCharacter, resolve: (pc: PlayerCharacter) => void): void {
+    this._preloadLogo();
+    // Pre-fill fields so _drawPreview works
+    this.headStyle    = saved.headStyle ?? 0;
+    this.skinTone     = saved.skinTone  ?? '#F5CBA7';
+    this.hairColor    = saved.hairColor ?? '#1a0a00';
+    this.playerName   = saved.name;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position:fixed;inset:0;z-index:60000;
+      background:rgba(8,10,16,0.97);
+      display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      font-family:system-ui,-apple-system,sans-serif;
+      padding:24px 16px;
+    `;
+
+    const title = document.createElement('div');
+    title.style.cssText = `color:#D4A040;font-size:clamp(14px,4vw,20px);font-weight:900;letter-spacing:3px;text-align:center;margin-bottom:24px;`;
+    title.textContent = 'WELCOME BACK';
+    overlay.appendChild(title);
+
+    // Mini canvas preview
+    const cv = document.createElement('canvas');
+    cv.width = 120; cv.height = 220;
+    cv.style.cssText = `border-radius:12px;border:2px solid rgba(212,160,64,0.4);margin-bottom:18px;`;
+    overlay.appendChild(cv);
+    this.previewCanvas = cv;
+    this.ctx = cv.getContext('2d')!;
+    this._drawPreview();
+
+    const nameEl = document.createElement('div');
+    nameEl.style.cssText = `color:#fff;font-size:clamp(18px,5vw,26px);font-weight:900;letter-spacing:2px;margin-bottom:24px;text-align:center;`;
+    nameEl.textContent = saved.name.toUpperCase();
+    overlay.appendChild(nameEl);
+
+    const continueBtn = document.createElement('button');
+    continueBtn.style.cssText = `
+      background:#C8A86A;color:#0a0c14;border:none;border-radius:28px;
+      padding:16px 48px;font-size:17px;font-weight:900;letter-spacing:1px;
+      cursor:pointer;touch-action:manipulation;margin-bottom:14px;
+      box-shadow:0 4px 20px rgba(200,168,106,0.4);
+    `;
+    continueBtn.textContent = `▶ CONTINUE AS ${saved.name.toUpperCase()}`;
+    continueBtn.addEventListener('click', () => {
+      overlay.remove();
+      resolve(saved);
+    });
+    overlay.appendChild(continueBtn);
+
+    const changeBtn = document.createElement('button');
+    changeBtn.style.cssText = `
+      background:transparent;color:rgba(212,160,64,0.6);border:1px solid rgba(212,160,64,0.2);
+      border-radius:20px;padding:10px 28px;font-size:13px;font-weight:700;
+      cursor:pointer;touch-action:manipulation;
+    `;
+    changeBtn.textContent = 'CHANGE CHARACTER';
+    changeBtn.addEventListener('click', () => {
+      overlay.remove();
+      this._build(resolve);
+    });
+    overlay.appendChild(changeBtn);
+
+    document.body.appendChild(overlay);
   }
 
   private _build(resolve: (pc: PlayerCharacter) => void): void {
@@ -411,13 +490,15 @@ export class CharacterCreator {
   }
 
   private _confirm(resolve: (pc: PlayerCharacter) => void): void {
-    this.overlay.remove();
-    resolve({
+    const char: PlayerCharacter = {
       name:      this.playerName.trim(),
       headStyle: this.headStyle,
       skinTone:  this.skinTone,
       hairColor: this.hairColor,
-    });
+    };
+    try { localStorage.setItem('tem_rush_character', JSON.stringify(char)); } catch { /* quota / private mode */ }
+    this.overlay.remove();
+    resolve(char);
   }
 
   // ── Preview drawing ──────────────────────────────────────────────────────

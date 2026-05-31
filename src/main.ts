@@ -49,6 +49,14 @@ import { WeaponSelector } from './ui/WeaponSelector';
 import { ZoneIndicator, ZONE_COLORS } from './gameplay/ZoneIndicator';
 import { CityAudio } from './audio/CityAudio';
 
+// ── React Native bridge (Earthians app WebView) ────────────────────────────
+function postRushEvent(event: string, data?: Record<string, unknown>): void {
+  const rn = (window as any).ReactNativeWebView;
+  if (rn?.postMessage) {
+    rn.postMessage(JSON.stringify({ type: 'TEM_RUSH_EVENT', event, data: data ?? {} }));
+  }
+}
+
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
   Matt:     "Matt folds himself into the back. \"Took your time.\" He's already on his phone.",
@@ -74,6 +82,7 @@ async function main() {
   cityAudio.start(); // AudioContext allowed after user gesture (StartMenu click)
   const playerChar = await new CharacterCreator().show();
   setPlayerName(playerChar.name); // persist for leaderboard
+  postRushEvent('first_play');
 
   const engine = new Engine();
   await engine.init();
@@ -917,8 +926,10 @@ async function main() {
                     payout:            _adjustedPayout,
                     shots_used:        _shootoutShots,
                   });
+                  postRushEvent('score_submitted', { score: _adjustedPayout });
                 }
                 const earned = jobManager.completeJob(arrived, finalQuality);
+                postRushEvent('job_complete', { jobTitle: arrived.title, payout: earned });
                 if (earned < 0) {
                   hud.showPenalty(arrived.title, Math.abs(earned));
                 } else {
