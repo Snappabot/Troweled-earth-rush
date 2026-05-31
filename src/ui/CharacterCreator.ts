@@ -292,6 +292,37 @@ export class CharacterCreator {
     pickerRow.appendChild(nextBtn);
     this.overlay.appendChild(pickerRow);
 
+    // ── Randomise button ─────────────────────────────────────────────────────
+    const rndBtn = document.createElement('button');
+    rndBtn.textContent = '🎲 RANDOMISE';
+    rndBtn.style.cssText = `
+      background:transparent; color:rgba(212,160,64,0.7);
+      border:1px solid rgba(212,160,64,0.3); border-radius:16px;
+      padding:8px 20px; font-size:13px; font-weight:700;
+      cursor:pointer; touch-action:manipulation; margin-top:6px;
+      margin-bottom:14px;
+    `;
+    rndBtn.addEventListener('click', () => {
+      this.headStyle    = Math.floor(Math.random() * HEAD_STYLES.length);
+      const skinIdx     = Math.floor(Math.random() * SKIN_TONES.length);
+      this.skinTone     = SKIN_TONES[skinIdx];
+      this.hairColorIdx = Math.floor(Math.random() * HAIR_COLORS.length);
+      this.hairColor    = HAIR_COLORS[this.hairColorIdx];
+      this.headLabel.textContent = HEAD_STYLES[this.headStyle];
+      this.swatches.forEach((s, i) => {
+        const selected = i === skinIdx;
+        s.style.borderColor = selected ? '#D4A040' : 'transparent';
+        s.style.transform   = selected ? 'scale(1.15)' : 'scale(1)';
+      });
+      this.hairSwatches.forEach((s, i) => {
+        const selected = i === this.hairColorIdx;
+        s.style.borderColor = selected ? '#D4A040' : 'transparent';
+        s.style.transform   = selected ? 'scale(1.15)' : 'scale(1)';
+      });
+      this._drawPreview();
+    });
+    this.overlay.appendChild(rndBtn);
+
     // ── Skin tone swatches ───────────────────────────────────────────────────
     const skinLabel = document.createElement('div');
     skinLabel.style.cssText = `

@@ -164,6 +164,7 @@ export class SpillMeter {
       this.level = 0.5;
 
       this.onSpill?.(); // penalty calculated by caller (30% of contract)
+      try { navigator.vibrate?.(60); } catch {}
 
       this.container.classList.add('spill-flash');
       setTimeout(() => {

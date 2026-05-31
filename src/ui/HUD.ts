@@ -41,6 +41,7 @@ export class HUD {
   private flashTimeout: ReturnType<typeof setTimeout> | null = null;
   private spillPenaltyTimeout: ReturnType<typeof setTimeout> | null = null;
   private currentMoney: number = 500_000;
+  private _lastMoney: number = 0;
   private timerPulseInterval: ReturnType<typeof setInterval> | null = null;
   private raceStripEl!: HTMLDivElement;
   private racePosEl!: HTMLDivElement;
@@ -114,8 +115,8 @@ export class HUD {
     const speedContainer = this.speedContainer;
     speedContainer.style.cssText = `
       position: fixed;
-      bottom: 20px;
-      left: 20px;
+      bottom: 185px;
+      left: 16px;
       pointer-events: none;
       font-family: system-ui, monospace;
       z-index: 1000;
@@ -571,6 +572,8 @@ export class HUD {
 
   /** Update the money display and check for 1 BTC achievement */
   updateMoney(amount: number): void {
+    const delta = amount - this._lastMoney;
+    this._lastMoney = amount;
     this.currentMoney = amount;
     if (this.spillPenaltyTimeout === null) {
       this.moneyEl.style.color = '#5EDB7D';
@@ -589,6 +592,28 @@ export class HUD {
       this.btcAchieved = true;
       this._showBitcoinAchievement();
     }
+    if (delta >= 50_000) {
+      this._floatChip(`+${Math.round(delta / 1000)}k ⚡`, '#2ECC40');
+    }
+  }
+
+  private _floatChip(text: string, color: string): void {
+    const chip = document.createElement('div');
+    chip.style.cssText = `
+      position:fixed; right:60px; top:14px; z-index:4000;
+      color:${color}; font-size:16px; font-weight:900;
+      font-family:system-ui,sans-serif; pointer-events:none;
+      text-shadow:0 1px 4px rgba(0,0,0,0.8);
+      transition: transform 900ms ease-out, opacity 900ms ease-out;
+      transform: translateY(0); opacity:1;
+    `;
+    chip.textContent = text;
+    document.body.appendChild(chip);
+    requestAnimationFrame(() => {
+      chip.style.transform = 'translateY(-40px)';
+      chip.style.opacity = '0';
+    });
+    setTimeout(() => chip.remove(), 950);
   }
 
   /** Show a penalty flash (scaffold fail, etc.) */
@@ -607,34 +632,44 @@ export class HUD {
     }, 2600);
   }
 
-  /** Show a brief toast notification centred on screen. */
-  showToast(text: string, color = 0xffffff): void {
-    const hex = '#' + color.toString(16).padStart(6, '0');
-    const el = document.createElement('div');
-    el.textContent = text;
-    Object.assign(el.style, {
-      position: 'fixed',
-      top: '8%',
-      left: '50%',
-      transform: 'translate(-50%, 0)',
-      background: hex,
-      color: '#fff',
-      padding: '14px 24px',
-      borderRadius: '14px',
-      fontSize: '18px',
-      fontWeight: '800',
-      fontFamily: 'system-ui, sans-serif',
-      zIndex: '9000',
-      opacity: '1',
-      textShadow: '0 1px 4px rgba(0,0,0,0.5)',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
-      pointerEvents: 'none',
-      whiteSpace: 'nowrap',
-      transition: 'opacity 0.5s ease',
+  private _toastStack: HTMLDivElement[] = [];
+
+  /** Show a brief toast notification centred on screen — queued, stacks vertically. */
+  showToast(text: string, color: string | number = '#fff', duration = 2500): void {
+    const hex = typeof color === 'number'
+      ? '#' + color.toString(16).padStart(6, '0')
+      : color;
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+      position:fixed; left:50%; transform:translateX(-50%);
+      background:rgba(0,0,0,0.82); color:${hex};
+      padding:10px 18px; border-radius:20px;
+      font-size:14px; font-weight:700; font-family:system-ui,sans-serif;
+      white-space:normal; text-align:center; max-width:80vw;
+      z-index:9500; pointer-events:none;
+      opacity:0; transition:opacity 0.2s, top 0.2s;
+      box-shadow:0 2px 12px rgba(0,0,0,0.5);
+    `;
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    this._toastStack.push(toast);
+    this._repositionToasts();
+    requestAnimationFrame(() => { toast.style.opacity = '1'; });
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => {
+        toast.remove();
+        this._toastStack = this._toastStack.filter(t => t !== toast);
+        this._repositionToasts();
+      }, 220);
+    }, duration);
+  }
+
+  private _repositionToasts(): void {
+    const base = window.innerHeight * 0.08;
+    this._toastStack.forEach((t, i) => {
+      t.style.top = `${base + i * 48}px`;
     });
-    document.body.appendChild(el);
-    setTimeout(() => { el.style.opacity = '0'; }, 6000);
-    setTimeout(() => el.remove(), 6600);
   }
 
   /** Show a speech bubble with character face avatar for hit chars */

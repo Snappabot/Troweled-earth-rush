@@ -57,6 +57,10 @@ function postRushEvent(event: string, data?: Record<string, unknown>): void {
   }
 }
 
+function haptic(pattern: number | number[] = 15): void {
+  try { navigator.vibrate?.(pattern); } catch {}
+}
+
 // ── Crew pickup one-liners ────────────────────────────────────────────────────
 const CREW_PICKUP_QUIPS: Record<string, string> = {
   Matt:     "Matt folds himself into the back. \"Took your time.\" He's already on his phone.",
@@ -204,8 +208,10 @@ async function main() {
     const penalty = contractPay > 0 ? Math.round(contractPay * 0.30) : 30_000;
     _jobSpillTotal += penalty;
     jobManager.money = Math.max(0, jobManager.money - penalty);
+    jobManager.saveProgress();
     hud.updateMoney(jobManager.money);
     hud.showSpillPenalty(penalty);
+    haptic(60);
     const pn = hud.getPlayerChar()?.name ?? 'Driver';
     hud.showToast(`🪣 SPILL! ${pn} lost ${Math.round(penalty/1000)}K sats!`, 0xFF4400);
   };
@@ -277,6 +283,7 @@ async function main() {
   // ── Splat callbacks ──────────────────────────────────────────────────────────
   pedestrians.onSplat = (sats: number, name?: string) => {
     jobManager.money += sats;
+    jobManager.saveProgress();
     hud.updateMoney(jobManager.money);
     cityAudio.playPedScatter();
     if (name === 'boronica') {
@@ -297,6 +304,7 @@ async function main() {
   };
   pedestrians.onHitCharSplat = (_charId: string, toast: string) => {
     jobManager.money += 10_000;
+    jobManager.saveProgress();
     hud.updateMoney(jobManager.money);
     hud.showToast(toast, 0xFF4400);
   };
@@ -334,9 +342,18 @@ async function main() {
     },
     undefined, // Marbellino Mixer is mission-only (removed from menu)
     () => contractWarsPanel.show(),
+    (muted) => {
+      cityAudio.setMuted(muted);
+      radio.setMuted(muted);
+    },
   );
   gameMenu.mountMoneyPanel(hud.getMoneyPanel());
   gameMenu.mountRadio(radio.getEl());
+  // Apply persisted mute state on load
+  if (gameMenu.isMuted()) {
+    cityAudio.setMuted(true);
+    radio.setMuted(true);
+  }
 
   // ── Hide UI during opening cinematic ─────────────────────────────────────
   hud.setVisible(false);
@@ -580,6 +597,7 @@ async function main() {
       physics.applyImpulse(trafficResult.impactX, trafficResult.impactZ);
       van.triggerBump(Math.min(1.0, 0.4 + impactMag * 0.3)); // camera shake
       cityAudio.playCrash();
+      haptic(80);
 
       if (jobActive) {
         // Only spill/damage materials after they've been picked up (Phase 2+)
@@ -588,6 +606,7 @@ async function main() {
           const crashFee = 15_000;   // flat material damage fee
           _jobSpillTotal += crashFee;
           jobManager.money = Math.max(0, jobManager.money - crashFee);
+          jobManager.saveProgress();
           hud.updateMoney(jobManager.money);
         }
       }
@@ -626,6 +645,7 @@ async function main() {
         zones.clear();
         hud.updateTravelTimer(null);
         hud.showTimerFail(150_000);
+        haptic([100, 50, 100]);
         hud.setActiveJob(null, 1);
         hud.updateMoney(jobManager.money);
         hud.updateCrewStatus([], [], false);
@@ -926,6 +946,7 @@ async function main() {
                     payout:            _adjustedPayout,
                     shots_used:        _shootoutShots,
                   });
+                  cityAudio.playMissionComplete();
                   postRushEvent('score_submitted', { score: _adjustedPayout });
                 }
                 const earned = jobManager.completeJob(arrived, finalQuality);
@@ -953,6 +974,7 @@ async function main() {
                 const _allDone = isAllCollected();
 
                 if (_isNew && _photo) {
+                  haptic(50);
                   // Show photo unlock card
                   const card = document.createElement('div');
                   card.style.cssText = `

@@ -567,12 +567,41 @@ export class TEMRadio {
   private volumeSlider!: HTMLInputElement;
   private rafId = 0;
   private lastUpdateTs = 0;
+  private volumeLevel = 55;
+  private muted = false;
+  private _volBeforeMute = 55;
+
+  private static readonly STATION_KEY = 'tem_rush_radio_station';
+  private static readonly VOLUME_KEY  = 'tem_rush_radio_volume';
+  private static readonly ON_KEY      = 'tem_rush_radio_on';
 
   constructor() {
+    // ── Load persisted settings ───────────────────────────────────────────────
+    try {
+      const savedStation = localStorage.getItem(TEMRadio.STATION_KEY);
+      if (savedStation !== null) {
+        const idx = parseInt(savedStation, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < STATIONS.length) this.stationIdx = idx;
+      }
+      const savedVolume = localStorage.getItem(TEMRadio.VOLUME_KEY);
+      if (savedVolume !== null) {
+        const v = parseInt(savedVolume, 10);
+        if (!isNaN(v)) this.volumeLevel = Math.max(0, Math.min(100, v));
+      }
+    } catch {}
+
     this._buildUI();
     // Start timers for song/DJ rotation
     this.lastUpdateTs = performance.now();
     this._tick();
+  }
+
+  private _saveState(): void {
+    try {
+      localStorage.setItem(TEMRadio.STATION_KEY, String(this.stationIdx));
+      localStorage.setItem(TEMRadio.VOLUME_KEY,  String(this.volumeLevel));
+      localStorage.setItem(TEMRadio.ON_KEY,      String(this.on));
+    } catch {}
   }
 
   private _volOpen = false;
@@ -601,11 +630,18 @@ export class TEMRadio {
     this.iconEl.textContent = '📻';
     this.iconEl.style.cssText = `font-size:16px; opacity:0.85; line-height:1;`;
 
-    // ◀ Prev station
+    // ◀ Prev station — 44x44 hit area, small visual
+    const prevHit = document.createElement('div');
+    prevHit.style.cssText = `
+      min-width:44px; height:44px;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; touch-action:manipulation;
+    `;
     const prev = document.createElement('span');
     prev.textContent = '◀';
-    prev.style.cssText = `color:rgba(200,168,106,0.8); font-size:12px; cursor:pointer; padding:0 2px; line-height:1;`;
-    prev.addEventListener('click', () => this._changeStation(-1));
+    prev.style.cssText = `color:rgba(200,168,106,0.8); font-size:12px; line-height:1; pointer-events:none;`;
+    prevHit.appendChild(prev);
+    prevHit.addEventListener('click', () => this._changeStation(-1));
 
     // Station name + freq
     const nameWrap = document.createElement('div');
@@ -623,11 +659,18 @@ export class TEMRadio {
     nameWrap.appendChild(this.nameEl);
     nameWrap.appendChild(this.freqEl);
 
-    // ▶ Next station
+    // ▶ Next station — 44x44 hit area, small visual
+    const nextHit = document.createElement('div');
+    nextHit.style.cssText = `
+      min-width:44px; height:44px;
+      display:flex; align-items:center; justify-content:center;
+      cursor:pointer; touch-action:manipulation;
+    `;
     const next = document.createElement('span');
     next.textContent = '▶';
-    next.style.cssText = `color:rgba(200,168,106,0.8); font-size:12px; cursor:pointer; padding:0 2px; line-height:1;`;
-    next.addEventListener('click', () => this._changeStation(1));
+    next.style.cssText = `color:rgba(200,168,106,0.8); font-size:12px; line-height:1; pointer-events:none;`;
+    nextHit.appendChild(next);
+    nextHit.addEventListener('click', () => this._changeStation(1));
 
     // 🔊 Volume button
     const volBtn = document.createElement('span');
@@ -655,9 +698,9 @@ export class TEMRadio {
     });
 
     bar.appendChild(this.iconEl);
-    bar.appendChild(prev);
+    bar.appendChild(prevHit);
     bar.appendChild(nameWrap);
-    bar.appendChild(next);
+    bar.appendChild(nextHit);
     bar.appendChild(volBtn);
     bar.appendChild(offBtn);
 
@@ -677,14 +720,17 @@ export class TEMRadio {
 
     this.volumeSlider = document.createElement('input');
     this.volumeSlider.type = 'range';
-    this.volumeSlider.min = '0'; this.volumeSlider.max = '100'; this.volumeSlider.value = '55';
+    this.volumeSlider.min = '0'; this.volumeSlider.max = '100';
+    this.volumeSlider.value = String(this.volumeLevel);
     this.volumeSlider.style.cssText = `
       width: 80px; height: 3px; accent-color: #C8A86A; cursor: pointer;
     `;
     this.volumeSlider.addEventListener('input', () => {
       const v = Number(this.volumeSlider.value) / 100;
+      this.volumeLevel = Number(this.volumeSlider.value);
       this.engine.setVolume(v * 0.18);
       volIcon.textContent = v === 0 ? '🔇' : v < 0.4 ? '🔈' : '🔊';
+      this._saveState();
     });
 
     const volLabel = document.createElement('span');
@@ -692,7 +738,7 @@ export class TEMRadio {
     this.volumeSlider.addEventListener('input', () => {
       volLabel.textContent = this.volumeSlider.value + '%';
     });
-    volLabel.textContent = '55%';
+    volLabel.textContent = `${this.volumeLevel}%`;
 
     volPanel.appendChild(volIcon);
     volPanel.appendChild(this.volumeSlider);
@@ -741,6 +787,8 @@ export class TEMRadio {
   private _togglePower(): void {
     if (!this.engineReady) {
       this.engineReady = this.engine.init();
+      // Apply persisted volume to the engine on first init
+      this.engine.setVolume((this.volumeLevel / 100) * 0.18);
     }
     this.on = !this.on;
     if (this.on) {
@@ -750,6 +798,7 @@ export class TEMRadio {
       this.engine.stop();
     }
     this._renderStation();
+    this._saveState();
     this._onStateChange?.();
   }
 
@@ -763,6 +812,19 @@ export class TEMRadio {
       this._showDJ();
     }
     this._renderStation();
+    this._saveState();
+  }
+
+  /** Mute / unmute radio without changing the power state. */
+  setMuted(muted: boolean): void {
+    if (muted === this.muted) return;
+    if (muted) {
+      this._volBeforeMute = this.volumeLevel;
+      this.engine.setVolume(0);
+    } else {
+      this.engine.setVolume((this._volBeforeMute / 100) * 0.18);
+    }
+    this.muted = muted;
   }
 
   private _showDJ(): void {

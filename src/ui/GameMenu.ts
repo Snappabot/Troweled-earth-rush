@@ -8,8 +8,21 @@ export class GameMenu {
   private radioSlot!: HTMLDivElement;
   private moneySlot!: HTMLDivElement;
   private _open = false;
+  private muted = false;
+  private muteBtn!: HTMLButtonElement;
+  private onMuteToggle?: (muted: boolean) => void;
 
-  constructor(onPhoto: () => void, onJobs: () => void, onMixer?: () => void, onContractWars?: () => void) {
+  constructor(
+    onPhoto: () => void,
+    onJobs: () => void,
+    onMixer?: () => void,
+    onContractWars?: () => void,
+    onMuteToggle?: (muted: boolean) => void,
+  ) {
+    this.onMuteToggle = onMuteToggle;
+    try {
+      this.muted = localStorage.getItem('tem_rush_muted') === 'true';
+    } catch {}
     this._build(onPhoto, onJobs, onMixer, onContractWars);
   }
 
@@ -68,6 +81,20 @@ export class GameMenu {
     btnRow.appendChild(photoBtn);
     btnRow.appendChild(jobsBtn);
     this.panel.appendChild(btnRow);
+
+    // ── Mute toggle (full-width row) ─────────────────────────────────────────
+    this.muteBtn = this._actionBtn(
+      this.muted ? '🔊  UNMUTE' : '🔇  MUTE ALL',
+      'rgba(50,30,30,0.9)',
+      () => {
+        this.muted = !this.muted;
+        this.muteBtn.innerHTML = this.muted ? '🔊  UNMUTE' : '🔇  MUTE ALL';
+        try { localStorage.setItem('tem_rush_muted', String(this.muted)); } catch {}
+        this.onMuteToggle?.(this.muted);
+      },
+    );
+    this.muteBtn.style.cssText += `width:100%; margin-top:2px;`;
+    this.panel.appendChild(this.muteBtn);
 
     // ── Mixer button (full-width, second row) ─────────────────────────────────
     if (onMixer) {
@@ -128,6 +155,9 @@ export class GameMenu {
     this.btn.style.display = visible ? 'block' : 'none';
     if (!visible) this._close();
   }
+
+  /** Is global mute currently active? */
+  isMuted(): boolean { return this.muted; }
 
   mountMoneyPanel(el: HTMLElement): void {
     el.style.cssText += `position:relative; top:auto; right:auto; align-items:flex-start;`;

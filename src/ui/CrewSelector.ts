@@ -156,8 +156,8 @@ export class CrewSelector {
 
     const perkEl = document.createElement('div');
     perkEl.style.cssText = `
-      color:#aaa;font-size:8.5px;text-align:center;
-      line-height:1.3; margin-top:2px;
+      color:#aaa;font-size:12px;text-align:center;
+      line-height:1.35; margin-top:2px;
     `;
     perkEl.textContent = crew.passive.desc;
     card.appendChild(perkEl);

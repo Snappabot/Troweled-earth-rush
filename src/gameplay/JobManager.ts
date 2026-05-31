@@ -364,6 +364,9 @@ export class JobManager {
   completedJobIds: Set<string> = new Set();
   money: number = 500_000;  // sats
 
+  private readonly MONEY_KEY = 'tem_rush_money';
+  private readonly JOBS_KEY  = 'tem_rush_completed_jobs';
+
   travelTimer: number = 0;       // counts down while job is active
   travelFailed: boolean = false; // true if timer expired
 
@@ -371,6 +374,26 @@ export class JobManager {
   crewToPickup: string[] = [];
   /** Which crew members have been collected so far */
   crewPickedUp: string[] = [];
+
+  constructor() {
+    try {
+      const savedMoney = localStorage.getItem(this.MONEY_KEY);
+      if (savedMoney) this.money = parseInt(savedMoney, 10) || 500_000;
+      const savedJobs = localStorage.getItem(this.JOBS_KEY);
+      if (savedJobs) {
+        try { JSON.parse(savedJobs).forEach((id: string) => this.completedJobIds.add(id)); } catch {}
+      }
+    } catch {}
+  }
+
+  saveProgress(): void {
+    try {
+      localStorage.setItem(this.MONEY_KEY, String(this.money));
+      localStorage.setItem(this.JOBS_KEY, JSON.stringify([...this.completedJobIds]));
+    } catch {}
+  }
+
+  private _save(): void { this.saveProgress(); }
 
   getAvailableJobs(): Job[] {
     return this.jobs
@@ -458,6 +481,7 @@ export class JobManager {
       this.travelFailed = true;
       const penalty = 150_000;
       this.money = Math.max(0, this.money - penalty);
+      this._save();
       this.activeJob = null;
       this.crewToPickup = [];
       this.crewPickedUp = [];
@@ -490,6 +514,7 @@ export class JobManager {
     const earned = Math.round(job.pay * qualityPct); // negative if penalty
     this.money = Math.max(0, this.money + earned);
     this.completedJobIds.add(job.id);
+    this._save();
     this.activeJob = null;
     this.crewToPickup = [];
     this.crewPickedUp = [];
