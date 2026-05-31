@@ -1410,7 +1410,10 @@ export class TowerDefence {
     const uiTray = document.createElement('div');
     Object.assign(uiTray.style, {
       position:'absolute', bottom:'0', left:'0', right:'0',
-      background:'rgba(0,0,0,0.85)', padding:'6px 4px', zIndex:'14002',
+      background:'rgba(0,0,0,0.85)',
+      padding:'6px 4px',
+      paddingBottom:'calc(6px + env(safe-area-inset-bottom, 20px))',
+      zIndex:'14002',
       display:'flex', flexDirection:'column', gap:'4px',
     });
     overlay.appendChild(uiTray);
@@ -1426,7 +1429,7 @@ export class TowerDefence {
 
     const uiInfo = document.createElement('div');
     Object.assign(uiInfo.style, {
-      position:'absolute', bottom:'90px', left:'8px', right:'8px',
+      position:'absolute', bottom:'calc(90px + env(safe-area-inset-bottom, 20px))', left:'8px', right:'8px',
       background:'rgba(0,0,0,0.9)', borderRadius:'8px', padding:'10px',
       color:'#FFF', fontSize:'13px', zIndex:'14003', display:'none',
     });
