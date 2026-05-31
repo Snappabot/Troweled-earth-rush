@@ -333,11 +333,11 @@ async function main() {
   const skipBtn = document.createElement('button');
   skipBtn.textContent = 'SKIP INTRO';
   Object.assign(skipBtn.style, {
-    position: 'fixed', bottom: '24px', right: '24px', zIndex: '9999',
-    background: 'rgba(0,0,0,0.55)', color: 'rgba(255,255,255,0.7)',
-    border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px',
-    padding: '8px 18px', fontSize: '12px', fontWeight: '700',
-    letterSpacing: '1px', cursor: 'pointer', fontFamily: 'system-ui,sans-serif',
+    position: 'fixed', bottom: '28px', right: '24px', zIndex: '9999',
+    background: 'rgba(0,0,0,0.75)', color: 'rgba(255,255,255,0.95)',
+    border: '2px solid rgba(255,255,255,0.55)', borderRadius: '24px',
+    padding: '10px 20px', fontSize: '13px', fontWeight: '700',
+    letterSpacing: '1.5px', cursor: 'pointer', fontFamily: 'system-ui,sans-serif',
     touchAction: 'manipulation',
   });
   document.body.appendChild(skipBtn);

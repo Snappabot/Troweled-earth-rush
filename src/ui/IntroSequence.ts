@@ -279,13 +279,15 @@ export class IntroSequence {
     const skip = document.createElement('button');
     skip.textContent = 'SKIP ▶';
     skip.style.cssText = `
-      position:absolute; bottom:20px; right:20px; z-index:20;
-      background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
-      color:rgba(255,255,255,0.5); font-size:11px; font-weight:700;
-      padding:7px 14px; border-radius:20px; cursor:pointer;
-      letter-spacing:1px; touch-action:manipulation;
+      position:absolute; bottom:28px; right:24px; z-index:100;
+      background:rgba(0,0,0,0.75); border:2px solid rgba(255,255,255,0.55);
+      color:rgba(255,255,255,0.95); font-size:13px; font-weight:700;
+      padding:10px 20px; border-radius:24px; cursor:pointer;
+      letter-spacing:1.5px; touch-action:manipulation;
+      font-family:system-ui,sans-serif;
     `;
     skip.addEventListener('click', () => this._finish(onDone));
+    skip.addEventListener('touchstart', (e) => { e.preventDefault(); this._finish(onDone); }, { passive: false });
 
     this.overlay.appendChild(this.canvas);
     this.overlay.appendChild(grain);
