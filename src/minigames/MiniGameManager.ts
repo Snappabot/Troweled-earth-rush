@@ -2,6 +2,7 @@ import { TrowelingGame } from './TrowelingGame';
 import { ScaffoldGame } from './ScaffoldGame';
 import type { ScaffoldResult } from './ScaffoldGame';
 import type { PlayerCharacter } from '../ui/CharacterCreator';
+import type { CityAudio } from '../audio/CityAudio';
 
 export type MiniGameType = 'troweling' | 'scaffold';
 
@@ -22,6 +23,9 @@ export class MiniGameManager {
   private playerChar: PlayerCharacter | null = null;
 
   setPlayerChar(pc: PlayerCharacter): void { this.playerChar = pc; }
+
+  private cityAudio: CityAudio | null = null;
+  setCityAudio(audio: CityAudio): void { this.cityAudio = audio; }
 
   constructor() {
     this.overlay = document.createElement('div');
@@ -123,6 +127,7 @@ export class MiniGameManager {
       if (!this.active) return;
       this.scaffoldGame = new ScaffoldGame();
       if (this.playerChar) this.scaffoldGame.setPlayerChar(this.playerChar);
+      if (this.cityAudio)  this.scaffoldGame.setCityAudio(this.cityAudio);
       this.scaffoldGame.mount(this.overlay, (result) => {
         if (this.safetyTimer) clearTimeout(this.safetyTimer);
         try { this.stop(); } catch { this.active = false; }

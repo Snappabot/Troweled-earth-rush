@@ -102,12 +102,29 @@ const CREW_DIALOGUE: Record<string, string[]> = {
 const TRIGGER_RADIUS = 15;
 const DIALOGUE_COOLDOWN = 12_000; // ms between lines per character
 
+interface PickupAnim {
+  name: string;
+  wrapper: THREE.Group;
+  character: CrewCharacter;
+  fromX: number;
+  fromZ: number;
+  toX: number;
+  toZ: number;
+  baseScale: number;
+  baseY: number;
+  baseFacing: number;
+  duration: number;
+  t: number;
+  onDone: () => void;
+}
+
 export class Characters {
   private scene: THREE.Scene;
   private collisionWorld: CollisionWorld | null = null;
   private crewMap: Map<string, { character: CrewCharacter; wrapper: THREE.Group; pos: { x: number; z: number } }> = new Map();
   private lastDialogue: Map<string, number> = new Map();
   private dialogueIndex: Map<string, number> = new Map();
+  private pickupAnims: PickupAnim[] = [];
 
   constructor(scene: THREE.Scene, collisionWorld?: CollisionWorld) {
     this.scene = scene;
@@ -170,6 +187,80 @@ export class Characters {
 
   updateAll(dt: number): void {
     for (const { character } of this.crewMap.values()) character.update(dt);
+
+    // Advance pickup animations
+    if (this.pickupAnims.length > 0) {
+      const finished: PickupAnim[] = [];
+      for (const a of this.pickupAnims) {
+        a.t += dt;
+        const p = Math.min(1, a.t / a.duration);
+        // Ease-out: starts fast (running burst), settles into the van
+        const ease = 1 - Math.pow(1 - p, 2);
+        a.wrapper.position.x = a.fromX + (a.toX - a.fromX) * ease;
+        a.wrapper.position.z = a.fromZ + (a.toZ - a.fromZ) * ease;
+        // Initial pop-up highlight (0→15%), then steady, then shrink-into-van (75%→100%)
+        let sc = a.baseScale;
+        if (p < 0.15) {
+          // brief pop scale 1 → 1.18 → 1
+          const k = p / 0.15;
+          sc = a.baseScale * (1 + Math.sin(k * Math.PI) * 0.18);
+        } else if (p > 0.75) {
+          const k = (p - 0.75) / 0.25;
+          sc = a.baseScale * (1 - k);
+        }
+        a.wrapper.scale.set(sc, sc, sc);
+        // Slight hop arc — sine bump up to 0.6 units, peaks mid-run
+        a.wrapper.position.y = a.baseY + Math.sin(p * Math.PI) * 0.55;
+
+        if (p >= 1) finished.push(a);
+      }
+      if (finished.length > 0) {
+        for (const a of finished) {
+          // Reset wrapper for future spawns
+          a.wrapper.visible = false;
+          a.wrapper.scale.set(a.baseScale, a.baseScale, a.baseScale);
+          a.wrapper.position.set(a.fromX, a.baseY, a.fromZ);
+          a.wrapper.rotation.y = a.baseFacing;
+          a.character.setWalking(false);
+          try { a.onDone(); } catch {}
+        }
+        this.pickupAnims = this.pickupAnims.filter(a => !finished.includes(a));
+      }
+    }
+  }
+
+  /**
+   * Play a brief crew-pickup animation: highlight pop → run-to-van → shrink-into-van.
+   * Fires the onSlam callback when the animation completes (use it for door SFX + shake).
+   */
+  animatePickup(name: string, vanX: number, vanZ: number, onSlam: () => void): void {
+    const e = this.crewMap.get(name);
+    if (!e || !e.wrapper.visible) { onSlam(); return; }
+    // Already animating — skip
+    if (this.pickupAnims.some(a => a.name === name)) return;
+
+    e.character.setWalking(true);
+    const fx = e.wrapper.position.x;
+    const fz = e.wrapper.position.z;
+    const baseFacing = e.wrapper.rotation.y;
+    // Face the van
+    e.wrapper.rotation.y = Math.atan2(vanX - fx, vanZ - fz);
+
+    this.pickupAnims.push({
+      name,
+      wrapper: e.wrapper,
+      character: e.character,
+      fromX: fx,
+      fromZ: fz,
+      toX: vanX,
+      toZ: vanZ,
+      baseScale: e.wrapper.scale.x,
+      baseY: e.wrapper.position.y,
+      baseFacing,
+      duration: 0.85,
+      t: 0,
+      onDone: onSlam,
+    });
   }
 
   /**

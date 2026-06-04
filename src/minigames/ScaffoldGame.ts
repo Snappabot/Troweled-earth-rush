@@ -11,6 +11,7 @@
 
 import type { MiniGameResult } from './MiniGameManager';
 import type { PlayerCharacter } from '../ui/CharacterCreator';
+import type { CityAudio } from '../audio/CityAudio';
 
 // ── Public result interface ───────────────────────────────────────────────────
 export interface ScaffoldResult {
@@ -180,6 +181,10 @@ export class ScaffoldGame {
   private playerChar: PlayerCharacter | null = null;
   setPlayerChar(pc: PlayerCharacter): void { this.playerChar = pc; }
 
+  // Audio (optional — silent fallback if not wired)
+  private audio: CityAudio | null = null;
+  setCityAudio(audio: CityAudio): void { this.audio = audio; }
+
   // ── Entry point ──────────────────────────────────────────────────────────────
   start(onComplete: (r: MiniGameResult) => void): void {
     this.onCompleteFn = onComplete;
@@ -348,6 +353,8 @@ export class ScaffoldGame {
         this.climbProgress  = 1;
         this.isClimbing     = false;
         this.playerY        = this.climbToY;
+        // Landed on new platform — thud/clank
+        this.audio?.playScaffoldPlace();
         // Win check: reached top floor
         if (this.playerFloor >= TOTAL_FLOORS) {
           this._end();
@@ -367,6 +374,8 @@ export class ScaffoldGame {
         this.climbProgress = 0;
         this.climbFromY    = this.floorYs[this.playerFloor - 1];
         this.climbToY      = this.floorYs[this.playerFloor];
+        // Whoosh on jump
+        this.audio?.playScaffoldJump();
       }
     }
 
@@ -412,6 +421,7 @@ export class ScaffoldGame {
         const sats = BLOB_VALUES[b.colorIdx];
         this.catchSats += sats;
         this.catchCount++;
+        this.audio?.playScaffoldCatch();
         const label = sats >= 1000 ? `+${sats / 1000}K sats ₿` : `+${sats} sats ₿`;
         this.floatingTexts.push({
           x: b.x, y: b.y,
@@ -455,6 +465,7 @@ export class ScaffoldGame {
         this.catchSats = Math.max(0, this.catchSats - BOMB_PENALTY);
         this.gooFlash  = GOO_FLASH_DUR;
         this.gooSplats.push({ x: this.playerX, y: this.playerY - this.hh * 0.05, age: 0, maxAge: 1.8 });
+        this.audio?.playScaffoldFall();
         this.floatingTexts.push({
           x: bm.x, y: bm.y - 20,
           text: `-${BOMB_PENALTY / 1000}K sats 💩`,
@@ -1130,6 +1141,9 @@ export class ScaffoldGame {
     const heightBonus = Math.round(BASE_PAYOUT * heightPct);
     const bonusSats  = heightBonus + this.catchSats;
     const won        = this.playerFloor >= TOTAL_FLOORS;
+
+    if (won) this.audio?.playScaffoldWin();
+    else     this.audio?.playScaffoldLose();
 
     // Result banner
     const banner = document.createElement('div');

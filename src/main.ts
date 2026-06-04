@@ -48,6 +48,7 @@ import { PlayerOnFoot } from './entities/PlayerOnFoot';
 import { WeaponSelector } from './ui/WeaponSelector';
 import { ZoneIndicator, ZONE_COLORS } from './gameplay/ZoneIndicator';
 import { CityAudio } from './audio/CityAudio';
+import { Tutorial } from './ui/Tutorial';
 
 // ── React Native bridge (Earthians app WebView) ────────────────────────────
 function postRushEvent(event: string, data?: Record<string, unknown>): void {
@@ -105,6 +106,7 @@ async function main() {
   const spillMeter = new SpillMeter();
   const hud = new HUD();
   hud.setPlayerCharacter(playerChar);
+  hud.setCityAudio(cityAudio);
   const dialoguePause = new DialoguePause();
 
   // ── Job system ──────────────────────────────────────────────────────────────
@@ -153,6 +155,7 @@ async function main() {
             job.pay = payWithBonus;   // apply crew pay bonus
             const selectedCrewNames = getActiveCrew().map(id => id.charAt(0).toUpperCase() + id.slice(1));
             jobManager.acceptJob(job, selectedCrewNames);
+            tutorial.onJobAccepted();
             rivalSystem.start(job.position);
             hud.showRaceStrip(true);
             waypointSystem.setTarget(JobManager.WORKSHOP_POS);
@@ -211,7 +214,10 @@ async function main() {
     jobManager.saveProgress();
     hud.updateMoney(jobManager.money);
     hud.showSpillPenalty(penalty);
-    haptic(60);
+    hud.showSpillOverlay();
+    cityAudio.playSpill();
+    engine.camera.triggerShake(2.5, 0.4);
+    haptic([40, 30, 60]);
     const pn = hud.getPlayerChar()?.name ?? 'Driver';
     hud.showToast(`🪣 SPILL! ${pn} lost ${Math.round(penalty/1000)}K sats!`, 0xFF4400);
   };
@@ -319,6 +325,7 @@ async function main() {
 
   // Mini-game manager
   const miniGameManager = new MiniGameManager();
+  miniGameManager.setCityAudio(cityAudio);
 
   // ── Achievement Gallery + Rewards ─────────────────────────────────────────
   const achievementGallery = new AchievementGallery();
@@ -355,6 +362,10 @@ async function main() {
     radio.setMuted(true);
   }
 
+  // ── First-launch tutorial ─────────────────────────────────────────────────
+  const tutorial = new Tutorial();
+  const isFirstPlay = !Tutorial.hasCompleted();
+
   // ── Hide UI during opening cinematic ─────────────────────────────────────
   hud.setVisible(false);
   gameMenu.setVisible(false);
@@ -379,6 +390,7 @@ async function main() {
     cityAudio.startEngine();
     hud.showToast('☰  Tap the menu to pick up contracts!', 0xC4920A);
     skipBtn.remove();
+    if (isFirstPlay) tutorial.startControlsIntro();
   };
   skipBtn.addEventListener('click', skipIntro);
   skipBtn.addEventListener('touchstart', (e) => { e.preventDefault(); skipIntro(); }, { passive: false });
@@ -469,6 +481,7 @@ async function main() {
         cityAudio.startEngine();
         hud.showToast('☰  Tap the menu to pick up contracts!', 0xC4920A);
         skipBtn.remove();
+        if (isFirstPlay) tutorial.startControlsIntro();
       }
       return; // skip all gameplay during cinematic
     }
@@ -781,6 +794,7 @@ async function main() {
         jobCompleting = true;
         spillMeter.level = 0;
         connie.playLaugh();
+        tutorial.onWorkshopArrived();
 
         // Brief arrival dialogue, then launch the mixer
         dialoguePause.show(
@@ -845,56 +859,64 @@ async function main() {
 
         if (dist < 10 && physics.speed < 3) {
           jobCompleting = true;
-          characters.hideCrew(name);
           zones.remove(`crew_${name}`); // remove this crew member's zone
-          const allCollected = jobManager.pickupCrew(name);
 
-          hud.updateCrewStatus(
-            jobManager.crewToPickup,
-            jobManager.crewPickedUp,
-            true
-          );
+          // Animate crew running to van; door slam + shake fires at end
+          characters.animatePickup(name, vanX, vanZ, () => {
+            cityAudio.playDoorSlam();
+            engine.camera.triggerShake(1.4, 0.32);
+            haptic([35, 25, 70]);
 
-          const quip = CREW_PICKUP_QUIPS[name] ?? `${name} hops in.`;
+            characters.hideCrew(name);
+            const allCollected = jobManager.pickupCrew(name);
 
-          if (allCollected) {
-            dialoguePause.show(
-              `🚐 ${name} aboard — Full crew!`,
-              `${quip}\n\nFull crew loaded. Everyone's in (sort of).\n\nHead to the job site now. Your waypoint is set.`,
-              () => {
-                jobManager.advanceToPhase3();
-                waypointSystem.setTarget(jobManager.activeJob!.position);
-                // All crew aboard — show green job site zone
-                zones.clear();
-                if (jobManager.activeJob) {
-                  zones.add({ id: 'jobsite', x: jobManager.activeJob.position.x, z: jobManager.activeJob.position.z, radius: jobManager.activeJob.triggerRadius ?? 10, color: ZONE_COLORS.jobSite, label: 'JOB SITE' });
-                }
-                hud.showCrewPickup(name, null);
-                hud.setActiveJob(jobManager.activeJob, 3);
-                jobCompleting = false;
-              },
-              randomFrom(BRAND_SLOGANS)
+            hud.updateCrewStatus(
+              jobManager.crewToPickup,
+              jobManager.crewPickedUp,
+              true
             );
-          } else {
-            const nextCrew = jobManager.nextCrewNeeded();
-            const stillNeeded = jobManager.crewToPickup
-              .filter(n => !jobManager.crewPickedUp.includes(n))
-              .join(', ');
-            dialoguePause.show(
-              `🧑‍🔧 ${name} aboard!`,
-              `${quip}\n\nStill need to collect:\n👷 ${stillNeeded}`,
-              () => {
-                if (nextCrew) {
-                  const nextPos = characters.getCrewPosition(nextCrew);
-                  waypointSystem.setTarget(nextPos);
-                  hud.showCrewPickup(name, nextCrew);
-                }
-                hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
-                jobCompleting = false;
-              },
-              randomFrom(GAME_TIPS)
-            );
-          }
+
+            const quip = CREW_PICKUP_QUIPS[name] ?? `${name} hops in.`;
+
+            if (allCollected) {
+              dialoguePause.show(
+                `🚐 ${name} aboard — Full crew!`,
+                `${quip}\n\nFull crew loaded. Everyone's in (sort of).\n\nHead to the job site now. Your waypoint is set.`,
+                () => {
+                  jobManager.advanceToPhase3();
+                  waypointSystem.setTarget(jobManager.activeJob!.position);
+                  // All crew aboard — show green job site zone
+                  zones.clear();
+                  if (jobManager.activeJob) {
+                    zones.add({ id: 'jobsite', x: jobManager.activeJob.position.x, z: jobManager.activeJob.position.z, radius: jobManager.activeJob.triggerRadius ?? 10, color: ZONE_COLORS.jobSite, label: 'JOB SITE' });
+                  }
+                  hud.showCrewPickup(name, null);
+                  hud.setActiveJob(jobManager.activeJob, 3);
+                  jobCompleting = false;
+                },
+                randomFrom(BRAND_SLOGANS)
+              );
+            } else {
+              const nextCrew = jobManager.nextCrewNeeded();
+              const stillNeeded = jobManager.crewToPickup
+                .filter(n => !jobManager.crewPickedUp.includes(n))
+                .join(', ');
+              dialoguePause.show(
+                `🧑‍🔧 ${name} aboard!`,
+                `${quip}\n\nStill need to collect:\n👷 ${stillNeeded}`,
+                () => {
+                  if (nextCrew) {
+                    const nextPos = characters.getCrewPosition(nextCrew);
+                    waypointSystem.setTarget(nextPos);
+                    hud.showCrewPickup(name, nextCrew);
+                  }
+                  hud.updateCrewStatus(jobManager.crewToPickup, jobManager.crewPickedUp, true);
+                  jobCompleting = false;
+                },
+                randomFrom(GAME_TIPS)
+              );
+            }
+          });
           break;
         }
       }

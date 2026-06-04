@@ -29,6 +29,11 @@ export class CityAudio {
   private speechQueue: string[] = [];
   private speaking = false;
 
+  // ── Timer tick state ────────────────────────────────────────────────────────
+  private tickTimer: ReturnType<typeof setInterval> | null = null;
+  private tickInterval = 1000;
+  private tickUrgency = 0;       // 0–1, controls pitch and volume
+
   constructor() {}
 
   start(): void {
@@ -165,6 +170,195 @@ export class CityAudio {
     this._noiseBurst(0.4, 0.3, 250, 0.01, now);
   }
 
+  /** Wet splat — sharp noise burst + low thud. Used for spill events + bombs. */
+  playSpill(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+    // High-frequency wet splat: bandpassed noise
+    this._noiseBurst(0.55, 0.12, 1800, 0.002, now);
+    // Mid-range slap
+    this._noiseBurst(0.35, 0.22, 600, 0.005, now + 0.02);
+    // Low thud underneath
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(160, now);
+    osc.frequency.exponentialRampToValueAtTime(50, now + 0.25);
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    osc.connect(gain); gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.35);
+  }
+
+  /** Van side-door slam — heavy thud + click. */
+  playDoorSlam(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+    // Initial click — metal latch
+    this._noiseBurst(0.25, 0.04, 3500, 0.001, now);
+    // Heavy thud
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(120, now + 0.02);
+    osc.frequency.exponentialRampToValueAtTime(45, now + 0.3);
+    gain.gain.setValueAtTime(0.55, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    osc.connect(gain); gain.connect(this.masterGain);
+    osc.start(now + 0.02); osc.stop(now + 0.4);
+    // Body shudder noise
+    this._noiseBurst(0.18, 0.25, 200, 0.005, now + 0.04);
+  }
+
+  // ── Timer tick (heartbeat) — under 15 seconds ──────────────────────────────
+  startTimerTick(urgency = 0): void {
+    this.tickUrgency = Math.max(0, Math.min(1, urgency));
+    // 0 = ~750ms (1.3 Hz), 1 = ~220ms (4.5 Hz)
+    this.tickInterval = 750 - this.tickUrgency * 530;
+    if (this.tickTimer !== null) return;
+    const fire = () => {
+      this._tickPulse();
+      this.tickTimer = setTimeout(fire, this.tickInterval) as unknown as ReturnType<typeof setInterval>;
+    };
+    fire();
+  }
+
+  setTimerTickUrgency(urgency: number): void {
+    this.tickUrgency = Math.max(0, Math.min(1, urgency));
+    this.tickInterval = 750 - this.tickUrgency * 530;
+  }
+
+  stopTimerTick(): void {
+    if (this.tickTimer !== null) {
+      clearTimeout(this.tickTimer as unknown as ReturnType<typeof setTimeout>);
+      this.tickTimer = null;
+    }
+  }
+
+  private _tickPulse(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+    const baseFreq = 140 + this.tickUrgency * 280;     // 140Hz → 420Hz
+    const vol      = 0.12 + this.tickUrgency * 0.18;   // 0.12 → 0.30
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(baseFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, now + 0.08);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(vol, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    osc.connect(gain); gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.1);
+  }
+
+  // ── ScaffoldGame sounds ────────────────────────────────────────────────────
+
+  /** Coin/blob catch — bright pluck (ascending). */
+  playScaffoldCatch(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(740, now);
+    osc.frequency.exponentialRampToValueAtTime(1180, now + 0.10);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+    osc.connect(gain); gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.18);
+  }
+
+  /** Climb / jump — short rising whoosh. */
+  playScaffoldJump(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(260, now);
+    osc.frequency.exponentialRampToValueAtTime(620, now + 0.18);
+    gain.gain.setValueAtTime(0.20, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    osc.connect(gain); gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.24);
+    this._noiseBurst(0.10, 0.18, 1200, 0.02, now);
+  }
+
+  /** Player placed/landed on a scaffold platform — thud/clank. */
+  playScaffoldPlace(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const now = this.ctx.currentTime;
+    // Metallic clank
+    this._noiseBurst(0.22, 0.05, 2200, 0.001, now);
+    // Wood thud
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(80, now + 0.18);
+    gain.gain.setValueAtTime(0.35, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+    osc.connect(gain); gain.connect(this.masterGain);
+    osc.start(now); osc.stop(now + 0.25);
+  }
+
+  /** Goo bomb hit / fall — wet splat + thud. */
+  playScaffoldFall(): void {
+    this.playSpill(); // wet splat is a perfect goo-bomb hit
+  }
+
+  /** Top reached — bright triumphant fanfare (longer than mission complete). */
+  playScaffoldWin(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    // C5–E5–G5–C6 ascending, then sustained C6 + E6
+    const seq = [523.25, 659.25, 783.99, 1046.50];
+    seq.forEach((freq, i) => {
+      const t = now + i * 0.10;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.32, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      osc.connect(gain); gain.connect(this.masterGain!);
+      osc.start(t); osc.stop(t + 0.25);
+    });
+    // Sustained closing chord
+    const tEnd = now + seq.length * 0.10 + 0.04;
+    [1046.50, 1318.51].forEach(freq => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, tEnd);
+      gain.gain.linearRampToValueAtTime(0.20, tEnd + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, tEnd + 0.7);
+      osc.connect(gain); gain.connect(this.masterGain!);
+      osc.start(tEnd); osc.stop(tEnd + 0.75);
+    });
+  }
+
+  /** Failed to reach top — descending sad horn. */
+  playScaffoldLose(): void {
+    if (!this.ctx || !this.masterGain) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const seq = [392.00, 329.63, 261.63]; // G4 → E4 → C4 descending
+    seq.forEach((freq, i) => {
+      const t = now + i * 0.18;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth'; osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.22, t + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+      osc.connect(gain); gain.connect(this.masterGain!);
+      osc.start(t); osc.stop(t + 0.35);
+    });
+  }
+
   playMissionComplete(): void {
     if (!this.ctx || !this.masterGain) return;
     const ctx = this.ctx;
@@ -189,6 +383,7 @@ export class CityAudio {
       this.masterGain.gain.setTargetAtTime(muted ? 0 : 1, this.ctx.currentTime, 0.05);
     }
     if (muted && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+    if (muted) this.stopTimerTick();
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────────

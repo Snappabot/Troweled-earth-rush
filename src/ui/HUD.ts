@@ -1,5 +1,6 @@
 import type { Job } from '../gameplay/JobManager';
 import type { PlayerCharacter } from './CharacterCreator';
+import type { CityAudio } from '../audio/CityAudio';
 
 export const ONE_BTC = 100_000_000; // sats
 
@@ -46,6 +47,10 @@ export class HUD {
   private raceStripEl!: HTMLDivElement;
   private racePosEl!: HTMLDivElement;
   private raceRowsEl!: HTMLDivElement;
+  private spillOverlayEl!: HTMLDivElement;
+  private spillTimeout: ReturnType<typeof setTimeout> | null = null;
+  private cityAudio: CityAudio | null = null;
+  private tickActive = false;
 
   constructor() {
     // ── Inject keyframe animations ────────────────────────────────────────────
@@ -279,6 +284,9 @@ export class HUD {
       pointer-events: none;
       background: rgba(220, 38, 38, 0.18);
     `;
+    // ── Spill splatter overlay ────────────────────────────────────────────────
+    this._buildSpillOverlay();
+
     const timerFailMsg = document.createElement('div');
     timerFailMsg.id = 'hud-timer-fail-msg';
     timerFailMsg.style.cssText = `
@@ -295,6 +303,106 @@ export class HUD {
     this.timerFailOverlay.appendChild(timerFailMsg);
     document.body.appendChild(this.timerFailOverlay);
   }
+
+  private _buildSpillOverlay(): void {
+    if (!document.getElementById('spill-overlay-styles')) {
+      const style = document.createElement('style');
+      style.id = 'spill-overlay-styles';
+      style.textContent = `
+        @keyframes spillFadeIn  { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes spillFadeOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes spillBlobPop {
+          0%   { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+          30%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+          100% { transform: translate(-50%, -50%) scale(1);    opacity: 1; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    this.spillOverlayEl = document.createElement('div');
+    this.spillOverlayEl.style.cssText = `
+      position: fixed; inset: 0; z-index: 8500;
+      display: none; pointer-events: none;
+      background: radial-gradient(circle at 50% 50%, rgba(180,40,30,0.55), rgba(80,15,15,0.92));
+    `;
+    // Painted SVG splatter blobs
+    const inner = document.createElement('div');
+    inner.style.cssText = `
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      width: min(94vw, 720px); height: min(94vw, 720px);
+      animation: spillBlobPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards;
+      pointer-events: none;
+    `;
+    inner.innerHTML = `
+      <svg viewBox="0 0 600 600" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <radialGradient id="splat" cx="50%" cy="45%" r="55%">
+            <stop offset="0%"  stop-color="#FFE9D4"/>
+            <stop offset="55%" stop-color="#D4906A"/>
+            <stop offset="100%" stop-color="#8A2820"/>
+          </radialGradient>
+        </defs>
+        <g fill="url(#splat)">
+          <path d="M300,90 C420,90 540,180 540,300 C540,420 430,510 320,510 C200,510 80,420 80,300 C80,200 180,90 300,90 Z"
+                opacity="0.92" />
+          <circle cx="120" cy="120" r="42" opacity="0.85"/>
+          <circle cx="470" cy="180" r="58" opacity="0.85"/>
+          <circle cx="500" cy="430" r="44" opacity="0.85"/>
+          <circle cx="160" cy="470" r="62" opacity="0.85"/>
+          <circle cx="80"  cy="320" r="34" opacity="0.85"/>
+          <circle cx="540" cy="300" r="28" opacity="0.85"/>
+          <circle cx="290" cy="40"  r="22" opacity="0.7"/>
+          <circle cx="310" cy="560" r="26" opacity="0.7"/>
+        </g>
+      </svg>
+    `;
+    this.spillOverlayEl.appendChild(inner);
+
+    const label = document.createElement('div');
+    label.style.cssText = `
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff; font-family: system-ui, sans-serif;
+      font-size: clamp(28px, 7vw, 56px); font-weight: 900;
+      letter-spacing: 3px; text-shadow: 0 2px 14px rgba(0,0,0,0.8);
+      text-align: center;
+    `;
+    label.textContent = '🪣 SPLAT!';
+    this.spillOverlayEl.appendChild(label);
+
+    document.body.appendChild(this.spillOverlayEl);
+  }
+
+  /** Brief full-screen plaster splatter overlay — fires when spill triggers. */
+  showSpillOverlay(): void {
+    if (this.spillTimeout !== null) {
+      clearTimeout(this.spillTimeout);
+      this.spillTimeout = null;
+    }
+    // Re-trigger CSS animation
+    this.spillOverlayEl.style.display = 'block';
+    this.spillOverlayEl.style.animation = 'none';
+    void this.spillOverlayEl.offsetWidth;
+    this.spillOverlayEl.style.animation = 'spillFadeIn 0.08s ease-out';
+    // Restart inner blob pop
+    const inner = this.spillOverlayEl.firstChild as HTMLDivElement | null;
+    if (inner) {
+      inner.style.animation = 'none';
+      void inner.offsetWidth;
+      inner.style.animation = 'spillBlobPop 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards';
+    }
+    this.spillTimeout = setTimeout(() => {
+      this.spillOverlayEl.style.animation = 'spillFadeOut 0.35s ease-out forwards';
+      setTimeout(() => {
+        this.spillOverlayEl.style.display = 'none';
+        this.spillTimeout = null;
+      }, 380);
+    }, 520);
+  }
+
+  /** Wire CityAudio so the HUD can drive the timer-tick heartbeat. */
+  setCityAudio(audio: CityAudio): void { this.cityAudio = audio; }
 
   /** Return the money/BTC panel element for mounting in GameMenu */
   getMoneyPanel(): HTMLDivElement { return this.moneyPanel; }
@@ -328,6 +436,10 @@ export class HUD {
     if (!job) {
       this.jobStripEl.style.display = 'none';
       this.crewPanelEl.style.display = 'none';
+      if (this.tickActive) {
+        this.cityAudio?.stopTimerTick();
+        this.tickActive = false;
+      }
       return;
     }
     this.jobStripEl.style.display = 'flex';
@@ -457,6 +569,10 @@ export class HUD {
         clearInterval(this.timerPulseInterval);
         this.timerPulseInterval = null;
       }
+      if (this.tickActive) {
+        this.cityAudio?.stopTimerTick();
+        this.tickActive = false;
+      }
       return;
     }
 
@@ -474,6 +590,20 @@ export class HUD {
       if (!this.travelTimerEl.classList.contains('hud-timer-pulse')) {
         this.travelTimerEl.classList.add('hud-timer-pulse');
       }
+    }
+
+    // Heartbeat tick under 15s — urgency ramps from 0→1 as it nears 0
+    if (seconds <= 15 && seconds > 0) {
+      const urgency = 1 - Math.max(0, seconds) / 15;
+      if (!this.tickActive) {
+        this.cityAudio?.startTimerTick(urgency);
+        this.tickActive = true;
+      } else {
+        this.cityAudio?.setTimerTickUrgency(urgency);
+      }
+    } else if (this.tickActive) {
+      this.cityAudio?.stopTimerTick();
+      this.tickActive = false;
     }
   }
 

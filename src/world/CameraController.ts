@@ -26,6 +26,11 @@ export class CameraController {
   private touching = false;
   private onFoot = false;
 
+  // Camera shake state
+  private shakeIntensity = 0;
+  private shakeDuration = 0;
+  private shakeTime = 0;
+
   constructor() {
     this.camera = new THREE.PerspectiveCamera(
       CAMERA_CONFIG.fov,
@@ -137,6 +142,16 @@ export class CameraController {
 
     this.camera.position.lerp(this.targetPos, CAMERA_CONFIG.positionSmoothing);
 
+    // Apply transient shake offset (post-lerp so it does not bleed into smoothing).
+    if (this.shakeTime > 0) {
+      this.shakeTime -= 1 / 60;
+      const remaining = Math.max(0, this.shakeTime / this.shakeDuration);
+      const mag = this.shakeIntensity * remaining;
+      this.camera.position.x += (Math.random() - 0.5) * mag;
+      this.camera.position.y += (Math.random() - 0.5) * mag * 0.6;
+      this.camera.position.z += (Math.random() - 0.5) * mag;
+    }
+
     const speed = velocity.length();
     const lookAhead = speed > 0.5
       ? velocity.clone().normalize().multiplyScalar(CAMERA_CONFIG.lookAheadDistance)
@@ -144,5 +159,12 @@ export class CameraController {
     const lookAtTarget = vanPos.clone().add(lookAhead);
     lookAtTarget.y += 2;
     this.camera.lookAt(lookAtTarget);
+  }
+
+  /** Trigger a brief camera shake (used for crew door slam, impacts, etc.) */
+  triggerShake(intensity: number, duration = 0.35): void {
+    this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
+    this.shakeDuration = Math.max(this.shakeDuration, duration);
+    this.shakeTime = Math.max(this.shakeTime, duration);
   }
 }
