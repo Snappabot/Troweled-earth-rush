@@ -5565,7 +5565,7 @@ Don't prove them wrong.`,"This isn't a wall. It's a surface waiting to breathe."
 
       @keyframes smPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
     `,document.head.appendChild(e)}}class J2{constructor(e,t,n,i,s){v(this,"btn");v(this,"panel");v(this,"radioSlot");v(this,"moneySlot");v(this,"_open",!1);v(this,"muted",!1);v(this,"muteBtn");v(this,"onMuteToggle");this.onMuteToggle=s;try{this.muted=localStorage.getItem("tem_rush_muted")==="true"}catch{}this._build(e,t,n,i)}_build(e,t,n,i){this.btn=document.createElement("button"),this.btn.textContent="☰",this.btn.style.cssText=`
-      position: fixed; top: 10px; right: 12px; z-index: 3100;
+      position: fixed; top: 66px; right: 12px; z-index: 3100;
       background: rgba(8,6,4,0.88); backdrop-filter: blur(10px);
       border: 1px solid rgba(200,168,106,0.4); border-radius: 12px;
       color: #C8A86A; font-size: 20px; font-weight: 900;
@@ -5574,7 +5574,7 @@ Don't prove them wrong.`,"This isn't a wall. It's a surface waiting to breathe."
       box-shadow: 0 2px 12px rgba(0,0,0,0.55);
       transition: background 0.15s, color 0.15s;
     `,this.btn.addEventListener("click",l=>{l.stopPropagation(),this._toggle()}),document.body.appendChild(this.btn),this.panel=document.createElement("div"),this.panel.style.cssText=`
-      position: fixed; top: 62px; right: 10px; z-index: 3099;
+      position: fixed; top: 118px; right: 10px; z-index: 3099;
       background: rgba(8,6,4,0.95); backdrop-filter: blur(18px);
       border: 1px solid rgba(200,168,106,0.22); border-radius: 18px;
       padding: 16px 14px; width: min(300px, calc(100vw - 24px));
@@ -6518,4 +6518,4 @@ Time to get to work. Show them what TEM does.`,()=>{l.setActiveJob(null,3),l.upd
     background:rgba(200,40,40,0.9);padding:24px 32px;border-radius:16px;
     max-width:90vw;z-index:9999;
   `,e.innerHTML=`<b>🚨 Game failed to start</b><br><br>${(a==null?void 0:a.message)||String(a)}`,document.body.appendChild(e)});
-//# sourceMappingURL=index-BIc7G5bY.js.map
+//# sourceMappingURL=index-Dd3zgkdV.js.map

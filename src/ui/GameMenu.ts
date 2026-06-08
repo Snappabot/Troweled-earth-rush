@@ -31,7 +31,7 @@ export class GameMenu {
     this.btn = document.createElement('button');
     this.btn.textContent = '☰';
     this.btn.style.cssText = `
-      position: fixed; top: 10px; right: 12px; z-index: 3100;
+      position: fixed; top: 66px; right: 12px; z-index: 3100;
       background: rgba(8,6,4,0.88); backdrop-filter: blur(10px);
       border: 1px solid rgba(200,168,106,0.4); border-radius: 12px;
       color: #C8A86A; font-size: 20px; font-weight: 900;
@@ -46,7 +46,7 @@ export class GameMenu {
     // ── Dropdown panel ────────────────────────────────────────────────────────
     this.panel = document.createElement('div');
     this.panel.style.cssText = `
-      position: fixed; top: 62px; right: 10px; z-index: 3099;
+      position: fixed; top: 118px; right: 10px; z-index: 3099;
       background: rgba(8,6,4,0.95); backdrop-filter: blur(18px);
       border: 1px solid rgba(200,168,106,0.22); border-radius: 18px;
       padding: 16px 14px; width: min(300px, calc(100vw - 24px));
