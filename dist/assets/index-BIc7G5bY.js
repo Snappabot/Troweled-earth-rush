@@ -4763,7 +4763,7 @@ void main() {
     `,n.addEventListener("click",()=>this._end()),this.overlay.appendChild(n)}_computeLayout(){this.ww=window.innerWidth,this.hh=window.innerHeight,this.scaffoldTop=this.hh*.09,this.scaffoldBottom=this.hh*.87,this.scaffoldLeft=this.ww*.07,this.scaffoldRight=this.ww*.93,this.connieX=this.ww*.3,this.philX=this.ww*.7;const e=this.scaffoldBottom-this.scaffoldTop,t=[0,.2,.36,.52,.68,.84];this.floorYs=t.map(n=>this.scaffoldBottom-e*n),this.playerX===0&&(this.playerX=this.ww*.5),this.playerY=this.floorYs[this.playerFloor]}_buildButtons(){const e=document.createElement("div");e.style.cssText=`
       position:absolute; bottom:0; left:0; right:0; z-index:100;
       display:flex; align-items:stretch; justify-content:space-between;
-      padding:8px 12px 14px; gap:8px;
+      padding:8px 12px calc(14px + env(safe-area-inset-bottom, 48px)); gap:8px;
     `;const t=(h,d,u)=>{const p=document.createElement("button");return p.innerHTML=h,p.style.cssText=`
         flex:${u}; min-height:68px; border:none; border-radius:14px;
         font-size:20px; font-weight:900; color:#fff; cursor:pointer;
@@ -6518,4 +6518,4 @@ Time to get to work. Show them what TEM does.`,()=>{l.setActiveJob(null,3),l.upd
     background:rgba(200,40,40,0.9);padding:24px 32px;border-radius:16px;
     max-width:90vw;z-index:9999;
   `,e.innerHTML=`<b>🚨 Game failed to start</b><br><br>${(a==null?void 0:a.message)||String(a)}`,document.body.appendChild(e)});
-//# sourceMappingURL=index-5sbdTPs5.js.map
+//# sourceMappingURL=index-BIc7G5bY.js.map

@@ -267,7 +267,7 @@ export class ScaffoldGame {
     bar.style.cssText = `
       position:absolute; bottom:0; left:0; right:0; z-index:100;
       display:flex; align-items:stretch; justify-content:space-between;
-      padding:8px 12px 14px; gap:8px;
+      padding:8px 12px calc(14px + env(safe-area-inset-bottom, 48px)); gap:8px;
     `;
 
     const mkBtn = (label: string, bgColor: string, flex: number) => {
