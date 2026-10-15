@@ -1,0 +1,77 @@
+name: Build UnityFramework (iOS)
+
+# Compiles the Unity-exported Xcode project (pushed to the `ios-export` branch by
+# rush-unity/tools/build-ios.sh) into UnityFramework.framework on a macOS runner and
+# publishes it as a GitHub Release asset. The Earthians Expo app's config plugin
+# (mobile/plugins/withRushUnity.js) downloads that asset at prebuild.
+#
+# Linux can export the Xcode project but only a Mac can compile it — that is the whole
+# reason this workflow exists.
+
+on:
+  push:
+    branches: [ios-export]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode version
+        run: |
+          sudo xcode-select -s /Applications/Xcode_16.4.app || true
+          xcodebuild -version
+
+      - name: Read version
+        id: ver
+        run: echo "v=$(cat RUSH_VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Reassemble split libraries
+        run: |
+          if ls Libraries/libiPhone-lib.a.part* >/dev/null 2>&1; then
+            cat Libraries/libiPhone-lib.a.part* > Libraries/libiPhone-lib.a
+            rm Libraries/libiPhone-lib.a.part*
+            ls -la Libraries/libiPhone-lib.a
+          fi
+
+      - name: Build UnityFramework (device, Release)
+        run: |
+          set -eo pipefail
+          xcodebuild -project Unity-iPhone.xcodeproj -scheme UnityFramework \
+            -configuration Release -sdk iphoneos -arch arm64 \
+            BUILD_DIR="$PWD/out" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            ENABLE_BITCODE=NO ONLY_ACTIVE_ARCH=NO SKIP_INSTALL=NO \
+            build | tail -50
+          ls out/Release-iphoneos/UnityFramework.framework
+
+      - name: Verify framework is self-contained
+        run: |
+          FW=out/Release-iphoneos/UnityFramework.framework
+          test -f "$FW/UnityFramework"
+          test -f "$FW/Headers/NativeCallProxy.h" || { echo "NativeCallProxy.h not public"; exit 1; }
+          test -d "$FW/Data" || { echo "Data/ missing from framework"; exit 1; }
+          lipo -info "$FW/UnityFramework"
+          du -sh "$FW"
+
+      - name: Package
+        run: |
+          cd out/Release-iphoneos
+          zip -qry "../../UnityFramework-${{ steps.ver.outputs.v }}.zip" UnityFramework.framework
+          cd ../..
+          shasum -a 256 "UnityFramework-${{ steps.ver.outputs.v }}.zip" | tee "UnityFramework-${{ steps.ver.outputs.v }}.zip.sha256"
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-${{ steps.ver.outputs.v }}
+          name: UnityFramework ${{ steps.ver.outputs.v }}
+          files: |
+            UnityFramework-${{ steps.ver.outputs.v }}.zip
+            UnityFramework-${{ steps.ver.outputs.v }}.zip.sha256
